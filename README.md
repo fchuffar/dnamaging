@@ -1,2 +1,2 @@
 # dnamaging
-A set scripts and vignettes allowing to build am epigentic clock model
+A set of scripts and vignettes allowing to build an epigentic clock model.
