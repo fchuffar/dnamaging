@@ -1,0 +1,32 @@
+---
+title: "Descriptive Statistics"
+author: "Fabien Jossaud, Florent Chuffart"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=TRUE, results="verbatim")
+```
+
+```{r data}
+if (!exists("mreadRDS")) { mreadRDS = memoise::memoise(readRDS) }
+d = mreadRDS("df_GSE40279.rds")
+# d = mreadRDS("df_GSE41037.rds")
+dim(d)
+
+```
+
+
+# Session Information
+
+```{r, results="verbatim"}
+sessionInfo()
+```
+
