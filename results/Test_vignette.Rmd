@@ -21,7 +21,8 @@ knitr::opts_chunk$set(
 
 ```{r appel data}
 
-HannumD <- readRDS("df_GSE40279.rds")
+if (!exists("mreadRDS")) { mreadRDS = memoise::memoise(readRDS) }
+HannumD = mreadRDS("df_GSE40279.rds")
 
 ```
 
