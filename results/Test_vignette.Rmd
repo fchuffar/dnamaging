@@ -1,29 +1,28 @@
 ---
 title: "Code Hannum 2013"
-author: "Jossaud Fabien, Chuffart Florent"
+---
+title: "Descriptive Statistics"
+author: "Fabien Jossaud, Florent Chuffart"
 date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{COde Hannum 2013}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
 ---
 
-```{r setup, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>"
-)
+
+```{r include=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=TRUE, results="verbatim")
 ```
 
 
 ## Appel data ( à modifier pour généraliser)
 
 ```{r appel data}
-
 if (!exists("mreadRDS")) { mreadRDS = memoise::memoise(readRDS) }
-HannumD = mreadRDS("df_GSE40279.rds")
-
+d = mreadRDS("df_GSE40279.rds")
 ```
 
 
@@ -34,22 +33,30 @@ HannumD = mreadRDS("df_GSE40279.rds")
 
 # On compte le pourcentage de valeurs manquantes
 
-pctNArow <- apply(HannumD,1,function(x) sum(is.na(x))) / ncol(HannumD) * 100 # Par ligne
+pctNArow = apply(d,1,function(x) sum(is.na(x))) / ncol(d) * 100 # Par ligne
 
-pctNAcol <- apply(HannumD,2,function(x) sum(is.na(x))) / nrow(HannumD) * 100 # Par colonne
+pctNAcol = apply(d,2,function(x) sum(is.na(x))) / nrow(d) * 100 # Par colonne
 
 # On regarde lesquelles sont supérieures à 20% de données manquantes 
 
-suppr <- which(pctNArow > 20) # Lignes
+suppr = which(pctNArow > 20) # Lignes
 
-suppc <- which(pctNAcol > 20) # Colonnes
+suppc = which(pctNAcol > 20) # Colonnes
 
 # On supprime les lignes et les colonnes correspondantes
 
-HannumDsupp <- HannumD[-(suppr),-(suppc)]
+dsupp = d[-(suppr),-(suppc)]
 
 print(paste0("Nombre de lignes supprimées : ",length(suppr)))
 
 print(paste0("Nombre de colonnes supprimées : ",length(suppc)))
+```
+
+
+
+# Session Information
+
+```{r, results="verbatim"}
+sessionInfo()
 ```
 
