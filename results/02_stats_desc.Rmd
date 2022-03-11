@@ -17,9 +17,10 @@ knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, 
 
 ```{r data}
 if (!exists("mreadRDS")) { mreadRDS = memoise::memoise(readRDS) }
-d = mreadRDS("df_GSE40279.rds")
-# d = mreadRDS("df_GSE41037.rds")
-dim(d)
+# d = mreadRDS("df_GSE40279.rds")
+d = mreadRDS("df_GSE41037.rds")
+print(dim(d))
+head(d[,1:30])
 
 ```
 

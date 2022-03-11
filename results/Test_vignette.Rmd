@@ -1,0 +1,54 @@
+---
+title: "Code Hannum 2013"
+author: "Jossaud Fabien, Chuffart Florent"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{COde Hannum 2013}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+
+## Appel data ( à modifier pour généraliser)
+
+```{r appel data}
+
+HannumD <- readRDS("df_GSE40279.rds")
+
+```
+
+
+
+## Trouver valeurs manquantes 
+
+```{r valeurs manquantes}
+
+# On compte le pourcentage de valeurs manquantes
+
+pctNArow <- apply(HannumD,1,function(x) sum(is.na(x))) / ncol(HannumD) * 100 # Par ligne
+
+pctNAcol <- apply(HannumD,2,function(x) sum(is.na(x))) / nrow(HannumD) * 100 # Par colonne
+
+# On regarde lesquelles sont supérieures à 20% de données manquantes 
+
+suppr <- which(pctNArow > 20) # Lignes
+
+suppc <- which(pctNAcol > 20) # Colonnes
+
+# On supprime les lignes et les colonnes correspondantes
+
+HannumDsupp <- HannumD[-(suppr),-(suppc)]
+
+print(paste0("Nombre de lignes supprimées : ",length(suppr)))
+
+print(paste0("Nombre de colonnes supprimées : ",length(suppc)))
+```
+
