@@ -11,7 +11,7 @@ output:
 ---
 
 
-```{r setup, include=FALSE}
+```{r include=FALSE}
 knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=TRUE, results="verbatim")
 ```
 

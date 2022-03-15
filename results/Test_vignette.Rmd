@@ -22,7 +22,7 @@ knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, 
 
 ```{r appel data}
 if (!exists("mreadRDS")) { mreadRDS = memoise::memoise(readRDS) }
-d = mreadRDS("df_GSE40279.rds")
+df = mreadRDS("df_GSE40279.rds")
 ```
 
 
@@ -33,9 +33,14 @@ d = mreadRDS("df_GSE40279.rds")
 
 # On compte le pourcentage de valeurs manquantes
 
-pctNArow = apply(d,1,function(x) sum(is.na(x))) / ncol(d) * 100 # Par ligne
+# apply_func = epimedtools::monitored_apply
+# foo = apply_func(mod=1, df, 1, function(x) {sum(is.na(x))})
 
-pctNAcol = apply(d,2,function(x) sum(is.na(x))) / nrow(d) * 100 # Par colonne
+
+apply_func = apply
+pctNArow = apply_func(df, 1, function(x) sum(is.na(x))) / ncol(df) * 100 # Par ligne
+
+pctNAcol = apply(df,2,function(x) sum(is.na(x))) / nrow(df) * 100 # Par colonne
 
 # On regarde lesquelles sont supérieures à 20% de données manquantes 
 
@@ -45,7 +50,7 @@ suppc = which(pctNAcol > 20) # Colonnes
 
 # On supprime les lignes et les colonnes correspondantes
 
-dsupp = d[-(suppr),-(suppc)]
+dsupp = df[-(suppr),-(suppc)]
 
 print(paste0("Nombre de lignes supprimées : ",length(suppr)))
 
