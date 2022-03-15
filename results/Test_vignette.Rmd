@@ -17,40 +17,233 @@ output:
 knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=TRUE, results="verbatim")
 ```
 
+```{r Packages}
 
-## Appel data ( à modifier pour généraliser)
+if (!require("BiocManager", quietly = TRUE)){
+ 
+    install.packages("BiocManager")
 
-```{r appel data}
+}
+
+BiocManager::install("impute")
+
+library(impute)
+
+```
+
+# Call data (Need to be modified to generalize and make it at a variable)
+
+```{r Call data}
 if (!exists("mreadRDS")) { mreadRDS = memoise::memoise(readRDS) }
 d = mreadRDS("df_GSE40279.rds")
+
+# Check data with 100 first variables of 20 first individuals 
+
+d[1:20,1:100]
+
+
 ```
 
 
+# DataMining
 
-## Trouver valeurs manquantes 
+## Finding missing values
 
-```{r valeurs manquantes}
+```{r Missing Values}
 
-# On compte le pourcentage de valeurs manquantes
+# Calculate pourcentages of missing values
 
-pctNArow = apply(d,1,function(x) sum(is.na(x))) / ncol(d) * 100 # Par ligne
+T1 <- Sys.time()
 
-pctNAcol = apply(d,2,function(x) sum(is.na(x))) / nrow(d) * 100 # Par colonne
+pctNArow = apply(d,1,function(x) sum(is.na(x))) / ncol(d) * 100 # By Rows
 
-# On regarde lesquelles sont supérieures à 20% de données manquantes 
+pctNAcol = apply(d,2,function(x) sum(is.na(x))) / nrow(d) * 100 # By Columns
 
-suppr = which(pctNArow > 20) # Lignes
+T2 <- Sys.time()
 
-suppc = which(pctNAcol > 20) # Colonnes
+Tf <- T2 - T1 
 
-# On supprime les lignes et les colonnes correspondantes
+print(paste0("Temps d'execution : ",Tf))
 
-dsupp = d[-(suppr),-(suppc)]
+# Looking how much got more than 5% missing values
 
+suppr = which(pctNArow > 5) # Rows
+
+suppc = which(pctNAcol > 5) # Columns
+
+# Delete respective rows and columns 
+
+if (length(suppr) != 0 & length(suppc) != 0){
+
+	dsupp = d[-(suppr),-(suppc)]
+
+} else if (length(suppr) == 0 & length(suppc) == 0) {
+
+	dsupp = d
+	
+} else {
+
+	if (nrow(suppr) != 0) {
+	
+		dsupp = d[-suppr,]
+		
+	}
+	
+	if (nrow(suppc) != 0) {
+	
+		dsupp = d[,-suppc]
+		
+	}
+	
+}
+
+
+	
 print(paste0("Nombre de lignes supprimées : ",length(suppr)))
 
 print(paste0("Nombre de colonnes supprimées : ",length(suppc)))
 ```
+
+## KNN
+
+We use the function impute.knn of the package impute to replace remaining missing values with KNN method. 
+
+```{r KNN}
+
+dknn <- dsupp[-(1:8),]
+dknnf <- impute.knn(dknn ,k = 10,maxp = 5000)
+dknn <- dknnf$data
+
+``` 
+
+## Finish removing of missing values
+
+```{r End Missing Values}
+
+d <- dknn
+
+```
+
+# Finding Outliers 
+
+## ACP 
+
+We first make an ACP to find outliers.
+
+```{r ACP}
+
+PCA <- prcomp(d)
+
+```
+
+
+## Z-score 
+
+We calculate z-score based on our ACP. 
+
+```{r zscore}
+
+
+
+```
+
+## Z-score transformation in FDR
+
+We converted all z-scores in FDR with Gaussian cumulative distribution and the Benjamini-Hochberg procedure. 
+
+```{r FDR Transformation}
+
+
+
+```
+
+## Outliers deleting 
+
+We delete all samples with a FDR < 0.2 . 
+
+```{r Delete Outliers}
+
+
+
+```
+
+## Remake procedures 
+
+We remake ACP and procedures with new cohort (without outliers) to find new outliers. We stop this procedures when we find no outliers. 
+
+```{r Remake Outliers}
+
+
+
+``` 
+
+# Model 
+
+## Find Variables for model 
+
+```{r Prepare Model}
+
+Xtrain <- d[,-(1:7)]
+Ytrain <- d[,"age__y_"]
+
+``` 
+
+## Finding Best Model
+ 
+### Test Classic regression
+
+We test the package glmnet with a classic regression (lambda = 0)
+
+```{r Classic Regression}
+
+modelCR <- glmnet(Xtrain,Ytrain,family="binomial",standardize=TRUE,lambda=0)
+
+```
+
+### Cross Validation
+
+We're trying to find best parameters for the ElasticNet regression (alpha>0 and lambda>0) with the function cv.glmnet 
+ 
+```{r Cross Validation}
+
+
+
+```
+
+### Model with best parameters 
+
+Now we have all parameters to construct our model
+
+```{r ModelCV}
+
+
+
+```
+
+### Bootstrapping
+
+But we have to make bootstrap to make our model stronger. We take CV parameters calculate above for each bootstrap cohort.
+
+```{r Bootstrapping}
+
+
+
+```
+
+### Markers choice for final model 
+
+We choose only markers find in +50% of our bootstrap models
+
+```{Choosing Markers}
+
+
+
+``` 
+
+### Covariables 
+
+
+
 
 
 
