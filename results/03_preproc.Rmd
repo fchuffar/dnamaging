@@ -17,133 +17,99 @@ output:
 knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=TRUE, results="verbatim")
 ```
 
-```{r Packages}
-
-if (!require("BiocManager", quietly = TRUE)){
- 
-    install.packages("BiocManager")
-
-}
-
-BiocManager::install("impute")
-
-library(impute)
-
-```
 
 # Call data (Need to be modified to generalize and make it at a variable)
 
 ```{r Call data}
 if (!exists("mreadRDS")) { mreadRDS = memoise::memoise(readRDS) }
-d = mreadRDS("df_GSE40279.rds")
+if (!exists("df_GSE40279")) {
+  df_GSE40279 = mreadRDS("df_GSE40279.rds")  
+}
+df = df_GSE40279
+
+idx_samples = rownames(df)
+
+
+head(df[,1:7])
+idx_clinicals = colnames(df)[1:7]
+
+
+head(df[,(ncol(df)-10):ncol(df)])
+idx_cpg = colnames(df)[8:ncol(df)][1:10000]
+tail (idx_cpg)
 
 # Check data with 100 first variables of 20 first individuals 
-
-d[1:20,1:100]
-
+df[1:20,1:10]
+dim(df)
 ```
 
 
-# DataMining
 
-## Finding missing values
+
+# Pretreatment
+
+## Missing values
 
 ```{r Missing Values}
+if (sum(is.na(df[,idx_cpg]))>0) {
+  # Looking how much got more than 5% missing values
+  # apply_func = epimedtools::monitored_apply
+  if (! exists("apply_func")) {apply_func = apply}
+  prop_na_row =  apply_func(is.na(df[,idx_cpg]), 1, sum) / ncol(df)
+  idx_cpg     = names(prop_na_col)[prop_na_col<.05]
+  prop_na_col =  apply_func(is.na(df[,idx_cpg]), 2, sum) / nrow(df)
+  idx_samples = names(prop_na_row)[prop_na_row<.05]
+  df = df[idx_samples, c(idx_clinicals, idx_cpg)]
 
-# Calculate pourcentages of missing values
-
-T1 <- Sys.time()
-
-pctNArow = apply(d,1,function(x) sum(is.na(x))) / ncol(d) * 100 # By Rows
-
-pctNAcol = apply(d,2,function(x) sum(is.na(x))) / nrow(d) * 100 # By Columns
-
-T2 <- Sys.time()
-
-<<<<<<< HEAD
-# apply_func = epimedtools::monitored_apply
-# foo = apply_func(mod=1, df, 1, function(x) {sum(is.na(x))})
-
-
-apply_func = apply
-pctNArow = apply_func(df, 1, function(x) sum(is.na(x))) / ncol(df) * 100 # Par ligne
-
-pctNAcol = apply(df,2,function(x) sum(is.na(x))) / nrow(df) * 100 # Par colonne
-=======
-Tf <- T2 - T1 
-
-print(paste0("Temps d'execution : ",Tf))
-
-# Looking how much got more than 5% missing values
-
-suppr = which(pctNArow > 5) # Rows
-
-suppc = which(pctNAcol > 5) # Columns
-
-# Delete respective rows and columns 
-
-dsupp = df[-(suppr),-(suppc)]
-if (length(suppr) != 0 & length(suppc) != 0){
-
-	dsupp = d[-(suppr),-(suppc)]
-
-} else if (length(suppr) == 0 & length(suppc) == 0) {
-
-	dsupp = d
-	
-} else {
-
-	if (nrow(suppr) != 0) {
-	
-		dsupp = d[-suppr,]
-		
-	}
-	
-	if (nrow(suppc) != 0) {
-	
-		dsupp = d[,-suppc]
-		
-	}
-	
+  ## KNN - We use the function impute.knn of the package impute to replace remaining missing values with KNN method. 
+  dknn <- df
+  dknnf <- impute::impute.knn(df, k=10, maxp=5000, rng.seed=1)
+  df <- dknnf$data
 }
-
-
-	
-print(paste0("Nombre de lignes supprimées : ",length(suppr)))
-
-print(paste0("Nombre de colonnes supprimées : ",length(suppc)))
 ```
 
-## KNN
 
-We use the function impute.knn of the package impute to replace remaining missing values with KNN method. 
-
-```{r KNN}
-
-dknn <- dsupp[-(1:8),]
-dknnf <- impute.knn(dknn ,k = 10,maxp = 5000)
-dknn <- dknnf$data
-
-``` 
-
-## Finish removing of missing values
-
-```{r End Missing Values}
-
-d <- dknn
-
-```
-
-# Finding Outliers 
+# Outliers 
 
 ## ACP 
 
 We first make an ACP to find outliers.
 
 ```{r ACP}
+pdaj = 1
+idx_samples
+it=1
+while(sum(padj < 0.2) != 0) {
+  print(paste0("*******", it))
+  it = it+1
+  mat = as.matrix(df[idx_samples, idx_cpg])
+  pca = prcomp(mat, scale=FALSE)
+  v = pca$sdev * pca$sdev
+  p = v / sum(v) * 100
 
-PCA <- prcomp(d)
+  layout(matrix(1:6,2), respect=TRUE)
+  # layout(matrix(1:2,1), respect=TRUE)
+  barplot(p)
 
+  for (i in 1:5) {
+    j = i+1
+    plot(pca$x[,i], pca$x[,j], xlab=paste0("PC", i, "(", signif(p[i], 3), "%)"), ylab=paste0("PC", j, "(", signif(p[j], 3), "%)"), pch=16)  
+    # scale_factor = min(abs(c(min(c(pca$x[,i], pca$x[,j])), max(c(pca$x[,i], pca$x[,j])))))
+    # scale_factor = min(abs(c(max(min(pca$x[,i]), min(pca$x[,j])), min(max(pca$x[,i]), max(pca$x[,j])))))
+    # arrows(0,0,pca$rotation[,i]*scale_factor, pca$rotation[,j]*scale_factor, col="grey")
+    # text(pca$rotation[,i]*scale_factor, pca$rotation[,j]*scale_factor, rownames(pca$rotation))
+  }
+
+  head(pca$x[,1:2])
+
+  mean = mean(pca$x[,1])
+  sd = sd(pca$x[,1])
+  pval = pnorm(abs(pca$x[,1]), mean, sd, lower.tail=FALSE)
+  padj = p.adjust(pval, method="BH")
+  sum(padj <= 0.2)
+  range(padj)  
+  idx_samples = names(padj)[padj > 0.2]
+}
 ```
 
 
