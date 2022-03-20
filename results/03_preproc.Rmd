@@ -21,6 +21,11 @@ knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, 
 # Call data (Need to be modified to generalize and make it at a variable)
 
 ```{r Call data}
+if (!require("BiocManager", quietly = TRUE)){
+    install.packages("BiocManager")}
+
+BiocManager::install("methylclock")
+
 if (!exists("mreadRDS")) { mreadRDS = memoise::memoise(readRDS) }
 if (!exists("df_GSE40279")) {
   df_GSE40279 = mreadRDS("df_GSE40279.rds")  
@@ -35,7 +40,10 @@ idx_clinicals = colnames(df)[1:7]
 
 
 head(df[,(ncol(df)-10):ncol(df)])
-idx_cpg = colnames(df)[8:ncol(df)][1:10000]
+
+idx_cpg = colnames(df)[8:ncol(df)]
+idx_cpgS = colnames(df)[8:ncol(df)][1:10000] # For small tests
+
 tail (idx_cpg)
 
 # Check data with 100 first variables of 20 first individuals 
@@ -76,7 +84,7 @@ if (sum(is.na(df[,idx_cpg]))>0) {
 We first make an ACP to find outliers.
 
 ```{r ACP}
-pdaj = 1
+padj = 1
 idx_samples
 it=1
 while(sum(padj < 0.2) != 0) {
@@ -112,55 +120,14 @@ while(sum(padj < 0.2) != 0) {
 }
 ```
 
-
-## Z-score 
-
-We calculate z-score based on our ACP. 
-
-```{r zscore}
-
-
-
-```
-
-## Z-score transformation in FDR
-
-We converted all z-scores in FDR with Gaussian cumulative distribution and the Benjamini-Hochberg procedure. 
-
-```{r FDR Transformation}
-
-
-
-```
-
-## Outliers deleting 
-
-We delete all samples with a FDR < 0.2 . 
-
-```{r Delete Outliers}
-
-
-
-```
-
-## Remake procedures 
-
-We remake ACP and procedures with new cohort (without outliers) to find new outliers. We stop this procedures when we find no outliers. 
-
-```{r Remake Outliers}
-
-
-
-``` 
-
 # Model 
 
 ## Find Variables for model 
 
 ```{r Prepare Model}
-
-Xtrain <- d[,-(1:7)]
-Ytrain <- d[,"age__y_"]
+XtrainS = df[,idx_cpgT]
+Xtrain <- df[,idx_cpg]
+Ytrain <- df[,"age__y_"]
 
 ``` 
 
@@ -168,21 +135,28 @@ Ytrain <- d[,"age__y_"]
  
 ### Test Classic regression
 
-We test the package glmnet with a classic regression (lambda = 0)
-
 ```{r Classic Regression}
 
-modelCR <- glmnet(Xtrain,Ytrain,family="binomial",standardize=TRUE,lambda=0)
+modelCR <- glmnet(XtrainS,Ytrain,standardize=TRUE,lambda=0.04,alpha = 0.8)
+
+Xtrain = as.matrix(XtrainS)
+
+predict(modelCR,XtrainS) #Erreur car vecteur trop grand et probleme méthode as.matrix 
+
+cpg_modCR <- modelCR$beta@i
 
 ```
 
-### Cross Validation
+### Horvath Package
 
-We're trying to find best parameters for the ElasticNet regression (alpha>0 and lambda>0) with the function cv.glmnet 
  
-```{r Cross Validation}
+```{r Horvath Package}
 
+Xtrain = t(Xtrain)
 
+modelHO <- DNAmAge(Xtrain,age=Ytrain,cell.count = FALSE, clocks = "Hannum")
+
+RMSEHO <- sqrt(mean((modelHO$age - modelHO$Hannum)^2))
 
 ```
 
