@@ -49,6 +49,16 @@ tail (idx_cpg)
 # Check data with 100 first variables of 20 first individuals 
 df[1:20,1:10]
 dim(df)
+
+## Cut Train/Test for prediction comparison. 
+
+Ntrain = 482
+
+Train = df[1:Ntrain,]
+dim(Train)
+
+Test = df[-(1:Ntrain),]
+dim(Test)
 ```
 
 
@@ -70,9 +80,9 @@ if (sum(is.na(df[,idx_cpg]))>0) {
   df = df[idx_samples, c(idx_clinicals, idx_cpg)]
 
   ## KNN - We use the function impute.knn of the package impute to replace remaining missing values with KNN method. 
-  dknn <- df
-  dknnf <- impute::impute.knn(df, k=10, maxp=5000, rng.seed=1)
-  df <- dknnf$data
+  dknn = df
+  dknnf = impute::impute.knn(df, k=10, maxp=5000, rng.seed=1)
+  df = dknnf$data
 }
 ```
 
@@ -125,9 +135,12 @@ while(sum(padj < 0.2) != 0) {
 ## Find Variables for model 
 
 ```{r Prepare Model}
-XtrainS = df[,idx_cpgT]
-Xtrain <- df[,idx_cpg]
-Ytrain <- df[,"age__y_"]
+
+Xtrain = Train[,idx_cpg]
+Ytrain = Train[,"age__y_"]
+
+Xtest = Test[,idx_cpg]
+Ytest = Test[,"age__y_"]
 
 ``` 
 
@@ -137,13 +150,15 @@ Ytrain <- df[,"age__y_"]
 
 ```{r Classic Regression}
 
-modelCR <- glmnet(XtrainS,Ytrain,standardize=TRUE,lambda=0.04,alpha = 0.8)
+modelCR = glmnet::glmnet(Xtrain,Ytrain,standardize=TRUE,lambda=0.04,alpha = 0.8)
 
-Xtrain = as.matrix(XtrainS)
+Xtest = data.matrix(Xtest)
 
-predict(modelCR,XtrainS) #Erreur car vecteur trop grand et probleme méthode as.matrix 
+PredCR = predict(modelCR,Xtest)
 
-cpg_modCR <- modelCR$beta@i
+RMSECR = sqrt(mean((Ytest - PredCR)^2))
+
+cpg_modCR = modelCR$beta@i
 
 ```
 
@@ -154,44 +169,11 @@ cpg_modCR <- modelCR$beta@i
 
 Xtrain = t(Xtrain)
 
-modelHO <- DNAmAge(Xtrain,age=Ytrain,cell.count = FALSE, clocks = "Hannum")
+modelHO = DNAmAge(Xtrain,age=Ytrain,cell.count = FALSE, clocks = "Hannum")
 
-RMSEHO <- sqrt(mean((modelHO$age - modelHO$Hannum)^2))
-
-```
-
-### Model with best parameters 
-
-Now we have all parameters to construct our model
-
-```{r ModelCV}
-
-
+RMSEHO = sqrt(mean((modelHO$age - modelHO$Hannum)^2))
 
 ```
-
-### Bootstrapping
-
-But we have to make bootstrap to make our model stronger. We take CV parameters calculate above for each bootstrap cohort.
-
-```{r Bootstrapping}
-
-
-
-```
-
-### Markers choice for final model 
-
-We choose only markers find in +50% of our bootstrap models
-
-```{Choosing Markers}
-
-
-
-``` 
-
-### Covariables 
-
 
 
 
