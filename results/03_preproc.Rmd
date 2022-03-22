@@ -150,7 +150,10 @@ Ytest = Test[,"age__y_"]
 
 ```{r Classic Regression}
 
-modelCR = glmnet::glmnet(Xtrain,Ytrain,standardize=TRUE,lambda=0.04,alpha = 0.8)
+lambda = 0.04
+alpha = 0.8 
+
+modelCR = glmnet::glmnet(Xtrain,Ytrain,standardize=TRUE,lambda= lambda,alpha = alpha)
 
 Xtest = data.matrix(Xtest)
 
@@ -160,6 +163,12 @@ RMSECR = sqrt(mean((Ytest - PredCR)^2))
 
 cpg_modCR = modelCR$beta@i
 
+plotAMARCR = plotDNAmAge(PredCR,Ytest,paste0("AMAR Glmnet avec lambda = ",lambda, " et alpha = ",alpha))
+
+plot.new()
+plotAMARCR
+text(0.2,1,paste0("RMSE = ",RMSECR))
+
 ```
 
 ### Horvath Package
@@ -167,11 +176,33 @@ cpg_modCR = modelCR$beta@i
  
 ```{r Horvath Package}
 
-Xtrain = t(Xtrain)
+XtestMC = t(Xtest)
 
-modelHO = DNAmAge(Xtrain,age=Ytrain,cell.count = FALSE, clocks = "Hannum")
+modelHO = DNAmAge(XtestMC,age=Ytest,cell.count = FALSE, clocks = "Hannum")
 
 RMSEHO = sqrt(mean((modelHO$age - modelHO$Hannum)^2))
+
+plotAMARHO = plotDNAmAge(modelHO$Hannum, modelHO$age, "AMAR fonction DNAmAge with Hannum Method")
+
+plot.new()
+plotAMARHO
+text(0.2,1,paste0("RMSE = ",RMSEHO))
+
+modelHOr = DNAmAge(XtestMC,age=Ytest,cell.count = FALSE, clocks = "Horvath")
+
+RMSEHOr = sqrt(mean((modelHOr$age - modelHOr$Horvath)^2))
+
+plotAMARHOr = plotDNAmAge(modelHOr$Horvath, modelHOr$age, "AMAR fonction DNAmAge with Horvath Method")
+
+plot.new()
+plotAMARHOr
+text(0.2,1,paste0("RMSE = ",RMSEHOr))
+
+RMSE_compar = c(RMSECR,RMSEHO,RMSEHOr)
+Names_RMSE = c("Selfmade Regression","Hannum method DNAmAge function","Horvath method DNAmAge function")
+RMSE_compar = rbind(Names_RMSE,RMSE_compar)
+
+
 
 ```
 
