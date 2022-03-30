@@ -16,7 +16,7 @@ knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, 
 source("common.R")
 ```
 
-```{r batch, eval=FALSE}
+```{r batch, eval=FALSE, echo=FALSE}
 for (gse in c( 
   "GSE41037", # ***
   "GSE41169",
@@ -97,6 +97,10 @@ if (s_tmp$platform_name=="GPL8490") {
 # Check
 dim(s$data)
 dim(s$exp_grp)
+s$data = s$data[,!colnames(s$data)%in%sample_blacklist]
+s$exp_grp = s$exp_grp[!rownames(s$exp_grp)%in%sample_blacklist,]
+dim(s$data)
+dim(s$exp_grp)
 if (sum(!rownames(s$exp_grp) %in% colnames(s$data)) !=0 ) {stop(paste0("problem exp_grp names ", gse))}
 s$exp_grp = s$exp_grp[colnames(s$data),]
 if (sum(rownames(s$exp_grp) != colnames(s$data)) !=0 ) {stop(paste0("problem exp_grp names ", gse))}
@@ -108,8 +112,8 @@ s$platform = s$platform[intersect(rownames(s$data), rownames(s$platform)),]
 s$data = s$data[rownames(s$platform),]
 if (sum(rownames(s$data) != rownames(s$platform)) !=0 ) {stop(paste0("problem pf names ", gse))}
 
-# covs
-for (cov in covs) {
+# covariates
+for (cov in covariates) {
   if (is.character(df[[cov]])) {
     df[[cov]] = as.factor(df[[cov]])
   }
