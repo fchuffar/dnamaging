@@ -16,6 +16,8 @@ glmnet
 ## Bioconductor
     
 ```
+RColorBrewer
+beeswarm
 impute
 methylclock
 methylclockData
