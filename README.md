@@ -19,6 +19,9 @@ glmnet
 impute
 methylclock
 methylclockData
+IlluminaHumanMethylation27kanno.ilmn12.hg19
+IlluminaHumanMethylation450kanno.ilmn12.hg19
+IlluminaHumanMethylationEPICanno.ilm10b4.hg19  
 ```
 
 
