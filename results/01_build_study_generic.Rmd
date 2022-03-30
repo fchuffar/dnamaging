@@ -13,19 +13,19 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=TRUE, results="verbatim")
-if (!exists(gse)) {gse = "GSE42861"}
+source("common.R")
 ```
 
 ```{r batch, eval=FALSE}
 for (gse in c( 
-  "GSE41037", 
+  "GSE41037", # ***
   "GSE41169",
-  "GSE40279",
+  "GSE40279", # ***
   "GSE20067",
   "GSE20236",
   "GSE19711",
   "GSE19711",
-  "GSE42861",
+  "GSE42861", # ***
   "GSE111223",
   "GSE34035",
   "GSE28746", 
@@ -42,6 +42,11 @@ for (gse in c(
     rmarkdown::render("01_build_study_generic.Rmd", output_file=paste0("01_build_study_", gse, ".Rmd"))    
   }
 }
+```
+
+
+```{r params}
+source("default_params.R")
 ```
 
 
@@ -102,6 +107,13 @@ if (sum(!rownames(s$data) %in% rownames(s$platform)) !=0 ) {warning(paste0("prob
 s$platform = s$platform[intersect(rownames(s$data), rownames(s$platform)),]
 s$data = s$data[rownames(s$platform),]
 if (sum(rownames(s$data) != rownames(s$platform)) !=0 ) {stop(paste0("problem pf names ", gse))}
+
+# covs
+for (cov in covs) {
+  if (is.character(df[[cov]])) {
+    df[[cov]] = as.factor(df[[cov]])
+  }
+}
 
 # Save
 s$save(s_filename)
