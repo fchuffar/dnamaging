@@ -1,7 +1,7 @@
 ---
 title: "Code Hannum 2013"
 ---
-title: "Descriptive Statistics"
+title: "Preprocessing"
 author: "Fabien Jossaud, Florent Chuffart"
 date: "`r Sys.Date()`"
 output: 
@@ -17,39 +17,54 @@ output:
 knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=TRUE, results="verbatim")
 ```
 
+```{r params}
+
+if (!exists("gse")) {gse = "GSE41037"}
+if (!exists("y_key")) {y_key = "age"}
+
+```
+
+```{r batch, eval=FALSE} 
+
+output_file = paste0("03_preproc_", gse)
+
+if (!file.exists(output_file)) {
+    rmarkdown::render("03_preproc.Rmd", output_file=output_file)    
+}
+
+``` 
 
 # Call data (Need to be modified to generalize and make it at a variable)
 
-```{r Call data}
+```{r call data}
+
+s_filename = paste0("df_", gse, ".rds")
 
 if (!exists("mreadRDS")) { mreadRDS = memoise::memoise(readRDS) }
-if (!exists("df_GSE40279")) {
-  df_GSE40279 = mreadRDS("df_GSE40279.rds")  
+
+if (!exists("dfs")) { 
+  dfs = list()
 }
-df = df_GSE40279
+
+if (!gse %in% names(dfs)) {
+  dfs[[gse]] = mreadRDS(s_filename)  
+}
+
+df = dfs[[gse]] 
 
 idx_samples = rownames(df)
 
+# Check where begin markers 
 
-head(df[,1:7])
-idx_clinicals = colnames(df)[1:7]
+markers_start = grep("cg",colnames(df))[1]
 
+idx_clinicals = colnames(df)[1:(markers_start-1)]
 
-head(df[,(ncol(df)-10):ncol(df)])
-
-idx_cpg = colnames(df)[8:ncol(df)]
-idx_cpgS = colnames(df)[8:ncol(df)][1:10000] # For small tests
-
-tail (idx_cpg)
-
-# Check data with 100 first variables of 20 first individuals 
-df[1:20,1:10]
-dim(df)
+idx_cpg = colnames(df)[markers_start:ncol(df)] # [1:10000]
 
 ## Cut Train/Test for prediction comparison. 
 
-Ntrain = nrow(df)/2
-
+Ntrain = floor(nrow(df)/2)
 set.seed(1)
 
 idx_train = sample(rownames(df),Ntrain)
@@ -66,41 +81,38 @@ dim(Test)
 
 ```
 
-
-
-
 # Pretreatment
 
 ## Missing values
 
-```{r Missing Values}
+```{r missing values}
 if (sum(is.na(df[,idx_cpg]))>0) {
   # Looking how much got more than 5% missing values
   # apply_func = epimedtools::monitored_apply
   if (! exists("apply_func")) {apply_func = apply}
   prop_na_row =  apply_func(is.na(df[,idx_cpg]), 1, sum) / ncol(df)
-  idx_cpg     = names(prop_na_col)[prop_na_col<.05]
-  prop_na_col =  apply_func(is.na(df[,idx_cpg]), 2, sum) / nrow(df)
   idx_samples = names(prop_na_row)[prop_na_row<.05]
+  prop_na_col =  apply_func(is.na(df[,idx_cpg]), 2, sum) / nrow(df)
+  idx_cpg     = names(prop_na_col)[prop_na_col<.05]
+
+  print(paste0("Nombre d'individus supprimés : ", nrow(df) - length(idx_samples)))
+  print(paste0("Nombre de marqueurs supprimés : ", ncol(df) - length(idx_clinicals) - length(idx_cpg)))
+
   df = df[idx_samples, c(idx_clinicals, idx_cpg)]
 
   ## KNN - We use the function impute.knn of the package impute to replace remaining missing values with KNN method. 
-  dknn = df
-  dknnf = impute::impute.knn(df, k=10, maxp=5000, rng.seed=1)
-  df = dknnf$data
+  dknn = as.matrix(df[,idx_cpg])
+  dknnf = impute::impute.knn(dknn, k=10, maxp=5000, rng.seed=1)
+  dknn = dknnf$data
+  df = cbind(df[,idx_clinicals],dknn)
 }
 ```
 
 
-# Outliers 
+## Outliers 
 
-## ACP 
-
-We first make an ACP to find outliers.
-
-```{r ACP}
-padj = 1
-idx_samples
+```{r acp}
+padj = 0
 it=1
 while(sum(padj < 0.2) != 0) {
   print(paste0("*******", it))
@@ -109,11 +121,9 @@ while(sum(padj < 0.2) != 0) {
   pca = prcomp(mat, scale=FALSE)
   v = pca$sdev * pca$sdev
   p = v / sum(v) * 100
-
   layout(matrix(1:6,2), respect=TRUE)
   # layout(matrix(1:2,1), respect=TRUE)
   barplot(p)
-
   for (i in 1:5) {
     j = i+1
     plot(pca$x[,i], pca$x[,j], xlab=paste0("PC", i, "(", signif(p[i], 3), "%)"), ylab=paste0("PC", j, "(", signif(p[j], 3), "%)"), pch=16)  
@@ -122,9 +132,7 @@ while(sum(padj < 0.2) != 0) {
     # arrows(0,0,pca$rotation[,i]*scale_factor, pca$rotation[,j]*scale_factor, col="grey")
     # text(pca$rotation[,i]*scale_factor, pca$rotation[,j]*scale_factor, rownames(pca$rotation))
   }
-
   head(pca$x[,1:2])
-
   mean = mean(pca$x[,1])
   sd = sd(pca$x[,1])
   pval = pnorm(abs(pca$x[,1]), mean, sd, lower.tail=FALSE)
@@ -133,6 +141,10 @@ while(sum(padj < 0.2) != 0) {
   range(padj)  
   idx_samples = names(padj)[padj > 0.2]
 }
+
+print(paste0("Nombre d'individus supprimés : ", nrow(df) - length(idx_samples)))
+
+df = df[idx_samples,]
 ```
 
 # Session Information
