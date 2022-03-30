@@ -21,10 +21,6 @@ knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, 
 # Call data (Need to be modified to generalize and make it at a variable)
 
 ```{r Call data}
-if (!require("BiocManager", quietly = TRUE)){
-    install.packages("BiocManager")}
-
-BiocManager::install("methylclock")
 
 if (!exists("mreadRDS")) { mreadRDS = memoise::memoise(readRDS) }
 if (!exists("df_GSE40279")) {
@@ -52,13 +48,22 @@ dim(df)
 
 ## Cut Train/Test for prediction comparison. 
 
-Ntrain = 482
+Ntrain = nrow(df)/2
 
-Train = df[1:Ntrain,]
+set.seed(1)
+
+idx_train = sample(rownames(df),Ntrain)
+idx_test = setdiff(rownames(df),idx_train)
+
+
+Train = df[idx_train,]
 dim(Train)
 
-Test = df[-(1:Ntrain),]
+Test = df[idx_test,]
 dim(Test)
+
+
+
 ```
 
 
@@ -129,86 +134,6 @@ while(sum(padj < 0.2) != 0) {
   idx_samples = names(padj)[padj > 0.2]
 }
 ```
-
-# Model 
-
-## Find Variables for model 
-
-```{r Prepare Model}
-
-Xtrain = Train[,idx_cpg]
-Ytrain = Train[,"age__y_"]
-
-Xtest = Test[,idx_cpg]
-Ytest = Test[,"age__y_"]
-
-``` 
-
-## Finding Best Model
- 
-### Test Classic regression
-
-```{r Classic Regression}
-
-lambda = 0.04
-alpha = 0.8 
-
-modelCR = glmnet::glmnet(Xtrain,Ytrain,standardize=TRUE,lambda= lambda,alpha = alpha)
-
-Xtest = data.matrix(Xtest)
-
-PredCR = predict(modelCR,Xtest)
-
-RMSECR = sqrt(mean((Ytest - PredCR)^2))
-
-cpg_modCR = modelCR$beta@i
-
-plotAMARCR = plotDNAmAge(PredCR,Ytest,paste0("AMAR Glmnet avec lambda = ",lambda, " et alpha = ",alpha))
-
-plot.new()
-plotAMARCR
-text(0.2,1,paste0("RMSE = ",RMSECR))
-
-```
-
-### Horvath Package
-
- 
-```{r Horvath Package}
-
-XtestMC = t(Xtest)
-
-modelHO = DNAmAge(XtestMC,age=Ytest,cell.count = FALSE, clocks = "Hannum")
-
-RMSEHO = sqrt(mean((modelHO$age - modelHO$Hannum)^2))
-
-plotAMARHO = plotDNAmAge(modelHO$Hannum, modelHO$age, "AMAR fonction DNAmAge with Hannum Method")
-
-plot.new()
-plotAMARHO
-text(0.2,1,paste0("RMSE = ",RMSEHO))
-
-modelHOr = DNAmAge(XtestMC,age=Ytest,cell.count = FALSE, clocks = "Horvath")
-
-RMSEHOr = sqrt(mean((modelHOr$age - modelHOr$Horvath)^2))
-
-plotAMARHOr = plotDNAmAge(modelHOr$Horvath, modelHOr$age, "AMAR fonction DNAmAge with Horvath Method")
-
-plot.new()
-plotAMARHOr
-text(0.2,1,paste0("RMSE = ",RMSEHOr))
-
-RMSE_compar = c(RMSECR,RMSEHO,RMSEHOr)
-Names_RMSE = c("Selfmade Regression","Hannum method DNAmAge function","Horvath method DNAmAge function")
-RMSE_compar = rbind(Names_RMSE,RMSE_compar)
-
-
-
-```
-
-
-
-
 
 # Session Information
 

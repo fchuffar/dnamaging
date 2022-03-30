@@ -1,0 +1,306 @@
+---
+title: "Code Hannum 2013"
+---
+title: "Pipeline Hannum"
+author: "Fabien Jossaud, Florent Chuffart"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+
+```{r include=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=TRUE, results="verbatim")
+```
+
+```{r params}
+
+if (!exists(gse)) {gse = "GSE41037"}
+if (!exists(y_key)) {y_key = "age"}
+
+```
+
+```{r batch, eval=FALSE} 
+
+output_file = paste0("05_Pipeline_", gse, ".Rmd")
+
+if (!file.exists(output_file)) {
+    rmarkdown::render("05_Pipeline.Rmd", output_file=output_file)    
+}
+
+``` 
+
+# Call data (Need to be modified to generalize and make it at a variable)
+
+```{r call data}
+
+s_filename = paste0("df_", gse, ".rds")
+
+if (!exists("mreadRDS")) { mreadRDS = memoise::memoise(readRDS) }
+
+if (!exists("dfs")) { 
+  dfs = list()
+}
+
+if (!gse %in% names(dfs)) {
+  dfs[[gse]] = mreadRDS(s_filename)  
+}
+
+df = dfs[[gse]] 
+
+idx_samples = rownames(df)
+
+# Check where begin markers 
+
+markers_start = grep("cg",colnames(df))[1]
+
+idx_clinicals = colnames(df)[1:(markers_start-1)]
+
+idx_cpg = colnames(df)[markers_start:ncol(df)][1:10000]
+
+## Cut Train/Test for prediction comparison. 
+
+Ntrain = floor(nrow(df)/2)
+set.seed(1)
+
+idx_train = sample(rownames(df),Ntrain)
+idx_test = setdiff(rownames(df),idx_train)
+
+
+Train = df[idx_train,]
+dim(Train)
+
+Test = df[idx_test,]
+dim(Test)
+
+
+
+```
+
+# Pretreatment
+
+## Missing values
+
+```{r Missing Values}
+if (sum(is.na(df[,idx_cpg]))>0) {
+  # Looking how much got more than 5% missing values
+  # apply_func = epimedtools::monitored_apply
+  if (! exists("apply_func")) {apply_func = apply}
+  prop_na_row =  apply_func(is.na(df[,idx_cpg]), 1, sum) / ncol(df)
+  idx_samples = names(prop_na_row)[prop_na_row<.05]
+  prop_na_col =  apply_func(is.na(df[,idx_cpg]), 2, sum) / nrow(df)
+  idx_cpg     = names(prop_na_col)[prop_na_col<.05]
+  df = df[idx_samples, c(idx_clinicals, idx_cpg)]
+
+  ## KNN - We use the function impute.knn of the package impute to replace remaining missing values with KNN method. 
+  dknn = df
+  dknnf = impute::impute.knn(df, k=10, maxp=5000, rng.seed=1)
+  df = dknnf$data
+}
+```
+
+
+# Outliers 
+
+## ACP 
+
+We first make an ACP to find outliers.
+
+```{r ACP}
+padj = 1
+idx_samples
+it=1
+while(sum(padj < 0.2) != 0) {
+  print(paste0("*******", it))
+  it = it+1
+  mat = as.matrix(df[idx_samples, idx_cpg])
+  pca = prcomp(mat, scale=FALSE)
+  v = pca$sdev * pca$sdev
+  p = v / sum(v) * 100
+
+  layout(matrix(1:6,2), respect=TRUE)
+  # layout(matrix(1:2,1), respect=TRUE)
+  barplot(p)
+
+  for (i in 1:5) {
+    j = i+1
+    plot(pca$x[,i], pca$x[,j], xlab=paste0("PC", i, "(", signif(p[i], 3), "%)"), ylab=paste0("PC", j, "(", signif(p[j], 3), "%)"), pch=16)  
+    # scale_factor = min(abs(c(min(c(pca$x[,i], pca$x[,j])), max(c(pca$x[,i], pca$x[,j])))))
+    # scale_factor = min(abs(c(max(min(pca$x[,i]), min(pca$x[,j])), min(max(pca$x[,i]), max(pca$x[,j])))))
+    # arrows(0,0,pca$rotation[,i]*scale_factor, pca$rotation[,j]*scale_factor, col="grey")
+    # text(pca$rotation[,i]*scale_factor, pca$rotation[,j]*scale_factor, rownames(pca$rotation))
+  }
+
+  head(pca$x[,1:2])
+
+  mean = mean(pca$x[,1])
+  sd = sd(pca$x[,1])
+  pval = pnorm(abs(pca$x[,1]), mean, sd, lower.tail=FALSE)
+  padj = p.adjust(pval, method="BH")
+  sum(padj <= 0.2)
+  range(padj)  
+  idx_samples = names(padj)[padj > 0.2]
+}
+```
+
+# Model 
+
+## Find Variables for model 
+
+```{r Prepare Model}
+
+Xtrain = Train[,idx_cpg]
+Ytrain = Train[,y_key]
+
+Xtest = Test[,idx_cpg]
+Ytest = Test[,y_key]
+
+``` 
+
+## Finding Best Model
+ 
+### Test Classic regression
+
+```{r Classic Regression}
+
+## Prepare data
+
+Xtrain = data.matrix(Xtrain)
+
+Xtest = data.matrix(Xtest)
+
+## Cross validation for best lambda and alpha
+
+alphas = seq(0.5,1,0.5)
+
+stat = lapply(alphas,function(alpha){ 
+  
+  modelcv = glmnet::cv.glmnet(Xtrain,Ytrain, alpha = alpha, type.measure = "mse")
+  lambdamin = modelcv$lambda.min
+  cvrecap = data.frame(lambda = modelcv$lambda, RMSE = sqrt(modelcv$cvm), nbprobes = modelcv$nzero)
+  ret = list(
+    cvrecap = cvrecap, 
+    lambdamin = lambdamin,
+    # model = modelcv,
+    alpha = alpha
+  )
+  return(ret)
+  
+  })
+
+layout(matrix(1:2,1),respect = TRUE)
+
+plot(0,0,col = 0, xlim = c(0,3), ylim = c(4,10))
+
+lapply(stat, function(it) { 
+  
+  cvrecap = it$cvrecap
+  points(cvrecap$lambda,cvrecap$RMSE)
+  abline(v = it$lambdamin)
+  })
+
+plot(0,0,col = 0, xlim = c(0,3), ylim = c(0,500))
+
+lapply(stat, function(it) { 
+  
+  cvrecap = it$cvrecap
+  points(cvrecap$lambda,cvrecap$nbprobes)
+  abline(v = it$lambdamin)
+  })
+
+## Plotting alpha and lambda.min predictions 
+
+layout(matrix(1:4,2),respect = TRUE)
+par(mfrow = c(2,2))
+lapply(stat, function(it) {
+  
+  # it = stat[[1]]
+  model = glmnet::glmnet(Xtrain,Ytrain, alpha = it$alpha, lambda = it$lambdamin, standardize = TRUE) 
+                         
+  predTr = predict(model,Xtrain)
+  RMSETr = signif(sqrt(mean((Ytrain - predTr)^2, na.rm = TRUE)),3)
+  plot(predTr,Ytrain,main = paste0("Pred Train set alpha = ",it$alpha,", RMSE = ", RMSETr))
+
+  predTe = predict(model,Xtest)
+  RMSETe = signif(sqrt(mean((Ytest - predTe)^2, na.rm = TRUE)),3)
+  plot(predTe,Ytest,main = paste0("Pred Test set alpha = ",it$alpha,", RMSE = ", RMSETe))  
+  
+})
+  
+```
+
+### Horvath Package
+
+ 
+```{r methylclock}
+
+## Prepare data 
+
+XtestMC = t(Xtest)
+
+XtrainMC = t(Xtrain)
+
+## Hannum clock
+
+### Train 
+
+modelHOTr = methylclock::DNAmAge(XtrainMC,age=Ytrain,cell.count = FALSE, clocks = "Hannum")
+
+RMSEHOTr = sqrt(mean((modelHOTr$age - modelHOTr$Hannum)^2))
+
+plotAMARHOTr = methylclock::plotDNAmAge(modelHOTr$Hannum, modelHOTr$age, paste0("AMAR fonction DNAmAge with Hannum Method on Train Set, RMSE = ",RMSEHOTr))
+
+plotAMARHOTr
+
+### Test
+
+modelHO = methylclock::DNAmAge(XtestMC,age=Ytest,cell.count = FALSE, clocks = "Hannum")
+
+RMSEHO = sqrt(mean((modelHO$age - modelHO$Hannum)^2))
+
+plotAMARHO = methylclock::plotDNAmAge(modelHO$Hannum, modelHO$age, paste0("AMAR fonction DNAmAge with Hannum Method on Test Set, RMSE = ",RMSEHO))
+
+plotAMARHO
+
+## Horvath clock
+
+### Train
+
+modelHOrTr = methylclock::DNAmAge(XtrainMC,age=Ytrain,cell.count = FALSE, clocks = "Horvath")
+
+RMSEHOrTr = sqrt(mean((modelHOrTr$age - modelHOrTr$Horvath)^2))
+
+plotAMARHOrTr = methylclock::plotDNAmAge(modelHOrTr$Horvath, modelHOrTr$age, paste0("AMAR fonction DNAmAge with Horvath Method on Train Set, RMSE = ",RMSEHOrTr))
+
+plotAMARHOrTr
+
+### Test 
+
+modelHOr = methylclock::DNAmAge(XtestMC,age=Ytest,cell.count = FALSE, clocks = "Horvath")
+
+RMSEHOr = sqrt(mean((modelHOr$age - modelHOr$Horvath)^2))
+
+plotAMARHOr = methylclock::plotDNAmAge(modelHOr$Horvath, modelHOr$age, paste0("AMAR fonction DNAmAge with Horvath Method on Test Set, RMSE = ",RMSEHOr))
+
+plotAMARHOr
+
+## RMSE Comparison
+
+RMSE_Tr = c(RMSECRTr,RMSEHOTr,RMSEHOrTr)
+RMSE_Te = c(RMSECR,RMSEHO,RMSEHOr)
+RMSE_compar = as.data.frame(rbind(RMSE_Tr,RMSE_Te))
+colnames(RMSE_compar) = c("Selfmade Regression","Hannum method DNAmAge function","Horvath method DNAmAge function")
+rownames(RMSE_compar) = c("Train","Test")
+
+
+
+```
+# Session Information
+
+```{r, results="verbatim"}
+sessionInfo()
+```
