@@ -12,7 +12,7 @@ output:
 
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=TRUE, results="verbatim")
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide")
 source("common.R")
 ```
 
@@ -114,15 +114,20 @@ if (sum(rownames(s$data) != rownames(s$platform)) !=0 ) {stop(paste0("problem pf
 
 # covariates
 for (cov in covariates) {
-  if (is.character(df[[cov]])) {
-    df[[cov]] = as.factor(df[[cov]])
+  if (is.character(s$exp_grp[[cov]])) {
+    s$exp_grp[[cov]] = as.factor(s$exp_grp[[cov]])
   }
 }
 
+```{r results="verbatim"}
 # Save
+print(paste0("Writing ", s_filename, "..."))
 s$save(s_filename)
 df = cbind(s$exp_grp, t(s$data[,rownames(s$exp_grp)]))
-saveRDS(df, paste0("df_", gse, ".rds"))
+
+df_filename = paste0("df_", gse, ".rds")
+print(paste0("Writing ", df_filename, "..."))
+saveRDS(df, df_filename)
 ```
 
 # Session Information
