@@ -1,5 +1,5 @@
 ---
-title: "Build methylation study"
+title: "Build Illumina methylation study"
 author: "Florent Chuffart"
 date: "`r Sys.Date()`"
 output: 

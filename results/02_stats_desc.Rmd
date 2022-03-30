@@ -49,8 +49,8 @@ lines(density(df[[y_key]]))
 ```{r}
 for (cov in covs) {
   layout(matrix(1:3,1), respect=TRUE)
-  tmp_col = 1:dim(tmp_tab)
   tmp_tab = table(df[[cov]], useNA="ifany")  
+  tmp_col = 1:dim(tmp_tab)
   tmp_x = barplot(tmp_tab, col=tmp_col, ylim=c(0,max(tmp_tab)*1.2), main=cov, las=2)
   text(tmp_x, tmp_tab+max(tmp_tab)*.1, labels=tmp_tab)
 
