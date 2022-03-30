@@ -30,3 +30,15 @@ https://github.com/fchuffar/epimedtools
 
 ```
 
+## Functionnal testing
+
+Functionnal testing is performed by executing vignettes with defaults parameters values.
+
+```
+rmarkdown::render("vignettes/01_build_study_generic.Rmd")
+rmarkdown::render("vignettes/02_stats_desc.Rmd")
+rmarkdown::render("vignettes/03_preproc.Rmd")
+rmarkdown::render("vignettes/04_model.Rmd")
+rmarkdown::render("vignettes/05_evaluation.Rmd")
+
+```
