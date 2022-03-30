@@ -11,8 +11,8 @@ output:
 ---
 
 
-```{r include=FALSE}
-knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=TRUE, results="verbatim")
+```{r}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide")
 source("common.R")
 ```
 
@@ -47,11 +47,11 @@ lines(density(df[[y_key]]))
 # covariates of interest distribution
 
 ```{r}
+layout(matrix(1:2,1), respect=TRUE)
 for (cov in covariates) {
-  layout(matrix(1:3,1), respect=TRUE)
   tmp_tab = table(df[[cov]], useNA="ifany")  
-  tmp_col = 1:dim(tmp_tab)
-  tmp_col = RColorBrewer::brewer.pal(n=dim(tmp_tab), name = "Set1")
+  # tmp_col = 1:dim(tmp_tab)
+  tmp_col = RColorBrewer::brewer.pal(n=max(3,dim(tmp_tab)), name = "Set1")
   tmp_x = barplot(tmp_tab, col=tmp_col, ylim=c(0,max(tmp_tab)*1.2), main=cov, las=2)
   text(tmp_x, tmp_tab+max(tmp_tab)*.1, labels=tmp_tab)
 
@@ -63,13 +63,9 @@ for (cov in covariates) {
   # WTG = wilcox.test(Age_F,Age_H)
   # text(x = 1, y = 80, labels = paste0("Wilcoxon p-val =", WTG$p.value))
 
-  beanplot::beanplot(formula(paste0(y_key,"~",cov)), data=df, method="jitter", log="",ylab=y_key)
-  # text(x = 1.5, y = 110, labels = paste0("Wilcoxon p-val =", WTG$p.value))
-
-  # boxplot(formula(paste0(y_key,"~",cov)), data=df, col=adjustcolor(tmp_col, alpha.f=.5), ylab=y_key)
-  # # text(x = 1.5, y = 90, labels = paste0("Wilcoxon p-val =", WTG$p.value))
-
-  beeswarm::beeswarm(formula(paste0(y_key,"~",cov)), data=df, ylab=y_key, col=tmp_col)  
+  beanplot::beanplot(formula(paste0(y_key,"~",cov)), data=df, border=tmp_col, col=adjustcolor(c(1,1,1,1), alpha.f=.1), method="jitter", log="",ylab="", main=y_key, las=2)
+  boxplot(formula(paste0(y_key,"~",cov)), data=df, col=adjustcolor(tmp_col, alpha.f=.5), ylab="", main=y_key, las=2)
+  beeswarm::beeswarm(formula(paste0(y_key,"~",cov)), data=df, ylab="", main=y_key, col=tmp_col, las=2)  
 }
 ```
 
