@@ -20,7 +20,7 @@ source("common.R")
 gses = c( 
   "GSE20067", # 27k Genome wide DNA methylation profiling of diabetic nephropathy in type 1 diabetes mellitus
   "GSE41037", # 27k Genome wide DNA methylation profiling of whole blood in schizophrenia patients and healthy subjects.
-  # "GSE40279", # 450k Hannum 2013
+  "GSE40279", # 450k Hannum 2013
   # "GSE41169",
   # "GSE20236",
   # "GSE19711",
@@ -41,7 +41,6 @@ for (gse in gses) {
   rm(list = ls()[-which(ls()=="gse")])
   ls()
   print(paste0("************ ", gse, " ************"))
-  s_filename = paste0("study_", gse, ".rds")
   source(paste0("params_", gse, ".R"))
   rmarkdown::render("01_build_study_generic.Rmd", output_file=paste0("01_build_study_", gse, ".html"))    
   rmarkdown::render("02_stats_desc.Rmd", output_file=paste0("02_stats_desc_", gse, ".html"))    
@@ -69,7 +68,6 @@ methylation study for `r gse`.
 
 ```{r, echo=FALSE, eval=TRUE}
 # Build
-s_filename = paste0("study_", gse, ".rds")
 print(paste0("#####", gse))
 s_tmp = epimedtools::create_study()
 s_tmp$gse = gse
@@ -128,6 +126,7 @@ for (cov in covariates) {
 
 ```{r results="verbatim"}
 # Save
+s_filename = paste0("study_", gse, ".rds")
 print(paste0("Writing ", s_filename, "..."))
 s$save(s_filename)
 df = cbind(s$exp_grp, t(s$data[,rownames(s$exp_grp)]))
