@@ -63,7 +63,7 @@ if (sum(is.na(df[,idx_cpg]))>0) {
   idx_cpg     = names(prop_na_col)[prop_na_col<.05]
 
   print(paste0("#samples removed: ", sum(prop_na_row>=.05)))
-  print(paste0("#probes removed: ", ncol(df) - length(idx_clinicals) - length(idx_cpg)))
+  print(paste0("#probes removed: ", sum(prop_na_col>=.05)))
 
   df = df[idx_samples, c(idx_clinicals, idx_cpg)]
 

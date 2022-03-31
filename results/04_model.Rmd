@@ -13,115 +13,58 @@ output:
 ---
 
 
+```{r}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide")
+source("common.R")
+```
+
+
+
 ```{r include=FALSE}
 knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=TRUE, results="verbatim")
+source("common.R")
 ```
 
+```{r params}
+source("default_params.R")
+```
 
-# Call data (Need to be modified to generalize and make it at a variable)
+# We need to execute 03_preproc to have our df preprocess. 
 
-```{r Call data}
-
-if (!exists("mreadRDS")) { mreadRDS = memoise::memoise(readRDS) }
-if (!exists("df_GSE40279")) {
-  df_GSE41037 = mreadRDS("df_GSE41037.rds")  
-  # df_GSE40279 = mreadRDS("df_GSE40279.rds")  
-}
-df = df_GSE41037
-#df = df_GSE40279
-
+```{r building_indexes}
 idx_samples = rownames(df)
+markers_start = grep("cg",colnames(df))[1]
+idx_clinicals = colnames(df)[1:(markers_start-1)]
+idx_cpg = colnames(df)[markers_start:ncol(df)]
+```
 
-
-head(df[,12:15])
-idx_clinicals = colnames(df)[1:12]
-
-
-head(df[,(ncol(df)-10):ncol(df)])
-
-idx_cpg = colnames(df)[13:ncol(df)]
-idx_cpgS = colnames(df)[13:ncol(df)][1:10000] # For small tests
-
-tail (idx_cpg)
-
-# Check data with 100 first variables of 20 first individuals 
-df[1:20,1:10]
-dim(df)
-
-## Cut Train/Test for prediction comparison. 
-
-Ntrain = nrow(df)/2
-
+```{r train/test}
+Ntrain = floor(nrow(df)/2)
 set.seed(1)
-
 idx_train = sample(rownames(df),Ntrain)
 idx_test = setdiff(rownames(df),idx_train)
-
-
-Train = df[idx_train,]
-dim(Train)
-
-Test = df[idx_test,]
-dim(Test)
-
-
-
 ```
-
 
 # Model 
 
-## Find Variables for model 
+```{r prepare model}
 
-```{r Prepare Model}
+Xtrain = df[idx_train,idx_cpg]
+Ytrain = df[idx_train,y_key]
 
-Xtrain = Train[,idx_cpg]
-Ytrain = Train[,"age"]
-
-Xtest = Test[,idx_cpg]
-Ytest = Test[,"age"]
+Xtest = df[idx_test,idx_cpg]
+Ytest = df[idx_test,y_key]
 
 ``` 
 
-## Finding Best Model
- 
-### Test Classic regression
-
-```{r Classic Regression}
-
-## Prepare data
+```{r glmnet model}
 
 Xtrain = data.matrix(Xtrain)
-
 Xtest = data.matrix(Xtest)
 
 ## Cross validation for best lambda and alpha
 
-alphas = seq(0.5,1,0.5)
-alpharecap = data.frame(matrix(vector(),0,3))
-
-for (i in alpha) {
-  
-  modelcv = glmnet::cv.glmnet(Xtrain,Ytrain, alpha = alpha, type.measure = "mse")
-  
-  eval(parse(text=paste0("cvrecap",alpha," = rbind(modelcv$lambda,sqrt(modelcv$cvm),modelcv$nzero)")))
-
-  lamdamin = c(modelcv$lambda.min,min(modelcv$cvm),modelcv$nzero[which(modelcv$lambda == modelcv$lambda.min)]) 
-
-  alpharecap = rbind(alpharecap, lambdamin)
-  
-  for j in 
-  Prediction = predict(glmnet::glmnet(Xtrain,Ytrain,standardize=TRUE,lambda= parse(text=paste0("cvrecap",alpha))[1][1],alpha = alpha))
-  modelcv$glmnet.fit # Stock it
-
-  
-}
-
-
-colnames(alpharecap) = alpha
-
-
-
+alphas = seq(0,1,0.5)
 
 stat = lapply(alphas,function(alpha){ 
   
@@ -138,150 +81,115 @@ stat = lapply(alphas,function(alpha){
   
   })
 
+## Compute graph params 
+
+lambda.lim = c()
+RMSE.lim = c()
+nbprobes.lim = c()
+for (i in (1:length(stat))){
+	lambda.lim = c(lambda.lim, min(stat[[i]]$cvrecap$lambda), max(stat[[i]]$cvrecap$lambda))
+	RMSE.lim = c(RMSE.lim, min(stat[[i]]$cvrecap$RMSE), max(stat[[i]]$cvrecap$RMSE))
+	nbprobes.lim = c(nbprobes.lim, min(stat[[i]]$cvrecap$nbprobes[stat[[i]]$cvrecap$nbprobes > 0]), max(stat[[i]]$cvrecap$nbprobes))
+}
+lambda.lim = c(log(min(lambda.lim))-0.5,log(max(lambda.lim))+0.5)
+RMSE.lim = c(floor(min(RMSE.lim)),ceiling(max(RMSE.lim)))
+nbprobes.lim = log(c(min(nbprobes.lim),max(nbprobes.lim)))
+col = RColorBrewer::brewer.pal(n= length(stat), name = "Set1")
+
+## Plot
+
 layout(matrix(1:2,1),respect = TRUE)
 
-plot(0,0,col = 0, xlim = c(0,3), ylim = c(4,10))
+plot(0,0,col = 0, xlab="log(lambda)", ylab="RMSE", xlim = lambda.lim, ylim = RMSE.lim, main = "RMSE depending on alphas and lambdas")
 lapply(stat, function(it) { 
-  
   cvrecap = it$cvrecap
-  points(cvrecap$lambda,cvrecap$RMSE)
-  abline(v = it$lambdamin)
+  points(log(cvrecap$lambda),cvrecap$RMSE)
+  abline(v = log(it$lambdamin))
   })
+#legend(x="topleft", legend=alphas, col=col, title="Alphas")
 
-plot(0,0,col = 0, xlim = c(0,3), ylim = c(0,500))
+plot(0,0,col = 0, xlab="log(lambda)", ylab="log(nbprobes)", xlim=lambda.lim, ylim=nbprobes.lim, main="nbprobes depending on alphas and lambdas" )
 lapply(stat, function(it) { 
-  
   cvrecap = it$cvrecap
-  points(cvrecap$lambda,cvrecap$nbprobes)
-  abline(v = it$lambdamin)
+  points(log(cvrecap$lambda),log(cvrecap$nbprobes))
+  abline(v = log(it$lambdamin))
   })
-
-modelcv = glmnet::cv.glmnet(Xtrain,Ytrain, alpha = 0, type.measure = "mse")
+#legend(x="topleft", legend=alphas, col=col, title="Alphas")
 
 ## Plotting alpha and lambda.min predictions 
 
-layout(matrix(1:4,2),respect = TRUE)
-par(mfrow = c(2,2))
-lapply(stat, function(it) {
+par(mfrow = c(length(stat),2))
+RMSE_pred = lapply(stat, function(it) {
   
-  # it = stat[[1]]
   model = glmnet::glmnet(Xtrain,Ytrain, alpha = it$alpha, lambda = it$lambdamin, standardize = TRUE) 
                          
   predTr = predict(model,Xtrain)
   RMSETr = signif(sqrt(mean((Ytrain - predTr)^2, na.rm = TRUE)),3)
-  plot(predTr,Ytrain,main = paste0("Pred Train set alpha = ",it$alpha,", RMSE = ", RMSETr))
+  plot(predTr, Ytrain, xlab="Methylomic Age", ylab="Chronological Age", main = paste0("Pred Train set alpha = ",it$alpha,", RMSE = ", RMSETr))
 
   predTe = predict(model,Xtest)
   RMSETe = signif(sqrt(mean((Ytest - predTe)^2, na.rm = TRUE)),3)
-  plot(predTe,Ytest,main = paste0("Pred Test set alpha = ",it$alpha,", RMSE = ", RMSETe))  
+  plot(predTe, Ytest, xlab="Methylomic Age", ylab="Chronological Age", main = paste0("Pred Test set alpha = ",it$alpha,", RMSE = ", RMSETe))  
   
+  ret = list(
+  	alpha = it$alpha,
+  	lambda = it$lambdamin,
+  	RMSETr = RMSETr,
+  	RMSETe = RMSETe
+  )
+  return(ret)
 })
   
 ```
 
-```{r}
-## Fix parameters
-
-lambda = 1*10^(-1)
-alpha = 1
-
-## Train model
-
-modelCR = glmnet::glmnet(Xtrain,Ytrain,standardize=TRUE,lambda= lambda,alpha = alpha)
-
-## Find model's markers
-
-cpg_modCR = modelCR$beta@i
-
-length(cpg_modCR)
-
-## Prediction on train set
-
-PredCRTr = predict(modelCR,Xtrain)
-
-RMSECRTr = signif((sqrt(mean((Ytrain - PredCRTr)^2)),3)
-
-plotAMARCRTr = methylclock::plotDNAmAge(PredCRTr,Ytrain,paste0("AMAR Glmnet Train avec lambda = ",lambda, " et alpha = ",alpha, "avec un RMSE = ",RMSECRTr))
-
-plotAMARCRTr
-
-## Prediction on test set
-
-PredCR = predict(modelCR,Xtest)
-
-RMSECR = sqrt(mean((Ytest - PredCR)^2))
-
-plotAMARCR = methylclock::plotDNAmAge(PredCR,Ytest,paste0("AMAR Glmnet Test avec lambda = ",lambda, " et alpha = ",alpha, "avec un RMSE =",RMSECR))
-
-plotAMARCR
-
-
-
-```
-
-### Horvath Package
-
- 
-```{r Horvath Package}
-## Prepare data 
+```{r methylclock}
 
 XtestMC = t(Xtest)
-
 XtrainMC = t(Xtrain)
-
-## Hannum clock
-
-### Train 
 
 modelHOTr = methylclock::DNAmAge(XtrainMC,age=Ytrain,cell.count = FALSE, clocks = "Hannum")
 
-RMSEHOTr = sqrt(mean((modelHOTr$age - modelHOTr$Hannum)^2))
+if(sum(is.na(modelHOTr$Hannum)) == 0){
+	par(mfrow=c(2,2))
+	
+	RMSEHOTr = signif(sqrt(mean((modelHOTr$age - modelHOTr$Hannum)^2)),3)
+	plot(modelHOTr$Hannum, modelHOTr$age, paste0("Pred with Hannum Method on Train Set, RMSE = ",RMSEHOTr))
 
-plotAMARHOTr = methylclock::plotDNAmAge(modelHOTr$Hannum, modelHOTr$age, paste0("AMAR fonction DNAmAge with Hannum Method on Train Set, RMSE = ",RMSEHOTr))
-
-plotAMARHOTr
-
-### Test
-
-modelHO = methylclock::DNAmAge(XtestMC,age=Ytest,cell.count = FALSE, clocks = "Hannum")
-
-RMSEHO = sqrt(mean((modelHO$age - modelHO$Hannum)^2))
-
-plotAMARHO = methylclock::plotDNAmAge(modelHO$Hannum, modelHO$age, paste0("AMAR fonction DNAmAge with Hannum Method on Test Set, RMSE = ",RMSEHO))
-
-plotAMARHO
-
-## Horvath clock
-
-### Train
+	modelHO = methylclock::DNAmAge(XtestMC,age=Ytest,cell.count = FALSE, clocks = "Hannum")
+	RMSEHO = signif(sqrt(mean((modelHO$age - modelHO$Hannum)^2)),3)
+	plot(modelHO$Hannum, modelHO$age, xlab="Methylomic Age", ylab="Chronological Age", main=paste0("Pred with Hannum Method on Test Set, RMSE = ",RMSEHO))
+} else{
+	par(mfrow=c(2,1))
+	RMSEHOTr = "NA"
+	RMSEHO = "NA"
+}
 
 modelHOrTr = methylclock::DNAmAge(XtrainMC,age=Ytrain,cell.count = FALSE, clocks = "Horvath")
-
-RMSEHOrTr = sqrt(mean((modelHOrTr$age - modelHOrTr$Horvath)^2))
-
-plotAMARHOrTr = methylclock::plotDNAmAge(modelHOrTr$Horvath, modelHOrTr$age, paste0("AMAR fonction DNAmAge with Horvath Method on Train Set, RMSE = ",RMSEHOrTr))
-
-plotAMARHOrTr
-
-### Test 
+RMSEHOrTr = signif(sqrt(mean((modelHOrTr$age - modelHOrTr$Horvath)^2)),3)
+plot(modelHOrTr$Horvath, modelHOrTr$age, xlab="Methylomic Age", ylab="Chronological Age", main=paste0("Pred with Horvath Method on Train Set, RMSE = ",RMSEHOrTr))
 
 modelHOr = methylclock::DNAmAge(XtestMC,age=Ytest,cell.count = FALSE, clocks = "Horvath")
+RMSEHOr = signif(sqrt(mean((modelHOr$age - modelHOr$Horvath)^2)),3)
+plot(modelHOr$Horvath, modelHOr$age, xlab="Methylomic Age", ylab="Chronological Age", main=paste0("Pred with Horvath Method on Test Set, RMSE = ",RMSEHOr))
 
-RMSEHOr = sqrt(mean((modelHOr$age - modelHOr$Horvath)^2))
+colnames.RMSE = c()
+RMSE_Tr = c()
+RMSE_Te = c()
+for (i in 1:length(RMSE_pred)){ 
+	RMSE_Tr = c(RMSE_Tr, RMSE_pred[[i]]$RMSETr)
+	RMSE_Te = c(RMSE_Te, RMSE_pred[[i]]$RMSETe)
+	colnames.RMSE = c(colnames.RMSE, paste0("Regression alpha = ",stat[[i]]$alpha))
+}
+RMSE_Tr = c(RMSE_Tr, RMSEHOTr, RMSEHOrTr)
+RMSE_Te = c(RMSE_Te, RMSEHO, RMSEHOr)
+colnames.RMSE = c(colnames.RMSE, "Hannum method", "Horvath method")
+rownames.RMSE = c("Train Set", "Test Set")
 
-plotAMARHOr = methylclock::plotDNAmAge(modelHOr$Horvath, modelHOr$age, paste0("AMAR fonction DNAmAge with Horvath Method on Test Set, RMSE = ",RMSEHOr))
-
-plotAMARHOr
-
-## RMSE Comparison
-
-RMSE_Tr = c(RMSECRTr,RMSEHOTr,RMSEHOrTr)
-RMSE_Te = c(RMSECR,RMSEHO,RMSEHOr)
 RMSE_compar = as.data.frame(rbind(RMSE_Tr,RMSE_Te))
-colnames(RMSE_compar) = c("Selfmade Regression","Hannum method DNAmAge function","Horvath method DNAmAge function")
-rownames(RMSE_compar) = c("Train","Test")
+colnames(RMSE_compar) = colnames.RMSE
+rownames(RMSE_compar) = rownames.RMSE
 
-
+RMSE_compar
 
 ```
 
