@@ -134,56 +134,7 @@ RMSE_pred = lapply(stat, function(it) {
   
 ```
 
-```{r methylclock}
 
-XtestMC = t(Xtest)
-XtrainMC = t(Xtrain)
-
-modelHOTr = methylclock::DNAmAge(XtrainMC,age=Ytrain,cell.count = FALSE, clocks = "Hannum")
-
-if(sum(is.na(modelHOTr$Hannum)) == 0){
-	par(mfrow=c(2,2))
-	
-	RMSEHOTr = signif(sqrt(mean((modelHOTr$age - modelHOTr$Hannum)^2)),3)
-	plot(modelHOTr$Hannum, modelHOTr$age, paste0("Pred with Hannum Method on Train Set, RMSE = ",RMSEHOTr))
-
-	modelHO = methylclock::DNAmAge(XtestMC,age=Ytest,cell.count = FALSE, clocks = "Hannum")
-	RMSEHO = signif(sqrt(mean((modelHO$age - modelHO$Hannum)^2)),3)
-	plot(modelHO$Hannum, modelHO$age, xlab="Methylomic Age", ylab="Chronological Age", main=paste0("Pred with Hannum Method on Test Set, RMSE = ",RMSEHO))
-} else{
-	par(mfrow=c(2,1))
-	RMSEHOTr = "NA"
-	RMSEHO = "NA"
-}
-
-modelHOrTr = methylclock::DNAmAge(XtrainMC,age=Ytrain,cell.count = FALSE, clocks = "Horvath")
-RMSEHOrTr = signif(sqrt(mean((modelHOrTr$age - modelHOrTr$Horvath)^2)),3)
-plot(modelHOrTr$Horvath, modelHOrTr$age, xlab="Methylomic Age", ylab="Chronological Age", main=paste0("Pred with Horvath Method on Train Set, RMSE = ",RMSEHOrTr))
-
-modelHOr = methylclock::DNAmAge(XtestMC,age=Ytest,cell.count = FALSE, clocks = "Horvath")
-RMSEHOr = signif(sqrt(mean((modelHOr$age - modelHOr$Horvath)^2)),3)
-plot(modelHOr$Horvath, modelHOr$age, xlab="Methylomic Age", ylab="Chronological Age", main=paste0("Pred with Horvath Method on Test Set, RMSE = ",RMSEHOr))
-
-colnames.RMSE = c()
-RMSE_Tr = c()
-RMSE_Te = c()
-for (i in 1:length(RMSE_pred)){ 
-	RMSE_Tr = c(RMSE_Tr, RMSE_pred[[i]]$RMSETr)
-	RMSE_Te = c(RMSE_Te, RMSE_pred[[i]]$RMSETe)
-	colnames.RMSE = c(colnames.RMSE, paste0("Regression alpha = ",stat[[i]]$alpha))
-}
-RMSE_Tr = c(RMSE_Tr, RMSEHOTr, RMSEHOrTr)
-RMSE_Te = c(RMSE_Te, RMSEHO, RMSEHOr)
-colnames.RMSE = c(colnames.RMSE, "Hannum method", "Horvath method")
-rownames.RMSE = c("Train Set", "Test Set")
-
-RMSE_compar = as.data.frame(rbind(RMSE_Tr,RMSE_Te))
-colnames(RMSE_compar) = colnames.RMSE
-rownames(RMSE_compar) = rownames.RMSE
-
-RMSE_compar
-
-```
 
 
 
