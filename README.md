@@ -35,7 +35,7 @@ https://github.com/fchuffar/epimedtools
 
 ```
 
-## Functionnal testing
+# Functionnal testing
 
 Functionnal testing is performed by executing vignettes with defaults parameters values.
 
