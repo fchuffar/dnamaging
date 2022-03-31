@@ -11,20 +11,13 @@ output:
 ---
 
 
-```{r}
+```{r echo=FALSE}
 knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide")
 source("common.R")
 ```
 
-
-
-```{r include=FALSE}
-knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=TRUE, results="verbatim")
-source("common.R")
-```
-
 ```{r params}
-source("default_params.R")
+source("params_default.R")
 ```
 
 ```{r loading_data}
