@@ -12,21 +12,13 @@ output:
     number_sections: true
 ---
 
-
-```{r}
-knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide")
-source("common.R")
-```
-
-
-
-```{r include=FALSE}
+```{r echo=FALSE}
 knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=TRUE, results="verbatim")
 source("common.R")
 ```
 
 ```{r params}
-source("default_params.R")
+source("params_default.R")
 ```
 
 # We need to execute 03_preproc to have our df preprocess. 
