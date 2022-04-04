@@ -48,7 +48,7 @@ if(sum(is.na(modelHOTr$Hannum)) == 0){
 
 modelHOrTr = methylclock::DNAmAge(XtrainMC,age=Ytrain,cell.count = FALSE, clocks = "Horvath")
 	
-if(sum(is.na(modelHOTr$Horvath)) == 0){
+if(sum(is.na(modelHOrTr$Horvath)) == 0){
 	par(mfrow=c(2,1))
 	
 	RMSEHOrTr = signif(sqrt(mean((modelHOrTr$age - modelHOrTr$Horvath)^2)),3)
