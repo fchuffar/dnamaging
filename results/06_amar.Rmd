@@ -1,0 +1,102 @@
+---
+title: "Code Hannum 2013"
+---
+title: "AMAR Comparison with different covariables"
+author: "Fabien Jossaud, Florent Chuffart"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+
+```{r include=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=TRUE, results="verbatim")
+source("common.R")
+```
+
+```{r params}
+source("params_default.R")
+```
+
+```{r amar}
+
+AMAR_Tr = c()
+AMAR_Te = c()
+AMAR.rownames = c()
+for (i in 1:length(RMSE_pred)){
+	AMAR_Tr = rbind(AMAR_Tr, t(RMSE_pred[[i]]$predTr))
+	AMAR_Te = rbind(AMAR_Te, t(RMSE_pred[[i]]$predTe))
+	AMAR.rownames = c(AMAR.rownames, paste0("Alpha", RMSE_pred[[i]]$alpha))
+}
+
+if (sum(is.na(modelHOTr$Hannum)) == 0) { 
+	AMAR_Tr = rbind(AMAR_Tr, modelHOTr$Hannum)
+	AMAR_Te = rbind(AMAR_Te, modelHO$Hannum)
+	AMAR.rownames = c(AMAR.rownames, "Hannum")
+}
+if (sum(is.na(modelHOrTr$Horvath)) == 0) { 
+	AMAR_Tr = rbind(AMAR_Tr, modelHOrTr$Horvath)
+	AMAR_Te = rbind(AMAR_Te, modelHOr$Horvath)
+	AMAR.rownames = c(AMAR.rownames, "Horvath")
+}
+
+data_pred_Tr = as.data.frame(t(AMAR_Tr))
+data_pred_Te = as.data.frame(t(AMAR_Te))
+colnames(data_pred_Tr) = AMAR.rownames
+colnames(data_pred_Te) = AMAR.rownames
+data_pred = list( 
+	Train = data_pred_Tr,
+	Test = data_pred_Te
+)
+
+Y = list(
+	Train = Ytrain,
+	Test = Ytest
+)
+
+AMAR_Tr = apply(AMAR_Tr, 1, function(x){x / Ytrain}) 
+AMAR_Te = apply(AMAR_Te, 1, function(x){x / Ytest})
+colnames(AMAR_Tr) = AMAR.rownames
+colnames(AMAR_Te) = AMAR.rownames
+
+AMAR_Tr[1:6,]
+AMAR_Te[1:6,]
+
+AMAR_Global = rbind.data.frame(AMAR_Tr,AMAR_Te)
+for (i in AMAR_covariates){
+	cov = as.data.frame(df[[i]],row.names = rownames(df))
+	AMAR.rownames = c(AMAR.rownames, i)
+	AMAR_Global = cbind.data.frame(AMAR_Global,cov[match(rownames(cov),rownames(AMAR_Global)),])
+	colnames(AMAR_Global) = AMAR.rownames
+}
+```
+
+```{r plot, out.width = "100%"}
+
+lapply(AMAR_covariates, function(it) {
+	par(mfrow = c(ncol(data_pred_Tr),3))	
+	tmp_col = RColorBrewer::brewer.pal(n=max(3,length(unique(AMAR_Global[[it]]))), name = "Set1") # Set colors
+	factors = unique(AMAR_Global[[it]])
+	for(i in colnames(data_pred_Tr)){
+		for(j in c("Train","Test")){
+			plot(data_pred[[j]][[i]], Y[[j]], col = tmp_col[factor(AMAR_Global[[it]])], xlab="Methylomic Age", ylab="Chronological Age", main = paste0(j, " for ",i))
+			legend(x="topleft", legend=unique(AMAR_Global[[it]]), col=tmp_col, pch = 1, title="factor")
+		}
+		density = lapply(factors, function(factor){return(density(AMAR_Global[AMAR_Global[[it]] == factor, i]))})
+		plot(0,0, xlim = c(min(unlist(lapply(density, function(d){min(d$x)}))),max(unlist(lapply(density, function(d){max(d$x)})))), ylim = c(min(unlist(lapply(density, function(d){min(d$y)}))),max(unlist(lapply(density, function(d){max(d$y)})))), main = paste0("density for ",i))
+		for (j in c(1:length(factors))){
+			lines(density[[j]],col = tmp_col[j])
+		}
+		legend(x="topleft", legend=factors, col=tmp_col, lty = 1, title="factor")
+	}
+})
+
+
+
+```
+ 
+

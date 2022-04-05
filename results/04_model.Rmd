@@ -126,6 +126,8 @@ RMSE_pred = lapply(stat, function(it) {
   ret = list(
   	alpha = it$alpha,
   	lambda = it$lambdamin,
+  	predTr = predTr,
+  	predTe = predTe,
   	RMSETr = RMSETr,
   	RMSETe = RMSETe
   )

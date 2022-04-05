@@ -44,7 +44,7 @@ idx_cpg = colnames(df)[markers_start:ncol(df)]
 
 # Missing values
 
-```{r missing values}
+```{r missing values, results="verbatim"}
 if (sum(is.na(df[,idx_cpg]))>0) {
   # Looking how much got more than 5% missing values
   # apply_func = epimedtools::monitored_apply
@@ -72,7 +72,7 @@ if (sum(is.na(df[,idx_cpg]))>0) {
 
 ## Outliers 
 
-```{r acp}
+```{r acp, results="verbatim"}
 padj = 0
 it=1
 while(sum(padj < 0.2) != 0) {

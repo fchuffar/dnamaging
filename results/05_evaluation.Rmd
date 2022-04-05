@@ -1,7 +1,7 @@
 ---
 title: "Code Hannum 2013"
 ---
-title: "Pipeline Hannum"
+title: "Horvath and Hannum method"
 author: "Fabien Jossaud, Florent Chuffart"
 date: "`r Sys.Date()`"
 output: 
@@ -42,8 +42,8 @@ if(sum(is.na(modelHOTr$Hannum)) == 0){
 	RMSEHO = signif(sqrt(mean((modelHO$age - modelHO$Hannum)^2)),3)
 	plot(modelHO$Hannum, modelHO$age, xlab="Methylomic Age", ylab="Chronological Age", main=paste0("Pred with Hannum Method on Test Set, RMSE = ",RMSEHO))
 } else{
-	RMSEHOTr = "NA"
-	RMSEHO = "NA"
+	RMSEHOTr = NA
+	RMSEHO = NA
 }
 
 modelHOrTr = methylclock::DNAmAge(XtrainMC,age=Ytrain,cell.count = FALSE, clocks = "Horvath")
@@ -58,8 +58,8 @@ if(sum(is.na(modelHOrTr$Horvath)) == 0){
 	RMSEHOr = signif(sqrt(mean((modelHOr$age - modelHOr$Horvath)^2)),3)
 	plot(modelHOr$Horvath, modelHOr$age, xlab="Methylomic Age", ylab="Chronological Age", main=paste0("Pred with Horvath Method on Test Set, RMSE = ",RMSEHOr))
 } else{
-	RMSEHOrTr = "NA"
-	RMSEHOr = "NA"
+	RMSEHOrTr = NA
+	RMSEHOr = NA
 }
 
 colnames.RMSE = c()
