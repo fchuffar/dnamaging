@@ -72,3 +72,5 @@ for (gse in gses) {
 }
 
 ```
+
+!INCLUDE "vignettes/ci.R"
