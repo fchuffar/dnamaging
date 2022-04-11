@@ -79,3 +79,5 @@ for (gse in gses) {
 // ----
 // include::vignettes/ci.R[]
 // ----
+
+[include](File:vignettes/ci.R)
