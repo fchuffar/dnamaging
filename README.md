@@ -74,3 +74,8 @@ for (gse in gses) {
 ```
 
 !INCLUDE "vignettes/ci.R"
+
+// [source,R]
+// ----
+// include::vignettes/ci.R[]
+// ----
