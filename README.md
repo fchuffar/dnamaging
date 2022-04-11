@@ -73,11 +73,11 @@ for (gse in gses) {
 
 ```
 
-!INCLUDE "vignettes/ci.R"
+!INCLUDE "results/ci.R"
 
 // [source,R]
 // ----
-// include::vignettes/ci.R[]
+// include::results/ci.R[]
 // ----
 
-[include](File:vignettes/ci.R)
+[include](File:results/ci.R)
