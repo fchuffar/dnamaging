@@ -110,7 +110,7 @@ lapply(stat, function(it) {
 
 ## Plotting alpha and lambda.min predictions 
 
-par(mfrow = c(length(stat),2))
+layout(matrix(1:2,1), respect=TRUE)
 RMSE_pred = lapply(stat, function(it) {
   
   model = glmnet::glmnet(Xtrain,Ytrain, alpha = it$alpha, lambda = it$lambdamin, standardize = TRUE) 
