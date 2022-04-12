@@ -22,8 +22,15 @@ source("params_default.R")
 
 
 ```{r loading_data}
-df_filename = paste0("df_", gse, ".rds")
-df = mreadRDS(df_filename)  
+if (!exists("Lima")){
+    df_filename = paste0("df_", gse, ".rds")
+    df = mreadRDS(df_filename)
+}
+```
+```{r remove na}
+for (i in covariates){
+	df = df[complete.cases(df[[i]]), ]
+}
 ```
 
 ```{r building_indexes}

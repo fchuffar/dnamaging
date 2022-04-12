@@ -20,11 +20,6 @@ source("common.R")
 source("params_default.R")
 ```
 
-```{r loading_data}
-df_filename = paste0("df_", gse, ".rds")
-df = mreadRDS(df_filename)  
-```
-
 ```{r building_indexes}
 idx_samples = rownames(df)
 markers_start = grep("cg",colnames(df))[1]
@@ -66,7 +61,7 @@ if (sum(is.na(df[,idx_cpg]))>0) {
   dknn = dknnf$data
   head(dknn[,1:6])
   df = cbind(df[idx_samples,idx_clinicals],dknn[idx_samples,idx_cpg])
-}
+}else { print("# Aucune valeur manquantes") }
 ```
 
 

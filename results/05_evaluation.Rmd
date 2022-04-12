@@ -36,7 +36,7 @@ if(sum(is.na(modelHOTr$Hannum)) == 0){
 	par(mfrow=c(2,2))
 	
 	RMSEHOTr = signif(sqrt(mean((modelHOTr$age - modelHOTr$Hannum)^2)),3)
-	plot(modelHOTr$Hannum, modelHOTr$age, paste0("Pred with Hannum Method on Train Set, RMSE = ",RMSEHOTr))
+	plot(modelHOTr$Hannum, modelHOTr$age, xlab="Methylomic Age", ylab="Chronological Age", main=paste0("Pred with Hannum Method on Train Set, RMSE = ",RMSEHOTr))
 
 	modelHO = methylclock::DNAmAge(XtestMC,age=Ytest,cell.count = FALSE, clocks = "Hannum")
 	RMSEHO = signif(sqrt(mean((modelHO$age - modelHO$Hannum)^2)),3)
@@ -49,7 +49,9 @@ if(sum(is.na(modelHOTr$Hannum)) == 0){
 modelHOrTr = methylclock::DNAmAge(XtrainMC,age=Ytrain,cell.count = FALSE, clocks = "Horvath")
 	
 if(sum(is.na(modelHOrTr$Horvath)) == 0){
-	par(mfrow=c(2,1))
+	if(sum(is.na(modelHOTr$Hannum)) != 0){
+		par(mfrow=c(2,1))
+	}
 	
 	RMSEHOrTr = signif(sqrt(mean((modelHOrTr$age - modelHOrTr$Horvath)^2)),3)
 	plot(modelHOrTr$Horvath, modelHOrTr$age, xlab="Methylomic Age", ylab="Chronological Age", main=paste0("Pred with Horvath Method on Train Set, RMSE = ",RMSEHOrTr))
