@@ -67,7 +67,7 @@ AMAR_Global = rbind.data.frame(AMAR_Tr,AMAR_Te)
 for (i in covariates){
 	cov = as.data.frame(df[[i]],row.names = rownames(df))
 	AMAR.rownames = c(AMAR.rownames, i)
-	AMAR_Global = cbind.data.frame(AMAR_Global,cov[match(rownames(cov),rownames(AMAR_Global)),])
+	AMAR_Global = cbind.data.frame(AMAR_Global,cov[rownames(AMAR_Global),])
 	colnames(AMAR_Global) = AMAR.rownames
 }
 ```
