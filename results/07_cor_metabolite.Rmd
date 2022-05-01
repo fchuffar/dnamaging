@@ -1,0 +1,67 @@
+---
+title: "Code Hannum 2013"
+---
+title: "Correlation Metabolite/CpG"
+author: "Fabien Jossaud, Florent Chuffart"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+
+```{r include=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=TRUE, results="verbatim")
+```
+
+```{r params}
+source("params_default.R")
+```
+
+Launch params_cor and params_Lima
+
+```{r heatmap}
+
+probes = unlist(strsplit(markers$probes,split=";")) #CpG from ewas_combp
+Lima_P = Lima[,probes]
+rownames(metabolite) = sapply(strsplit(rownames(metabolite),"_"),"[[",1) #Remove extra number on individuals
+Lima_P = na.omit(Lima_P[rownames(metabolite),]) #Remove NA
+metabolite = metabolite[rownames(Lima_P),] #Take only common inidividuals between CpG dataset and meta dataset
+Met_Lima = cbind(metabolite[,-(1:2)],Lima_P) #Only metabolites
+Met_Lima = sapply(Met_Lima,as.numeric) #Transform all dataframe in numeric
+Met_Lima_cor = cor(Met_Lima) # Compute correlation
+Met_Lima_cor = Met_Lima_cor[colnames(metabolite)[-(1:2)],probes] #keep only Metabolite/CpG correlation
+pal <- colorRampPalette(RColorBrewer::brewer.pal(11, "RdYlGn"))(100) #Palette between red (negative correlation) and green (positive correlation)
+heatmap(Met_Lima_cor,col = pal)
+
+```
+
+```{r relevant correlation}
+Meta_cor <- c()
+CpG_cor <- c()
+cor_score <- c()
+for (i in 1:nrow(Met_Lima_cor)){ #Stock Metabolite and CpG with more than 0.5 correlation (neg or pos)
+  for (j in 1:ncol(Met_Lima_cor)){ 
+    if(abs(Met_Lima_cor[i,j]) > 0.5) {
+      Meta_cor <- c(Meta_cor, rownames(Met_Lima_cor)[i])
+      CpG_cor <- c(CpG_cor, colnames(Met_Lima_cor)[j])
+      cor_score <- c(cor_score, Met_Lima_cor[i,j])
+    }
+  }
+}
+Tab_corr = cbind(Meta_cor,CpG_cor,cor_score)
+nrow(Tab_corr)
+head(Tab_corr)
+```
+# Session Information
+
+```{r, results="verbatim"}
+sessionInfo()
+```
+
+
+
+
