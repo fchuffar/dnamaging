@@ -87,7 +87,7 @@ lambda.lim = c(log(min(lambda.lim))-0.5,log(max(lambda.lim))+0.5)
 RMSE.lim = c(floor(min(RMSE.lim)),ceiling(max(RMSE.lim)))
 nbprobes.lim = log(c(min(nbprobes.lim),max(nbprobes.lim)))
 col = RColorBrewer::brewer.pal(n= length(stat), name = "Set1")
-
+names(col) = alphas
 ## Plot
 
 layout(matrix(1:2,1),respect = TRUE)
@@ -95,18 +95,18 @@ layout(matrix(1:2,1),respect = TRUE)
 plot(0,0,col = 0, xlab="log(lambda)", ylab="RMSE", xlim = lambda.lim, ylim = RMSE.lim, main = "RMSE depending on alphas and lambdas")
 lapply(stat, function(it) { 
   cvrecap = it$cvrecap
-  points(log(cvrecap$lambda),cvrecap$RMSE)
-  abline(v = log(it$lambdamin))
+  points(log(cvrecap$lambda),cvrecap$RMSE,col = col[as.character(it$alpha)])
+  abline(v = log(it$lambdamin), col = col[as.character(it$alpha)])
   })
-#legend(x="topleft", legend=alphas, col=col, title="Alphas")
+legend(x="topleft", legend=names(col), fill=col, title="Alphas")
 
 plot(0,0,col = 0, xlab="log(lambda)", ylab="log(nbprobes)", xlim=lambda.lim, ylim=nbprobes.lim, main="nbprobes depending on alphas and lambdas" )
 lapply(stat, function(it) { 
   cvrecap = it$cvrecap
-  points(log(cvrecap$lambda),log(cvrecap$nbprobes))
-  abline(v = log(it$lambdamin))
+  points(log(cvrecap$lambda),log(cvrecap$nbprobes), col = col[as.character(it$alpha)])
+  abline(v = log(it$lambdamin), col = col[as.character(it$alpha)])
   })
-#legend(x="topleft", legend=alphas, col=col, title="Alphas")
+legend(x="topleft", legend=names(col), fill=col, title="Alphas")
 
 ## Plotting alpha and lambda.min predictions 
 
