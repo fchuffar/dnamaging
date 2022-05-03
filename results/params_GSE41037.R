@@ -1,6 +1,6 @@
-if (!exists("gse")) {gse = "GSE41037"}
-if (!exists("y_key")) {y_key = "age"}
-if (!exists("covariates")) {covariates = c("gender", "diseasestatus")}
-if (!exists("sample_blacklist")) {sample_blacklist = c("GSM1007327")}
-if (!exists("AMAR_covariates")) {covariates = c("gender", "diseasestatus")}
+gse = "GSE41037"
+y_key = "age"
+covariates = c("gender", "diseasestatus")
+sample_blacklist = c("GSM1007327")
+covariates = c("gender", "diseasestatus")
 
