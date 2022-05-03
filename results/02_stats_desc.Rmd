@@ -20,18 +20,11 @@ source("common.R")
 source("params_default.R")
 ```
 
-
 ```{r loading_data}
-if (!exists("Lima")){
-    df_filename = paste0("df_", gse, ".rds")
-    df = mreadRDS(df_filename)
-}
+df_filename = paste0("df_", gse, ".rds")
+df = mreadRDS(df_filename)
 ```
-```{r remove na}
-for (i in covariates){
-	df = df[complete.cases(df[[i]]), ]
-}
-```
+
 
 ```{r building_indexes}
 idx_samples = rownames(df)
@@ -69,7 +62,6 @@ for (cov in covariates) {
   # Age_F = df[[y_key]][which(df[[cov]] == "F")]
   # WTG = wilcox.test(Age_F,Age_H)
   # text(x = 1, y = 80, labels = paste0("Wilcoxon p-val =", WTG$p.value))
-
 
   f = paste0(y_key,"~",cov)
   beanplot::beanplot(formula(f), data=df, border=tmp_col, col=adjustcolor(c(1,1,1,1), alpha.f=.1), method="jitter", log="", ylab=y_key, xlab="", las=2, main=f)
