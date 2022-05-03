@@ -40,7 +40,7 @@ idx_clinicals = colnames(df)[1:(markers_start-1)]
 idx_cpg = colnames(df)[markers_start:ncol(df)]
 ```
 
-# Explained variable distribution
+# Explained variable
 
 ```{r}
 layout(1, respect=TRUE)
@@ -51,7 +51,7 @@ lines(density(df[[y_key]]))
 ```
 
 
-# covariates of interest distribution
+# Covariates
 
 ```{r}
 layout(matrix(1:2,1), respect=TRUE)
@@ -70,9 +70,11 @@ for (cov in covariates) {
   # WTG = wilcox.test(Age_F,Age_H)
   # text(x = 1, y = 80, labels = paste0("Wilcoxon p-val =", WTG$p.value))
 
-  beanplot::beanplot(formula(paste0(y_key,"~",cov)), data=df, border=tmp_col, col=adjustcolor(c(1,1,1,1), alpha.f=.1), method="jitter", log="",ylab="", main=y_key, las=2)
-  boxplot(formula(paste0(y_key,"~",cov)), data=df, col=adjustcolor(tmp_col, alpha.f=.5), ylab="", main=y_key, las=2)
-  beeswarm::beeswarm(formula(paste0(y_key,"~",cov)), data=df, ylab="", main=y_key, col=tmp_col, las=2)  
+
+  f = paste0(y_key,"~",cov)
+  beanplot::beanplot(formula(f), data=df, border=tmp_col, col=adjustcolor(c(1,1,1,1), alpha.f=.1), method="jitter", log="", ylab=y_key, xlab="", las=2, main=f)
+  boxplot(formula(f), data=df, col=adjustcolor(tmp_col, alpha.f=.5), ylab=y_key, xlab="", las=2, main=f)
+  beeswarm::beeswarm(formula(f), data=df, ylab=y_key, xlab="", col=tmp_col, las=2, main=f)  
 }
 ```
 
