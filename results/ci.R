@@ -20,7 +20,6 @@ gses = c(
 for (gse in gses) {
   rm(list = ls()[-which(ls()=="gse")])
   print(paste0("************ ", gse, " ************"))
-  source(paste0("params_", gse, ".R"))
   # rmarkdown::render("01_build_study_generic.Rmd", output_file=paste0("01_build_study_", gse, ".html"))
   rmarkdown::render("02_stats_desc.Rmd", output_file=paste0("02_stats_desc_", gse, ".html"))    
   rmarkdown::render("03_preproc.Rmd", output_file=paste0("03_preproc_", gse, ".html"))    

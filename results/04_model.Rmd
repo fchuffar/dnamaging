@@ -163,7 +163,7 @@ bs_probes
 
 - regarder le nombre de fois ou sortent chaques sondes qui sortent au moins une fois, pour chaques alpha (4 graphes) : 
 ```{r}
-for (i in 1:length(alpha)) {
+for (i in 1:length(alphas)) {
   probes = lapply(bs_probes, "[[", i)
   probes = unlist(probes)
   sort(table(probes))
