@@ -56,7 +56,7 @@ Xtest = data.matrix(Xtest)
 
 ## Cross validation for best lambda and alpha
 
-alphas = seq(0,1,0.5)
+alphas = seq(0.25,1,0.25)
 
 stat = lapply(alphas,function(alpha){ 
   
@@ -85,7 +85,7 @@ for (i in (1:length(stat))){
 }
 lambda.lim = c(log(min(lambda.lim))-0.5,log(max(lambda.lim))+0.5)
 RMSE.lim = c(floor(min(RMSE.lim)),ceiling(max(RMSE.lim)))
-nbprobes.lim = log(c(min(nbprobes.lim),max(nbprobes.lim)))
+nbprobes.lim = c(min(nbprobes.lim),max(nbprobes.lim))
 col = RColorBrewer::brewer.pal(n= length(stat), name = "Set1")
 names(col) = alphas
 ## Plot
@@ -100,10 +100,10 @@ lapply(stat, function(it) {
   })
 legend(x="topleft", legend=names(col), fill=col, title="Alphas")
 
-plot(0,0,col = 0, xlab="log(lambda)", ylab="log(nbprobes)", xlim=lambda.lim, ylim=nbprobes.lim, main="nbprobes depending on alphas and lambdas" )
+plot(0,0,col = 0, xlab="log(lambda)", ylab="nbprobes", xlim=lambda.lim, ylim=nbprobes.lim, main="nbprobes depending on alphas and lambdas" )
 lapply(stat, function(it) { 
   cvrecap = it$cvrecap
-  points(log(cvrecap$lambda),log(cvrecap$nbprobes), col = col[as.character(it$alpha)])
+  points(log(cvrecap$lambda),cvrecap$nbprobes, col = col[as.character(it$alpha)])
   abline(v = log(it$lambdamin), col = col[as.character(it$alpha)])
   })
 legend(x="topleft", legend=names(col), fill=col, title="Alphas")
