@@ -25,11 +25,6 @@ idx_samples = rownames(df)
 markers_start = grep("cg",colnames(df))[1]
 idx_clinicals = colnames(df)[1:(markers_start-1)]
 idx_cpg = colnames(df)[markers_start:ncol(df)]
-
-# nb_train = round(nrow(df)/2)
-# set.seed(1)
-# idx_train = sample(rownames(df),nb_train)
-# idx_test = setdiff(rownames(df),idx_train)
 ```
 
 

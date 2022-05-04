@@ -1,7 +1,5 @@
 ---
-title: "Code Hannum 2013"
----
-title: "Model"
+title: "Build prediction model"
 author: "Fabien Jossaud, Florent Chuffart"
 date: "`r Sys.Date()`"
 output: 
@@ -12,6 +10,7 @@ output:
     number_sections: true
 ---
 
+
 ```{r echo=FALSE}
 knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=TRUE, results="verbatim")
 source("common.R")
@@ -21,8 +20,6 @@ source("common.R")
 source("params_default.R")
 ```
 
-# We need to execute 03_preproc to have our df preprocess. 
-
 ```{r building_indexes}
 idx_samples = rownames(df)
 markers_start = grep("cg",colnames(df))[1]
@@ -30,116 +27,182 @@ idx_clinicals = colnames(df)[1:(markers_start-1)]
 idx_cpg = colnames(df)[markers_start:ncol(df)]
 ```
 
+# Prerequisits
+
+We need to execute 03_preproc to have our df preprocess. 
+
+
+# Define train and test samples
+
 ```{r train/test}
 Ntrain = floor(nrow(df)/2)
 set.seed(1)
-idx_train = sample(rownames(df),Ntrain)
-idx_test = setdiff(rownames(df),idx_train)
+idx_train = sample(rownames(df), Ntrain)
+idx_test = setdiff(rownames(df), idx_train)
 ```
 
 # Model 
 
 ```{r prepare model}
-
-Xtrain = df[idx_train,idx_cpg]
+tmp_mat_cpg = as.matrix(df[,idx_cpg])
+# head(tmp_mat_cpg)
+Xtrain = tmp_mat_cpg[idx_train,]
 Ytrain = df[idx_train,y_key]
-
-Xtest = df[idx_test,idx_cpg]
+Xtest = tmp_mat_cpg[idx_test,]
 Ytest = df[idx_test,y_key]
-
 ``` 
 
 ```{r glmnet model}
-
-Xtrain = data.matrix(Xtrain)
-Xtest = data.matrix(Xtest)
-
 ## Cross validation for best lambda and alpha
-
 alphas = seq(0.25,1,0.25)
 
-stat = lapply(alphas,function(alpha){ 
-  
-  modelcv = glmnet::cv.glmnet(Xtrain,Ytrain, alpha = alpha, type.measure = "mse")
+
+if (!exists("mcv_glmnet")) {mcv_glmnet = memoise::memoise(glmnet::cv.glmnet)}
+stat = lapply(alphas, function(alpha) {   
+  print(alpha)
+  modelcv = mcv_glmnet(Xtrain, Ytrain, alpha=alpha, type.measure="mse", standardize=TRUE)
   lambdamin = modelcv$lambda.min
-  cvrecap = data.frame(lambda = modelcv$lambda, RMSE = sqrt(modelcv$cvm), nbprobes = modelcv$nzero)
-  ret = list(
-    cvrecap = cvrecap, 
-    lambdamin = lambdamin,
-    # model = modelcv,
-    alpha = alpha
-  )
-  return(ret)
-  
-  })
+  cvrecap = data.frame(lambda=modelcv$lambda, rmse=sqrt(modelcv$cvm), nbprobes=modelcv$nzero, alpha=alpha)
+  return(cvrecap)  
+})
+stat = do.call(rbind, stat)
+```
 
-## Compute graph params 
+# Meta parameters
 
-lambda.lim = c()
-RMSE.lim = c()
-nbprobes.lim = c()
-for (i in (1:length(stat))){
-	lambda.lim = c(lambda.lim, min(stat[[i]]$cvrecap$lambda), max(stat[[i]]$cvrecap$lambda))
-	RMSE.lim = c(RMSE.lim, min(stat[[i]]$cvrecap$RMSE), max(stat[[i]]$cvrecap$RMSE))
-	nbprobes.lim = c(nbprobes.lim, min(stat[[i]]$cvrecap$nbprobes[stat[[i]]$cvrecap$nbprobes > 0]), max(stat[[i]]$cvrecap$nbprobes))
-}
-lambda.lim = c(log(min(lambda.lim))-0.5,log(max(lambda.lim))+0.5)
-RMSE.lim = c(floor(min(RMSE.lim)),ceiling(max(RMSE.lim)))
-nbprobes.lim = c(min(nbprobes.lim),max(nbprobes.lim))
-col = RColorBrewer::brewer.pal(n= length(stat), name = "Set1")
-names(col) = alphas
+```{r meta parameters}
 ## Plot
-
 layout(matrix(1:2,1),respect = TRUE)
+plot(0, 0, col=0, xlab="log10(lambda)", ylab="RMSE", xlim=log10(range(stat$lambda)), ylim=range(stat$rmse))
+lapply(alphas, function(alpha) { 
+  cvrecap = stat[stat$alpha==alpha,]
+  points(log10(cvrecap$lambda), cvrecap$rmse, col=which(alpha==alphas))
+  abline(v=log10(cvrecap[cvrecap$rmse==min(cvrecap$rmse),]$lambda), col=which(alpha==alphas))
+})
+legend(x="topleft", legend=alphas, fill=1:length(alphas), title="Alpha")
+plot(0, 0, col=0, xlab="log10(lambda)", ylab="nbprobes", xlim=log10(range(stat$lambda)), ylim=range(stat$nbprobes))
+lapply(alphas, function(alpha) { 
+  cvrecap = stat[stat$alpha==alpha,]
+  points(log10(cvrecap$lambda), cvrecap$nbprobes, col=which(alpha==alphas))
+  abline(v=log10(cvrecap[cvrecap$rmse==min(cvrecap$rmse),]$lambda), col=which(alpha==alphas))
+})
+legend(x="topright", legend=alphas, fill=1:length(alphas), title="Alpha")
+```
 
-plot(0,0,col = 0, xlab="log(lambda)", ylab="RMSE", xlim = lambda.lim, ylim = RMSE.lim, main = "RMSE depending on alphas and lambdas")
-lapply(stat, function(it) { 
-  cvrecap = it$cvrecap
-  points(log(cvrecap$lambda),cvrecap$RMSE,col = col[as.character(it$alpha)])
-  abline(v = log(it$lambdamin), col = col[as.character(it$alpha)])
+## Model evaluation
+
+```{r model eval}
+if (!exists("mglmnet")) {
+  mglmnet = memoise::memoise(function(...) {
+    glmnet::glmnet(...)
   })
-legend(x="topleft", legend=names(col), fill=col, title="Alphas")
-
-plot(0,0,col = 0, xlab="log(lambda)", ylab="nbprobes", xlim=lambda.lim, ylim=nbprobes.lim, main="nbprobes depending on alphas and lambdas" )
-lapply(stat, function(it) { 
-  cvrecap = it$cvrecap
-  points(log(cvrecap$lambda),cvrecap$nbprobes, col = col[as.character(it$alpha)])
-  abline(v = log(it$lambdamin), col = col[as.character(it$alpha)])
-  })
-legend(x="topleft", legend=names(col), fill=col, title="Alphas")
-
-## Plotting alpha and lambda.min predictions 
+}
 
 layout(matrix(1:2,1), respect=TRUE)
-RMSE_pred = lapply(stat, function(it) {
-  
-  model = glmnet::glmnet(Xtrain,Ytrain, alpha = it$alpha, lambda = it$lambdamin, standardize = TRUE) 
+# layout(matrix(1:8,2), respect=TRUE)
+rmse_pred = lapply(alphas, function(alpha) { 
+  # print(alpha)
+  cvrecap = stat[stat$alpha==alpha,]
+  lambda = cvrecap[cvrecap$rmse==min(cvrecap$rmse),]$lambda
+  m = mglmnet(Xtrain, Ytrain, alpha=alpha, lambda=lambda, standardize=TRUE) 
                          
-  predTr = predict(model,Xtrain)
-  RMSETr = signif(sqrt(mean((Ytrain - predTr)^2, na.rm = TRUE)),3)
-  plot(predTr, Ytrain, xlab="Methylomic Age", ylab="Chronological Age", main = paste0("Pred Train set alpha = ",it$alpha,", RMSE = ", RMSETr))
+  predTr = predict(m, Xtrain)
+  rmseTr = signif(sqrt(mean((Ytrain - predTr)^2, na.rm=TRUE)),3)
+  plot(predTr, Ytrain, xlab="Predicted Age", ylab="Chronological Age", main = paste0("Train alpha: ",alpha,", rmse: ", rmseTr))
 
-  predTe = predict(model,Xtest)
-  RMSETe = signif(sqrt(mean((Ytest - predTe)^2, na.rm = TRUE)),3)
-  plot(predTe, Ytest, xlab="Methylomic Age", ylab="Chronological Age", main = paste0("Pred Test set alpha = ",it$alpha,", RMSE = ", RMSETe))  
+  predTe = predict(m, Xtest)
+  rmseTe = signif(sqrt(mean((Ytest - predTe)^2, na.rm = TRUE)),3)
+  plot(predTe, Ytest, xlab="Predicted Age", ylab="Chronological Age", main = paste0("Test alpha: ",alpha,", rmse: ", rmseTe))  
   
   ret = list(
-  	alpha = it$alpha,
-  	lambda = it$lambdamin,
+  	alpha = alpha,
+  	lambda = lambda,
   	predTr = predTr,
   	predTe = predTe,
-  	RMSETr = RMSETr,
-  	RMSETe = RMSETe
+  	rmseTr = rmseTr,
+  	rmseTe = rmseTe
   )
   return(ret)
 })
-  
 ```
 
 
 
 
+# Bootstrap
 
+```{r boostrap}
+## bootstrap Cross validation for best lambda and alpha
+n_boot = 30
+
+
+bs_probes = epimedtools::monitored_apply(mod=1, t(t(1:n_boot)), 1, function(i) { # Bootstrap sample creation
+  set.seed(i)
+  boot_ind_F = sample(idx_train, ceiling(2/3 * length(idx_train)), replace=FALSE)
+  boot_ind_T = sample(idx_train, floor(  1/3 * length(idx_train)), replace=TRUE)
+  boot_ind = c(boot_ind_F,boot_ind_T)
+  Xtrain = tmp_mat_cpg[boot_ind,]
+  Ytrain = df[boot_ind,y_key]
+
+  foo = lapply(alphas, function(alpha) {
+    cvrecap = stat[stat$alpha==alpha,]
+    lambda = cvrecap[cvrecap$rmse==min(cvrecap$rmse),]$lambda
+    # m = glmnet::glmnet(Xtrain, Ytrain, alpha=alpha, lambda=lambda, standardize=TRUE)
+    m = mglmnet(Xtrain, Ytrain, alpha=alpha, lambda=lambda, standardize=TRUE)
+    probes = rownames(m$beta)[m$beta@i+1]
+    return(probes)
+  })
+  names(foo) = paste0("alpha",alphas)
+  foo
+})
+
+bs_probes
+```
+
+
+
+- regarder le nombre de fois ou sortent chaques sondes qui sortent au moins une fois, pour chaques alpha (4 graphes) : 
+```{r}
+for (i in 1:length(alpha)) {
+  probes = lapply(bs_probes, "[[", i)
+  probes = unlist(probes)
+  sort(table(probes))
+  tmp_tab = table(probes)
+  names(tmp_tab)[tmp_tab >= n_boot/2]
+  barplot(table(table(probes)), las=2)
+}
+```
+- regarder le nombre de fois ou sortent les 71 sondes de Hannum, pour chaques alpha (4 graphes) 
+```{r}
+# adapt code above
+```
+
+
+
+
+- regarder le nombre de sondes qui sortent >= 50% pour nbs = 2, 4, ... n_boot, pour chaques alpha (4 graphes)
+
+
+Tu see later : 
+- regarder le nombre de sondes qui sortent >= 50% pour nbs = 2, 4, ... n_boot, with grid search on alphas and lambda (4 graphes)
+
+
+
+
+
+
+
+
+
+
+
+
+
+# plot nb_probes~n | alpha
+
+# barplot table plot nb_probes~n | alpha
+
+````
 
 
 # Session Information
