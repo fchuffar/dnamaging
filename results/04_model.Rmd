@@ -95,7 +95,7 @@ legend(x="topright", legend=alphas, fill=1:length(alphas), title="Alpha")
 if (!exists("mglmnet")) {
   mglmnet = memoise::memoise(function(...) {
     glmnet::glmnet(...)
-  })
+  }, cache = cachem::cache_mem(max_size = 10*1024 * 1024^2))
 }
 
 layout(matrix(1:2,1), respect=TRUE)
@@ -163,13 +163,14 @@ bs_probes
 
 - regarder le nombre de fois ou sortent chaques sondes qui sortent au moins une fois, pour chaques alpha (4 graphes) : 
 ```{r}
+layout(matrix(1:2,1),respect = TRUE)
 for (i in 1:length(alphas)) {
   probes = lapply(bs_probes, "[[", i)
   probes = unlist(probes)
-  sort(table(probes))
+  # sort(table(probes))
   tmp_tab = table(probes)
   names(tmp_tab)[tmp_tab >= n_boot/2]
-  barplot(table(table(probes)), las=2)
+  barplot(table(table(probes)), las=2, main=paste0("alpha: ", alphas[i]))
 }
 ```
 - regarder le nombre de fois ou sortent les 71 sondes de Hannum, pour chaques alpha (4 graphes) 
