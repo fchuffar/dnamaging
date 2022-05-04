@@ -1,5 +1,5 @@
 ---
-title: "Descriptive Statistics"
+title: "Descriptive statistics"
 author: "Fabien Jossaud, Florent Chuffart"
 date: "`r Sys.Date()`"
 output: 
@@ -19,6 +19,7 @@ source("common.R")
 ```{r params}
 source("params_default.R")
 ```
+
 
 ```{r loading_data}
 df_filename = paste0("df_", gse, ".rds")

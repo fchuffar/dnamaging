@@ -1,5 +1,5 @@
 ---
-title: "Preprocessing of metrhylation data"
+title: "Preprocessing of methylation data"
 author: "Fabien Jossaud, Florent Chuffart"
 date: "`r Sys.Date()`"
 output: 
@@ -39,6 +39,8 @@ idx_cpg = colnames(df)[markers_start:ncol(df)]
 
 # Missing values
 
+**TODO Fabien**, adding description of what you are doing
+
 ```{r missing values, results="verbatim"}
 if (sum(is.na(df[,idx_cpg]))>0) {
   # Looking how much got more than 5% missing values
@@ -48,7 +50,7 @@ if (sum(is.na(df[,idx_cpg]))>0) {
   idx_samples = names(prop_na_row)[prop_na_row<.05]
   prop_na_col =  apply_func(is.na(df[idx_samples,idx_cpg]), 2, sum) / nrow(df)
   sum(prop_na_col>=.05)
-  idx_cpg     = names(prop_na_col)[prop_na_col<.05]
+  idx_cpg = names(prop_na_col)[prop_na_col<.05]
 
   print(paste0("#samples removed: ", sum(prop_na_row>=.05)))
   print(paste0("#probes removed: ", sum(prop_na_col>=.05)))
@@ -61,11 +63,16 @@ if (sum(is.na(df[,idx_cpg]))>0) {
   dknn = dknnf$data
   head(dknn[,1:6])
   df = cbind(df[idx_samples,idx_clinicals],dknn[idx_samples,idx_cpg])
-}else { print("# Aucune valeur manquantes") }
+} else {
+  print("# Aucune valeur manquantes") 
+}
 ```
 
 
+
 ## Outliers 
+
+**TODO Fabien**, adding description of what you are doing
 
 ```{r acp, results="verbatim"}
 padj = 0
