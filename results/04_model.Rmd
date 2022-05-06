@@ -20,6 +20,11 @@ source("common.R")
 source("params_default.R")
 ```
 
+# Prerequisits
+
+We need to execute 03_preproc to have our df preprocess. 
+
+
 ```{r building_indexes}
 idx_samples = rownames(df)
 markers_start = grep("cg",colnames(df))[1]
@@ -27,23 +32,14 @@ idx_clinicals = colnames(df)[1:(markers_start-1)]
 idx_cpg = colnames(df)[markers_start:ncol(df)]
 ```
 
-# Prerequisits
-
-We need to execute 03_preproc to have our df preprocess. 
-
-
 # Define train and test samples
 
-```{r train/test}
+```{r train test sets}
 Ntrain = floor(nrow(df)/2)
 set.seed(1)
 idx_train = sample(rownames(df), Ntrain)
 idx_test = setdiff(rownames(df), idx_train)
-```
 
-# Model 
-
-```{r prepare model}
 tmp_mat_cpg = as.matrix(df[,idx_cpg])
 # head(tmp_mat_cpg)
 Xtrain = tmp_mat_cpg[idx_train,]
@@ -51,6 +47,9 @@ Ytrain = df[idx_train,y_key]
 Xtest = tmp_mat_cpg[idx_test,]
 Ytest = df[idx_test,y_key]
 ``` 
+
+
+# Model 
 
 ```{r glmnet model}
 ## Cross validation for best lambda and alpha
@@ -155,8 +154,6 @@ bs_probes = epimedtools::monitored_apply(mod=1, t(t(1:n_boot)), 1, function(i) {
   names(foo) = paste0("alpha",alphas)
   foo
 })
-
-bs_probes
 ```
 
 

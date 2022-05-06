@@ -1,7 +1,5 @@
 ---
-title: "Code Hannum 2013"
----
-title: "Horvath and Hannum method"
+title: "Model evaluation (comparison with Horvath and Hannum)"
 author: "Fabien Jossaud, Florent Chuffart"
 date: "`r Sys.Date()`"
 output: 
@@ -13,7 +11,7 @@ output:
 ---
 
 
-```{r include=FALSE}
+```{r echo=FALSE}
 knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=TRUE, results="verbatim")
 source("common.R")
 ```
@@ -22,66 +20,93 @@ source("common.R")
 source("params_default.R")
 ```
 
+# Prerequisits
+
+We need to execute 03_preproc to have our df preprocess. 
+We need to execute 04_modelpreproc to have ...
+
+```{r building_indexes}
+idx_samples = rownames(df)
+markers_start = grep("cg",colnames(df))[1]
+idx_clinicals = colnames(df)[1:(markers_start-1)]
+idx_cpg = colnames(df)[markers_start:ncol(df)]
+```
+
+# Define train and test samples
+
+```{r train test sets}
+Ntrain = floor(nrow(df)/2)
+set.seed(1)
+idx_train = sample(rownames(df), Ntrain)
+idx_test = setdiff(rownames(df), idx_train)
+
+tmp_mat_cpg = as.matrix(df[,idx_cpg])
+# head(tmp_mat_cpg)
+Xtrain = tmp_mat_cpg[idx_train,]
+Ytrain = df[idx_train,y_key]
+Xtest = tmp_mat_cpg[idx_test,]
+Ytest = df[idx_test,y_key]
+``` 
+
+
 # Call data (Need to be modified to generalize and make it at a variable)
 
+ 
+```{r methylclock_models}
 
-```{r methylclock}
+layout(matrix(1:2,1),respect = TRUE)
 
-XtestMC = t(Xtest)
-XtrainMC = t(Xtrain)
-
-modelHOTr = methylclock::DNAmAge(XtrainMC,age=Ytrain,cell.count = FALSE, clocks = "Hannum")
+if (!exists("mmethylclock_DNAmAge")) {mmethylclock_DNAmAge = memoise::memoise(methylclock::DNAmAge)}
+modelHOTr = mmethylclock_DNAmAge(t(Xtrain), age=Ytrain, cell.count=FALSE, clocks="Hannum")
+modelHO = mmethylclock_DNAmAge(t(Xtest),age=Ytest,cell.count = FALSE, clocks = "Hannum")
 
 if(sum(is.na(modelHOTr$Hannum)) == 0){
-	par(mfrow=c(2,2))
+  rmseHOTr = signif(sqrt(mean((modelHOTr$age - modelHOTr$Hannum)^2)),3)
+  rmseHO = signif(sqrt(mean((modelHO$age - modelHO$Hannum)^2)),3)
 	
-	RMSEHOTr = signif(sqrt(mean((modelHOTr$age - modelHOTr$Hannum)^2)),3)
-	plot(modelHOTr$Hannum, modelHOTr$age, xlab="Methylomic Age", ylab="Chronological Age", main=paste0("Pred with Hannum Method on Train Set, RMSE = ",RMSEHOTr))
+	plot(modelHOTr$Hannum, modelHOTr$age, xlab="Methylomic Age", ylab="Chronological Age", main=paste0("Pred with Hannum Method on Train Set, rmse = ",rmseHOTr))
+	plot(modelHO$Hannum, modelHO$age, xlab="Methylomic Age", ylab="Chronological Age", main=paste0("Pred with Hannum Method on Test Set, rmse = ",rmseHO))
 
-	modelHO = methylclock::DNAmAge(XtestMC,age=Ytest,cell.count = FALSE, clocks = "Hannum")
-	RMSEHO = signif(sqrt(mean((modelHO$age - modelHO$Hannum)^2)),3)
-	plot(modelHO$Hannum, modelHO$age, xlab="Methylomic Age", ylab="Chronological Age", main=paste0("Pred with Hannum Method on Test Set, RMSE = ",RMSEHO))
 } else{
-	RMSEHOTr = NA
-	RMSEHO = NA
+	rmseHOTr = NA
+	rmseHO = NA
 }
 
-modelHOrTr = methylclock::DNAmAge(XtrainMC,age=Ytrain,cell.count = FALSE, clocks = "Horvath")
+modelHOrTr = mmethylclock_DNAmAge(t(Xtrain),age=Ytrain,cell.count = FALSE, clocks = "Horvath")
+modelHOr = mmethylclock_DNAmAge(t(Xtest),age=Ytest,cell.count = FALSE, clocks = "Horvath")
 	
 if(sum(is.na(modelHOrTr$Horvath)) == 0){
-	if(sum(is.na(modelHOTr$Hannum)) != 0){
-		par(mfrow=c(2,1))
-	}
-	
-	RMSEHOrTr = signif(sqrt(mean((modelHOrTr$age - modelHOrTr$Horvath)^2)),3)
-	plot(modelHOrTr$Horvath, modelHOrTr$age, xlab="Methylomic Age", ylab="Chronological Age", main=paste0("Pred with Horvath Method on Train Set, RMSE = ",RMSEHOrTr))
+		rmseHOrTr = signif(sqrt(mean((modelHOrTr$age - modelHOrTr$Horvath)^2)),3)
+	rmseHOr = signif(sqrt(mean((modelHOr$age - modelHOr$Horvath)^2)),3)
 
-	modelHOr = methylclock::DNAmAge(XtestMC,age=Ytest,cell.count = FALSE, clocks = "Horvath")
-	RMSEHOr = signif(sqrt(mean((modelHOr$age - modelHOr$Horvath)^2)),3)
-	plot(modelHOr$Horvath, modelHOr$age, xlab="Methylomic Age", ylab="Chronological Age", main=paste0("Pred with Horvath Method on Test Set, RMSE = ",RMSEHOr))
+	plot(modelHOrTr$Horvath, modelHOrTr$age, xlab="Methylomic Age", ylab="Chronological Age", main=paste0("Pred with Horvath Method on Train Set, rmse = ",rmseHOrTr))
+	plot(modelHOr$Horvath, modelHOr$age, xlab="Methylomic Age", ylab="Chronological Age", main=paste0("Pred with Horvath Method on Test Set, rmse = ",rmseHOr))
 } else{
-	RMSEHOrTr = NA
-	RMSEHOr = NA
+	rmseHOrTr = NA
+	rmseHOr = NA
 }
 
-colnames.RMSE = c()
-RMSE_Tr = c()
-RMSE_Te = c()
-for (i in 1:length(RMSE_pred)){ 
-	RMSE_Tr = c(RMSE_Tr, RMSE_pred[[i]]$RMSETr)
-	RMSE_Te = c(RMSE_Te, RMSE_pred[[i]]$RMSETe)
-	colnames.RMSE = c(colnames.RMSE, paste0("Regression alpha = ",stat[[i]]$alpha))
+```
+
+```{r methylclock_results}
+colnames.rmse = c()
+rmse_Tr = c()
+rmse_Te = c()
+for (i in 1:length(rmse_pred)){ 
+	rmse_Tr = c(rmse_Tr, rmse_pred[[i]]$rmseTr)
+	rmse_Te = c(rmse_Te, rmse_pred[[i]]$rmseTe)
+	colnames.rmse = c(colnames.rmse, paste0("Regression alpha = ",alphas[1]))
 }
-RMSE_Tr = c(RMSE_Tr, RMSEHOTr, RMSEHOrTr)
-RMSE_Te = c(RMSE_Te, RMSEHO, RMSEHOr)
-colnames.RMSE = c(colnames.RMSE, "Hannum method", "Horvath method")
-rownames.RMSE = c("Train Set", "Test Set")
+rmse_Tr = c(rmse_Tr, rmseHOTr, rmseHOrTr)
+rmse_Te = c(rmse_Te, rmseHO, rmseHOr)
+colnames.rmse = c(colnames.rmse, "Hannum method", "Horvath method")
+rownames.rmse = c("Train Set", "Test Set")
 
-RMSE_compar = as.data.frame(rbind(RMSE_Tr,RMSE_Te))
-colnames(RMSE_compar) = colnames.RMSE
-rownames(RMSE_compar) = rownames.RMSE
+rmse_compar = as.data.frame(rbind(rmse_Tr,rmse_Te))
+colnames(rmse_compar) = colnames.rmse
+rownames(rmse_compar) = rownames.rmse
 
-RMSE_compar
+rmse_compar
 
 ```
 
