@@ -21,6 +21,7 @@ source("params_default.R")
 ```
 
 ```{r building_indexes}
+start_time = Sys.time()
 idx_samples = rownames(df)
 markers_start = grep("cg",colnames(df))[1]
 idx_clinicals = colnames(df)[1:(markers_start-1)]
@@ -133,7 +134,7 @@ rmse_pred = lapply(alphas, function(alpha) {
 
 ```{r boostrap}
 ## bootstrap Cross validation for best lambda and alpha
-n_boot = 30
+n_boot = 300
 
 
 bs_probes = epimedtools::monitored_apply(mod=1, t(t(1:n_boot)), 1, function(i) { # Bootstrap sample creation
@@ -156,33 +157,59 @@ bs_probes = epimedtools::monitored_apply(mod=1, t(t(1:n_boot)), 1, function(i) {
   foo
 })
 
-bs_probes
 ```
 
 
 
 - regarder le nombre de fois ou sortent chaques sondes qui sortent au moins une fois, pour chaques alpha (4 graphes) : 
-```{r}
+```{r bootstrap distribution}
 layout(matrix(1:2,1),respect = TRUE)
 for (i in 1:length(alphas)) {
   probes = lapply(bs_probes, "[[", i)
   probes = unlist(probes)
-  # sort(table(probes))
   tmp_tab = table(probes)
   names(tmp_tab)[tmp_tab >= n_boot/2]
   barplot(table(table(probes)), las=2, main=paste0("alpha: ", alphas[i]))
 }
 ```
-- regarder le nombre de fois ou sortent les 71 sondes de Hannum, pour chaques alpha (4 graphes) 
-```{r}
-# adapt code above
+
+ Number of times when Hannum CpG are in the bootstrap model for each alpha : 
+
+```{r hannum distribution}
+layout(matrix(1:2,1),respect = TRUE)
+Hannum_Coeff <- methylclockData::get_coefHannum()
+for (i in 1:length(alphas)) {
+  probes = lapply(bs_probes, "[[", i)
+  probes = unlist(probes)
+  tmp_tab = table(probes)
+  tmp_tab_Hannum = tmp_tab[Hannum_Coeff$CpGmarker]
+  tmp_tab_Hannum[is.na(tmp_tab_Hannum)] = 0
+  print(names(tmp_tab_Hannum)[tmp_tab_Hannum >= n_boot/2])
+  barplot(table(tmp_tab_Hannum), las=2, main=paste0("alpha: ", alphas[i]))
+}
 ```
-
-
-
 
 - regarder le nombre de sondes qui sortent >= 50% pour nbs = 2, 4, ... n_boot, pour chaques alpha (4 graphes)
 
+```{r probes number}
+layout(matrix(1:2,1),respect = TRUE)
+x = seq(2,n_boot,2) 
+for (i in 1:length(alphas)){
+    nb_probes = lapply(x, function(nb_boot){ 
+      tmp_probes = lapply(bs_probes[1:nb_boot], "[[", i)
+      tmp_probes = unlist(tmp_probes)
+      tmp_tab = table(tmp_probes)
+      tmp_boot_cpg = names(tmp_tab)[tmp_tab >= nb_boot/2]
+      return(length(tmp_boot_cpg))
+    })
+    nb_probes = unlist(nb_probes)
+    plot(x, nb_probes, type = "l", main = paste0("alpha: ",alphas[i]))
+    tab_probes = table(nb_probes)
+    barplot(tab_probes)
+}
+end_time = Sys.time()
+print(paste0("Execution time for vignette : ", end_time - start_time))
+```
 
 Tu see later : 
 - regarder le nombre de sondes qui sortent >= 50% pour nbs = 2, 4, ... n_boot, with grid search on alphas and lambda (4 graphes)
