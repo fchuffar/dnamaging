@@ -20,26 +20,31 @@ source("common.R")
 source("params_default.R")
 ```
 
-# Prerequisits
-
-We need to execute 03_preproc to have our df preprocess. 
-
-
 ```{r building_indexes}
+start_time = Sys.time()
 idx_samples = rownames(df)
 markers_start = grep("cg",colnames(df))[1]
 idx_clinicals = colnames(df)[1:(markers_start-1)]
 idx_cpg = colnames(df)[markers_start:ncol(df)]
 ```
 
+# Prerequisits
+
+We need to execute 03_preproc to have our df preprocess. 
+
+
 # Define train and test samples
 
-```{r train test sets}
+```{r train/test}
 Ntrain = floor(nrow(df)/2)
 set.seed(1)
 idx_train = sample(rownames(df), Ntrain)
 idx_test = setdiff(rownames(df), idx_train)
+```
 
+# Model 
+
+```{r prepare model}
 tmp_mat_cpg = as.matrix(df[,idx_cpg])
 # head(tmp_mat_cpg)
 Xtrain = tmp_mat_cpg[idx_train,]
@@ -48,12 +53,9 @@ Xtest = tmp_mat_cpg[idx_test,]
 Ytest = df[idx_test,y_key]
 ``` 
 
-
-# Model 
-
 ```{r glmnet model}
 ## Cross validation for best lambda and alpha
-alphas = seq(0.25,1,0.25)
+alphas = c(0.1, 0.25, 0.5, 1)
 
 
 if (!exists("mcv_glmnet")) {mcv_glmnet = memoise::memoise(glmnet::cv.glmnet)}
@@ -91,38 +93,56 @@ legend(x="topright", legend=alphas, fill=1:length(alphas), title="Alpha")
 ## Model evaluation
 
 ```{r model eval}
+model_params = lapply(alphas, function(alpha, stat=stat) { 
+  cvrecap = stat[stat$alpha==alpha,]
+  lambda = cvrecap[cvrecap$rmse==min(cvrecap$rmse),]$lambda[1]
+  ret = list(alpha=alpha, lambda=lambda)
+  return(ret)
+}, stat=stat)
+
 if (!exists("mglmnet")) {
   mglmnet = memoise::memoise(function(...) {
     glmnet::glmnet(...)
   }, cache = cachem::cache_mem(max_size = 10*1024 * 1024^2))
 }
 
-layout(matrix(1:2,1), respect=TRUE)
-# layout(matrix(1:8,2), respect=TRUE)
-rmse_pred = lapply(alphas, function(alpha) { 
-  # print(alpha)
-  cvrecap = stat[stat$alpha==alpha,]
-  lambda = cvrecap[cvrecap$rmse==min(cvrecap$rmse),]$lambda
+model_factory_glmnet = function(Xtrain, Ytrain, alpha=alpha, lambda=lambda) {
   m = mglmnet(Xtrain, Ytrain, alpha=alpha, lambda=lambda, standardize=TRUE) 
+  m$name = paste0("glmnet_", signif(alpha,3), "_", signif(lambda,3))
+  return(m)
+}
+
+models = lapply(model_params, function(m_params, Xtrain=Xtrain, Ytrain=Ytrain) { 
+  print(m_params)
+  alpha = m_params$alpha
+  lambda = m_params$lambda
+  m = model_factory_glmnet(Xtrain, Ytrain, alpha=alpha, lambda=lambda) 
+  return(m)  
+}, Xtrain=Xtrain, Ytrain=Ytrain)
+names(models) = sapply(models, "[[", "name")
+
+layout(matrix(1:2,1), respect=TRUE)
+layout(matrix(1:8,2), respect=TRUE)
+foo = lapply(models, function(m, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytest=Ytest) { 
                          
   predTr = predict(m, Xtrain)
-  rmseTr = signif(sqrt(mean((Ytrain - predTr)^2, na.rm=TRUE)),3)
-  plot(predTr, Ytrain, xlab="Predicted Age", ylab="Chronological Age", main = paste0("Train alpha: ",alpha,", rmse: ", rmseTr))
-
+  rmseTr = sqrt(mean((Ytrain - predTr)^2))
   predTe = predict(m, Xtest)
-  rmseTe = signif(sqrt(mean((Ytest - predTe)^2, na.rm = TRUE)),3)
-  plot(predTe, Ytest, xlab="Predicted Age", ylab="Chronological Age", main = paste0("Test alpha: ",alpha,", rmse: ", rmseTe))  
-  
-  ret = list(
-  	alpha = alpha,
-  	lambda = lambda,
-  	predTr = predTr,
-  	predTe = predTe,
-  	rmseTr = rmseTr,
-  	rmseTe = rmseTe
-  )
-  return(ret)
-})
+  rmseTe = sqrt(mean((Ytest - predTe)^2))
+
+  plot(predTr, Ytrain, xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " train rmse: ", signif(rmseTr, 3)))
+  plot(predTe, Ytest , xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " test  rmse: ", signif(rmseTe, 3)))  
+}, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytest=Ytest)
+```
+
+
+```{r other_models}
+# model_params = list(
+#   list(alpha=0.25, lambda=2),
+#   list(alpha=0.25, lambda=1),
+#   list(alpha=0.25, lambda=0.1),
+#   NULL
+# )
 ```
 
 
@@ -132,75 +152,99 @@ rmse_pred = lapply(alphas, function(alpha) {
 
 ```{r boostrap}
 ## bootstrap Cross validation for best lambda and alpha
-n_boot = 30
+n_boot = 50
 
 
 bs_probes = epimedtools::monitored_apply(mod=1, t(t(1:n_boot)), 1, function(i) { # Bootstrap sample creation
   set.seed(i)
-  boot_ind_F = sample(idx_train, ceiling(2/3 * length(idx_train)), replace=FALSE)
-  boot_ind_T = sample(idx_train, floor(  1/3 * length(idx_train)), replace=TRUE)
-  boot_ind = c(boot_ind_F,boot_ind_T)
+  boot_ind = c(
+    sample(idx_train, ceiling(2/3 * length(idx_train)), replace=FALSE),
+    sample(idx_train, floor(  1/3 * length(idx_train)), replace=TRUE)
+  )
   Xtrain = tmp_mat_cpg[boot_ind,]
   Ytrain = df[boot_ind,y_key]
 
-  foo = lapply(alphas, function(alpha) {
-    cvrecap = stat[stat$alpha==alpha,]
-    lambda = cvrecap[cvrecap$rmse==min(cvrecap$rmse),]$lambda
-    # m = glmnet::glmnet(Xtrain, Ytrain, alpha=alpha, lambda=lambda, standardize=TRUE)
-    m = mglmnet(Xtrain, Ytrain, alpha=alpha, lambda=lambda, standardize=TRUE)
+  models = lapply(model_params, function(m_params, Xtrain=Xtrain, Ytrain=Ytrain) { 
+    # print(m_params)
+    alpha = m_params$alpha
+    lambda = m_params$lambda
+    m = model_factory_glmnet(Xtrain, Ytrain, alpha=alpha, lambda=lambda) 
+    return(m)  
+  }, Xtrain=Xtrain, Ytrain=Ytrain)
+
+  probes = lapply(models, function(m, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytest=Ytest) { 
     probes = rownames(m$beta)[m$beta@i+1]
     return(probes)
   })
-  names(foo) = paste0("alpha",alphas)
-  foo
+  names(probes) = names(models)
+  probes
 })
 ```
 
 
+For each alpha, we see the occurence of each probes across bootstraps.
 
-- regarder le nombre de fois ou sortent chaques sondes qui sortent au moins une fois, pour chaques alpha (4 graphes) : 
-```{r}
+```{r bootstrap distribution}
 layout(matrix(1:2,1),respect = TRUE)
+# layout(matrix(1:4,1),respect = TRUE)
 for (i in 1:length(alphas)) {
   probes = lapply(bs_probes, "[[", i)
   probes = unlist(probes)
-  # sort(table(probes))
   tmp_tab = table(probes)
   names(tmp_tab)[tmp_tab >= n_boot/2]
   barplot(table(table(probes)), las=2, main=paste0("alpha: ", alphas[i]))
 }
 ```
-- regarder le nombre de fois ou sortent les 71 sondes de Hannum, pour chaques alpha (4 graphes) 
-```{r}
-# adapt code above
+
+For each alpha, we see the occurence of Hannum probes across bootstraps.
+
+```{r hannum distribution}
+layout(matrix(1:2,1),respect = TRUE)
+Hannum_Coeff = methylclockData::get_coefHannum()
+foo = lapply(1:length(alphas), function(i) {
+  probes = lapply(bs_probes, "[[", i)
+  probes = unlist(probes)
+  tmp_tab = table(probes)
+  tmp_tab_Hannum = tmp_tab[Hannum_Coeff$CpGmarker]
+  tmp_tab_Hannum[is.na(tmp_tab_Hannum)] = 0  
+  barplot(table(tmp_tab_Hannum), las=2, main=paste0("alpha=", alphas[i], ": ", sum(tmp_tab_Hannum >= n_boot/2), " probes."))
+  ret = names(tmp_tab_Hannum)[tmp_tab_Hannum >= n_boot/2]
+  return(ret)
+})
+unique(unlist(foo))
+```
+
+
+Follow the number of retained probes along of the bootstraps process
+
+```{r probes number}
+layout(matrix(1:2,1),respect = TRUE)
+x = seq(2,n_boot,2) 
+for (i in 1:length(alphas)){
+    tmp_probes = lapply(x, function(nb_boot){ 
+      tmp_probes = lapply(bs_probes[1:nb_boot], "[[", i)
+      tmp_probes = unlist(tmp_probes)
+      tmp_tab = table(tmp_probes)
+      tmp_boot_cpg = names(tmp_tab)[tmp_tab >= nb_boot/2]
+      return(tmp_boot_cpg)
+    })
+    # barplot(sort(table(unlist(tmp_probes))))
+    nb_probes = unlist(sapply(tmp_probes, length))
+    plot(x, nb_probes, type = "l", main = paste0("alpha: ",alphas[i]))
+    tab_probes = table(nb_probes)
+    barplot(tab_probes, las=2)
+}
+end_time = Sys.time()
+print(paste0("Execution time for vignette : ", end_time - start_time))
 ```
 
 
 
+```{r}
+end_time = Sys.time()
+print(paste0("Execution time for vignette : ", end_time - start_time))
+```
 
-- regarder le nombre de sondes qui sortent >= 50% pour nbs = 2, 4, ... n_boot, pour chaques alpha (4 graphes)
-
-
-Tu see later : 
-- regarder le nombre de sondes qui sortent >= 50% pour nbs = 2, 4, ... n_boot, with grid search on alphas and lambda (4 graphes)
-
-
-
-
-
-
-
-
-
-
-
-
-
-# plot nb_probes~n | alpha
-
-# barplot table plot nb_probes~n | alpha
-
-````
 
 
 # Session Information

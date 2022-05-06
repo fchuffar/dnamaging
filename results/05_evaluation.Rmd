@@ -54,6 +54,31 @@ Ytest = df[idx_test,y_key]
  
 ```{r methylclock_models}
 
+#
+# rmse_pred = lapply(models, function(m, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytest=Ytest) {
+#
+#   predTr = predict(m, Xtrain)
+#   rmseTr = signif(sqrt(mean((Ytrain - predTr)^2, na.rm=TRUE)),3)
+#   predTe = predict(m, Xtest)
+#   rmseTe = signif(sqrt(mean((Ytest - predTe)^2, na.rm = TRUE)),3)
+#
+#   plot(predTr, Ytrain, xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " train rmse: ", rmseTr))
+#   plot(predTe, Ytest , xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " test  rmse: ", rmseTe))
+#
+#   ret = list(
+#     alpha = alpha,
+#     lambda = lambda,
+#     predTr = predTr,
+#     predTe = predTe,
+#     rmseTr = rmseTr,
+#     rmseTe = rmseTe
+#   )
+#   return(ret)
+# }, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytest=Ytest)
+#
+#
+
+
 layout(matrix(1:2,1),respect = TRUE)
 
 if (!exists("mmethylclock_DNAmAge")) {mmethylclock_DNAmAge = memoise::memoise(methylclock::DNAmAge)}
