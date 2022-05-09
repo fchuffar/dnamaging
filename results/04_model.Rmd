@@ -28,38 +28,33 @@ idx_clinicals = colnames(df)[1:(markers_start-1)]
 idx_cpg = colnames(df)[markers_start:ncol(df)]
 ```
 
-# Prerequisits
-
-We need to execute 03_preproc to have our df preprocess. 
-
-
-# Define train and test samples
+# Preparing model 
 
 ```{r train/test}
+#Define train and test indexes
 Ntrain = floor(nrow(df)/2)
 set.seed(1)
 idx_train = sample(rownames(df), Ntrain)
 idx_test = setdiff(rownames(df), idx_train)
-```
-
-# Model 
+``` 
 
 ```{r prepare model}
+#Create Train and Test samples
 tmp_mat_cpg = as.matrix(df[,idx_cpg])
-# head(tmp_mat_cpg)
 Xtrain = tmp_mat_cpg[idx_train,]
 Ytrain = df[idx_train,y_key]
 Xtest = tmp_mat_cpg[idx_test,]
 Ytest = df[idx_test,y_key]
 ``` 
 
+# Find best meta parameters with cross validation
 ```{r glmnet model}
 ## Cross validation for best lambda and alpha
 alphas = c(.1, .15, .2, .25, .5, 1)
 
 
-if (!exists("mcv_glmnet")) {mcv_glmnet = memoise::memoise(glmnet::cv.glmnet)}
-stat = lapply(alphas, function(alpha) {   
+if (!exists("mcv_glmnet")) {mcv_glmnet = memoise::memoise(glmnet::cv.glmnet)} #Memoise for glmnet
+stat = lapply(alphas, function(alpha) { #list with cv recap (lambda,rmse,nbprobes) and lambda.min  
   print(alpha)
   modelcv = mcv_glmnet(Xtrain, Ytrain, alpha=alpha, type.measure="mse", standardize=TRUE)
   lambdamin = modelcv$lambda.min
@@ -69,10 +64,8 @@ stat = lapply(alphas, function(alpha) {
 stat = do.call(rbind, stat)
 ```
 
-# Meta parameters
-
 ```{r meta parameters}
-## Plot
+# Plotting rmse and nbprobes depending on alpha and lambda (with cv results)
 layout(matrix(1:2,1),respect = TRUE)
 plot(0, 0, col=0, xlab="log10(lambda)", ylab="RMSE", xlim=log10(range(stat$lambda)), ylim=range(stat$rmse))
 lapply(alphas, function(alpha) { 
@@ -90,15 +83,29 @@ lapply(alphas, function(alpha) {
 legend(x="topright", legend=alphas, fill=1:length(alphas), title="Alpha")
 ```
 
-## Model evaluation
+# Model evaluation with best meta parameters
 
 ```{r model eval}
+
+# Define params for models
+
+# With lambda min 
+#model_params = lapply(alphas, function(alpha, stat=stat) { 
+#  cvrecap = stat[stat$alpha==alpha,]
+#  lambda = cvrecap[cvrecap$rmse==min(cvrecap$rmse),]$lambda[1]
+#  ret = list(alpha=alpha, lambda=lambda)
+#  return(ret)
+#}, stat=stat)
+
+# With lambda based on nb_probes 
 model_params = lapply(alphas, function(alpha, stat=stat) { 
   cvrecap = stat[stat$alpha==alpha,]
-  lambda = cvrecap[cvrecap$rmse==min(cvrecap$rmse),]$lambda[1]
+  lambda = cvrecap[abs(350-cvrecap$nbprobes)==min(abs(350-cvrecap$nbprobes)),]$lambda[1]
   ret = list(alpha=alpha, lambda=lambda)
   return(ret)
 }, stat=stat)
+
+# memoise glmnet
 
 if (!exists("mglmnet")) {
   mglmnet = memoise::memoise(function(...) {
@@ -106,11 +113,15 @@ if (!exists("mglmnet")) {
   }, cache = cachem::cache_mem(max_size = 10*1024 * 1024^2))
 }
 
+#factory function for product models
+
 model_factory_glmnet = function(Xtrain, Ytrain, alpha=alpha, lambda=lambda) {
   m = mglmnet(Xtrain, Ytrain, alpha=alpha, lambda=lambda, standardize=TRUE) 
   m$name = paste0("glmnet_", signif(alpha,3), "_", signif(lambda,3))
   return(m)
 }
+
+# Create models 
 
 models = lapply(model_params, function(m_params, Xtrain=Xtrain, Ytrain=Ytrain) { 
   print(m_params)
@@ -121,8 +132,10 @@ models = lapply(model_params, function(m_params, Xtrain=Xtrain, Ytrain=Ytrain) {
 }, Xtrain=Xtrain, Ytrain=Ytrain)
 names(models) = sapply(models, "[[", "name")
 
+# Plot predictions with train an test set of each models
+
 layout(matrix(1:2,1), respect=TRUE)
-layout(matrix(1:8,2), respect=TRUE)
+#layout(matrix(1:8,2), respect=TRUE)
 foo = lapply(models, function(m, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytest=Ytest) { 
                          
   predTr = predict(m, Xtrain)
@@ -154,8 +167,8 @@ foo = lapply(models, function(m, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytes
 ## bootstrap Cross validation for best lambda and alpha
 n_boot = 500
 
-
-bs_probes = epimedtools::monitored_apply(mod=1, t(t(1:n_boot)), 1, function(i) { # Bootstrap sample creation
+bs_probes = epimedtools::monitored_apply(mod=1, t(t(1:n_boot)), 1, function(i) { #epimedtools to see evolution of running 
+  # Bootstrap sample creation
   set.seed(i)
   boot_ind = c(
     sample(idx_train, ceiling(2/3 * length(idx_train)), replace=FALSE),
@@ -163,7 +176,7 @@ bs_probes = epimedtools::monitored_apply(mod=1, t(t(1:n_boot)), 1, function(i) {
   )
   Xtrain = tmp_mat_cpg[boot_ind,]
   Ytrain = df[boot_ind,y_key]
-
+  # Create model with best meta params and bootstrap sample
   models = lapply(model_params, function(m_params, Xtrain=Xtrain, Ytrain=Ytrain) { 
     # print(m_params)
     alpha = m_params$alpha
@@ -171,7 +184,7 @@ bs_probes = epimedtools::monitored_apply(mod=1, t(t(1:n_boot)), 1, function(i) {
     m = model_factory_glmnet(Xtrain, Ytrain, alpha=alpha, lambda=lambda) 
     return(m)  
   }, Xtrain=Xtrain, Ytrain=Ytrain)
-
+  # For each bootstrap, capture all probes use in the model 
   probes = lapply(models, function(m, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytest=Ytest) { 
     probes = rownames(m$beta)[m$beta@i+1]
     return(probes)
@@ -187,27 +200,28 @@ For each alpha, we see the occurence of each probes across bootstraps.
 ```{r bootstrap distribution}
 layout(matrix(1:2,1),respect = TRUE)
 # layout(matrix(1:4,1),respect = TRUE)
-for (i in 1:length(alphas)) {
-  probes = lapply(bs_probes, "[[", i)
-  probes = unlist(probes)
-  tmp_tab = table(probes)
-  names(tmp_tab)[tmp_tab >= n_boot/2]
-  barplot(table(table(probes)), las=2, main=paste0("alpha: ", alphas[i]))
-}
+boot_probes = lapply(1:length(alphas),function(i){
+  probes = lapply(bs_probes, "[[", i) #Probes for each alpha
+  probes = unlist(probes) # probes of all bootstraps
+  tmp_tab = table(probes) # distribution of all probes
+  tmp_boot_probes = names(tmp_tab)[tmp_tab >= n_boot/2] # probes which appears in more than 50% of models
+  barplot(table(table(probes)), las=2, main=paste0("alpha: ", alphas[i])) # barplot of occurence of each probes across bootstraps
+  return(tmp_boot_probes)
+})
 ```
 
 For each alpha, we see the occurence of Hannum probes across bootstraps.
 
 ```{r hannum distribution}
 layout(matrix(1:2,1),respect = TRUE)
-Hannum_Coeff = methylclockData::get_coefHannum()
+Hannum_Coeff = methylclockData::get_coefHannum() # Get Hannum probes
 foo = lapply(1:length(alphas), function(i) {
   probes = lapply(bs_probes, "[[", i)
   probes = unlist(probes)
   tmp_tab = table(probes)
-  tmp_tab_Hannum = tmp_tab[Hannum_Coeff$CpGmarker]
-  tmp_tab_Hannum[is.na(tmp_tab_Hannum)] = 0  
-  barplot(table(tmp_tab_Hannum), las=2, main=paste0("alpha=", alphas[i], ": ", sum(tmp_tab_Hannum >= n_boot/2), " probes."))
+  tmp_tab_Hannum = tmp_tab[Hannum_Coeff$CpGmarker] # Occurence of each Hannum's probes
+  tmp_tab_Hannum[is.na(tmp_tab_Hannum)] = 0  # If no occurences, set 0 
+  barplot(table(tmp_tab_Hannum), las=2, main=paste0("alpha=", alphas[i], ": ", sum(tmp_tab_Hannum >= n_boot/2), " probes.")) # Plot occurences of Hannum probes across bootstraps
   ret = names(tmp_tab_Hannum)[tmp_tab_Hannum >= n_boot/2]
   return(ret)
 })
@@ -219,26 +233,49 @@ Follow the number of retained probes along of the bootstraps process
 
 ```{r probes number}
 layout(matrix(1:2,1),respect = TRUE)
-x = seq(2,n_boot,2) 
-for (i in 1:length(alphas)){
-    tmp_probes = lapply(x, function(nb_boot){ 
-      tmp_probes = lapply(bs_probes[1:nb_boot], "[[", i)
-      tmp_probes = unlist(tmp_probes)
+x = seq(2,n_boot,2) # Sequence of even bootstraps
+for (i in 1:length(alphas)){ #for each alpha
+    tmp_probes = lapply(x, function(nb_boot){ # when the number of bootstrap is even 
+      tmp_probes = lapply(bs_probes[1:nb_boot], "[[", i) # Take all previous bootstraps
+      tmp_probes = unlist(tmp_probes) 
       tmp_tab = table(tmp_probes)
-      tmp_boot_cpg = names(tmp_tab)[tmp_tab >= nb_boot/2]
+      tmp_boot_cpg = names(tmp_tab)[tmp_tab >= nb_boot/2] # Check probes appears more than 50% times
       return(tmp_boot_cpg)
     })
     # barplot(sort(table(unlist(tmp_probes))))
-    nb_probes = unlist(sapply(tmp_probes, length))
-    plot(x, nb_probes, type = "l", main = paste0("alpha: ",alphas[i]))
-    tab_probes = table(nb_probes)
-    barplot(tab_probes, las=2)
+    nb_probes = unlist(sapply(tmp_probes, length)) # Check number of probes across boostraps
+    plot(x, nb_probes, type = "l", main = paste0("alpha: ",alphas[i])) # Plot number of probes across bootstraps
+    tab_probes = table(nb_probes) 
+    barplot(tab_probes, las=2) # Check when number of probes stabilised
 }
-end_time = Sys.time()
-print(paste0("Execution time for vignette : ", end_time - start_time))
 ```
 
+```{r stock bootstrap model}
+train = df[idx_train,c(idx_cpg,y_key)] # Impute train set with CpG and y_key for lm
+model_boot_coeff = lapply(1:length(alphas), function(i){ # Compute coefficients and mean in the train for each probes of the model for each alpha
+	m_boot = lm(formula(paste0(y_key,"~",paste0(boot_probes[[i]],collapse="+"))),data=train) #lm model with probes previously find with bootstrap
+	mean_probes = as.numeric(c("NA",unlist(lapply(boot_probes[[i]], function(j){
+		return(mean(train[,j])) 
+	})))) # For each probes of the model, compute its mean in the train set
+	boot_tab = cbind(coefficient = m_boot$coefficients,mean_probes) # tab with coeff of lm model and mean of each probes in train set
+	return(boot_tab)
+})
+```
 
+```{r rmse model}
+#Plot rmse like with cross validation but with bootstrap results
+layout(matrix(1:2,1), respect=TRUE)
+#layout(matrix(1:8,2), respect=TRUE)
+foo = lapply(model_boot_coeff, function(m, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytest=Ytest) {               
+  predTr = Xtrain[,rownames(m)[-1]] %*% as.matrix(m[-1,"coefficient"]) + m[1,"coefficient"]
+  rmseTr = sqrt(mean((Ytrain - predTr)^2))
+  predTe = Xtest[,rownames(m)[-1]] %*% as.matrix(m[-1,"coefficient"]) + m[1,"coefficient"]
+  rmseTe = sqrt(mean((Ytest - predTe)^2))
+
+  plot(predTr, Ytrain, xlab="Predicted Age", ylab="Chronological Age", main = paste0(" train rmse: ", signif(rmseTr, 3)))
+  plot(predTe, Ytest , xlab="Predicted Age", ylab="Chronological Age", main = paste0(" test  rmse: ", signif(rmseTe, 3)))  
+}, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytest=Ytest)
+```
 
 ```{r}
 end_time = Sys.time()
