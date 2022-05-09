@@ -176,7 +176,7 @@ foo = lapply(models, function(m, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytes
 n_boot = 500
 
 
-bs_func = function(i, idx_train=idx_train, df=df, model_params) { #epimedtools to see evolution of running 
+bs_func = function(i, idx_train=idx_train, model_params) { #epimedtools to see evolution of running 
   # Bootstrap sample creation
   set.seed(i)
   idx_bstrain = c(
@@ -212,7 +212,7 @@ if (USE_PARAPPLY) {
   ewas = parallel::parApply(cl, t(t(1:n_boot)), 1, bs_func)
 } else {
   print("bootstrap using epimedtools::monitored_apply")
-  bs_probes = epimedtools::monitored_apply(mod=1, t(t(1:n_boot)), 1, bs_func)
+  bs_probes = epimedtools::monitored_apply(mod=1, t(t(1:n_boot)), 1, bs_func, idx_train=idx_train, model_params=model_params)
 }
 
 
