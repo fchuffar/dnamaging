@@ -41,51 +41,44 @@ idx_train = sample(rownames(df), Ntrain)
 idx_test = setdiff(rownames(df), idx_train)
 ``` 
 
-```{r prepare model}
-#Create Train and Test samples
-Xtrain = mget_full_cpg_matrix()[idx_train,]
-Ytrain = mget_df()[idx_train,y_key]
-Xtest = mget_full_cpg_matrix()[idx_test,]
-Ytest = mget_df()[idx_test,y_key]
-``` 
 
 # Find best meta parameters with cross validation
-```{r glmnet model}
+```{r cvglmnet}
 ## Cross validation for best lambda and alpha
 alphas = c(.1, .15, .2, .25, .5, 1)
 
 if (!exists("mcvglmnet")) {
   cvglmnet = function(alpha, idx_train, y_key) {
-    Xtrain = mget_full_cpg_matrix()[idx_train,]
-    Ytrain = mget_df()[idx_train, y_key]
-    modelcv = glmnet::cv.glmnet(Xtrain, Ytrain, alpha=alpha, type.measure="mse", standardize=TRUE)
+    x = mget_full_cpg_matrix()[idx_train,]
+    y = mget_df()[idx_train, y_key]
+    modelcv = glmnet::cv.glmnet(x=x, y=y, alpha=alpha, type.measure="mse", standardize=TRUE)
     cvrecap = data.frame(lambda=modelcv$lambda, rmse=sqrt(modelcv$cvm), nbprobes=modelcv$nzero, alpha=alpha)
     return(cvrecap)  
   }
   mcvglmnet = memoise::memoise(cvglmnet)
 } #Memoise for cvglmnet
 
-stat = lapply(alphas, function(alpha, idx_train=idx_train, y_key=y_key) { #list with cv recap (lambda,rmse,nbprobes) and lambda.min  
+cvrecaps = lapply(alphas, function(alpha, idx_train=idx_train, y_key=y_key) { #list with cv recap (lambda,rmse,nbprobes) and lambda.min  
   print(alpha)
-  modelcv = mcvglmnet(alpha=alpha, idx_train=idx_train, y_key=y_key)
+  cvrecap = mcvglmnet(alpha=alpha, idx_train=idx_train, y_key=y_key)
   return(cvrecap)  
 }, idx_train=idx_train, y_key=y_key)
-stat = do.call(rbind, stat)
+cvrecaps = do.call(rbind, cvrecaps)
 ```
 
 ```{r meta parameters}
 # Plotting rmse and nbprobes depending on alpha and lambda (with cv results)
 layout(matrix(1:2,1),respect = TRUE)
-plot(0, 0, col=0, xlab="log10(lambda)", ylab="RMSE", xlim=log10(range(stat$lambda)), ylim=range(stat$rmse))
+plot(0, 0, col=0, xlab="log10(lambda)", ylab="RMSE", xlim=log10(range(cvrecaps$lambda)), ylim=range(cvrecaps$rmse))
 lapply(alphas, function(alpha) { 
-  cvrecap = stat[stat$alpha==alpha,]
+  cvrecap = cvrecaps[cvrecaps$alpha==alpha,]
   points(log10(cvrecap$lambda), cvrecap$rmse, col=which(alpha==alphas))
   abline(v=log10(cvrecap[cvrecap$rmse==min(cvrecap$rmse),]$lambda), col=which(alpha==alphas))
 })
 legend(x="topleft", legend=alphas, fill=1:length(alphas), title="Alpha")
-plot(0, 0, col=0, xlab="log10(lambda)", ylab="nbprobes", xlim=log10(range(stat$lambda)), ylim=range(stat$nbprobes))
+plot(0, 0, col=0, xlab="log10(lambda)", ylab="nbprobes", xlim=log10(range(cvrecaps$lambda)), ylim=range(cvrecaps$nbprobes))
 lapply(alphas, function(alpha) { 
-  cvrecap = stat[stat$alpha==alpha,]
+  cvrecap = cvrecaps[cvrecaps$alpha==alpha,]
   points(log10(cvrecap$lambda), cvrecap$nbprobes, col=which(alpha==alphas))
   abline(v=log10(cvrecap[cvrecap$rmse==min(cvrecap$rmse),]$lambda), col=which(alpha==alphas))
 })
@@ -94,52 +87,63 @@ legend(x="topright", legend=alphas, fill=1:length(alphas), title="Alpha")
 
 # Model evaluation with best meta parameters
 
-```{r model eval}
+```{r glmnet_build}
 
 # Define params for models
 
 # With lambda min 
-#model_params = lapply(alphas, function(alpha, stat=stat) { 
-#  cvrecap = stat[stat$alpha==alpha,]
+#model_params = lapply(alphas, function(alpha, cvrecaps=cvrecaps) { 
+#  cvrecap = cvrecaps[cvrecaps$alpha==alpha,]
 #  lambda = cvrecap[cvrecap$rmse==min(cvrecap$rmse),]$lambda[1]
 #  ret = list(alpha=alpha, lambda=lambda)
 #  return(ret)
-#}, stat=stat)
+#}, cvrecaps=cvrecaps)
 
 # With lambda based on nb_probes 
-model_params = lapply(alphas, function(alpha, stat=stat) { 
-  cvrecap = stat[stat$alpha==alpha,]
+model_params = lapply(alphas, function(alpha, cvrecaps=cvrecaps) { 
+  cvrecap = cvrecaps[cvrecaps$alpha==alpha,]
   lambda = cvrecap[abs(350-cvrecap$nbprobes)==min(abs(350-cvrecap$nbprobes)),]$lambda[1]
   ret = list(alpha=alpha, lambda=lambda)
   return(ret)
-}, stat=stat)
+}, cvrecaps=cvrecaps)
 
 # glmnet model factory, it produces glmnet model objects
 
-model_factory_glmnet = function(idx_train, y_key, alpha=alpha, lambda=lambda) {
-  Xtrain = mget_full_cpg_matrix()[idx_train,]
-  Ytrain = mget_df()[idx_train,y_key]
-  m = glmnet::glmnet(x=Xtrain, y=Ytrain, alpha=alpha, lambda=lambda, standardize=TRUE) 
-  m$name = paste0("glmnet_", signif(alpha,3), "_", signif(lambda,3))
-  return(m)
-}
 
 
 if (!exists("mmodel_factory_glmnet")) {
+  model_factory_glmnet = function(idx_train, y_key, alpha=alpha, lambda=lambda) {
+    x = mget_full_cpg_matrix()[idx_train,]
+    y = mget_df()[idx_train,y_key]
+    m = glmnet::glmnet(x=x, y=y, alpha=alpha, lambda=lambda, standardize=TRUE) 
+    m$name = paste0("glmnet_", signif(alpha,3), "_", signif(lambda,3))
+    return(m)
+  }
   mmodel_factory_glmnet = memoise::memoise(model_factory_glmnet)
 }
 
 # Create models 
 
-models = lapply(model_params, function(m_params, Xtrain=Xtrain, Ytrain=Ytrain) { 
+models = lapply(model_params, function(m_params, idx_train=idx_train, y_key=y_key) { 
   print(m_params)
   alpha = m_params$alpha
   lambda = m_params$lambda
-  m = mmodel_factory_glmnet(idx_train, y_key, alpha=alpha, lambda=lambda) 
+  m = mmodel_factory_glmnet(idx_train=idx_train, y_key=y_key, alpha=alpha, lambda=lambda) 
   return(m)  
-}, Xtrain=Xtrain, Ytrain=Ytrain)
+}, idx_train=idx_train, y_key=y_key)
 names(models) = sapply(models, "[[", "name")
+```
 
+
+```{r prepare train test set }
+#Create Train and Test samples
+Xtrain = mget_full_cpg_matrix()[idx_train,]
+Ytrain = mget_df()[idx_train,y_key]
+Xtest = mget_full_cpg_matrix()[idx_test,]
+Ytest = mget_df()[idx_test,y_key]
+``` 
+
+```{r glmnet_plot}
 # Plot predictions with train an test set of each models
 
 layout(matrix(1:2,1), respect=TRUE)
@@ -157,18 +161,6 @@ foo = lapply(models, function(m, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytes
 ```
 
 
-```{r other_models}
-# model_params = list(
-#   list(alpha=0.25, lambda=2),
-#   list(alpha=0.25, lambda=1),
-#   list(alpha=0.25, lambda=0.1),
-#   NULL
-# )
-```
-
-
-
-
 # Bootstrap
 
 ```{r boostrap}
@@ -176,7 +168,7 @@ foo = lapply(models, function(m, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytes
 n_boot = 500
 
 
-bs_func = function(i, idx_train=idx_train, model_params) { #epimedtools to see evolution of running 
+bs_func = function(i, idx_train=idx_train, model_params=model_params) { #epimedtools to see evolution of running 
   # Bootstrap sample creation
   set.seed(i)
   idx_bstrain = c(
@@ -209,7 +201,7 @@ if (USE_PARAPPLY) {
     cl <<- parallel::makeCluster(nb_cores,  type="FORK")
     # parallel::stopCluster(cl)
   }
-  ewas = parallel::parApply(cl, t(t(1:n_boot)), 1, bs_func)
+  ewas = parallel::parApply(cl, t(t(1:n_boot)), 1, bs_func, idx_train=idx_train, model_params=model_params)
 } else {
   print("bootstrap using epimedtools::monitored_apply")
   bs_probes = epimedtools::monitored_apply(mod=1, t(t(1:n_boot)), 1, bs_func, idx_train=idx_train, model_params=model_params)
