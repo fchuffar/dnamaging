@@ -93,9 +93,18 @@ legend(x="topright", legend=alphas, fill=1:length(alphas), title="Alpha")
 ## Model evaluation
 
 ```{r model eval}
+# With lambda min 
+#model_params = lapply(alphas, function(alpha, stat=stat) { 
+#  cvrecap = stat[stat$alpha==alpha,]
+#  lambda = cvrecap[cvrecap$rmse==min(cvrecap$rmse),]$lambda[1]
+#  ret = list(alpha=alpha, lambda=lambda)
+#  return(ret)
+#}, stat=stat)
+
+# With lambda based on nb_probes 
 model_params = lapply(alphas, function(alpha, stat=stat) { 
   cvrecap = stat[stat$alpha==alpha,]
-  lambda = cvrecap[cvrecap$rmse==min(cvrecap$rmse),]$lambda[1]
+  lambda = cvrecap[abs(350-cvrecap$nbprobes)==min(abs(350-cvrecap$nbprobes)),]$lambda[1]
   ret = list(alpha=alpha, lambda=lambda)
   return(ret)
 }, stat=stat)
@@ -122,7 +131,7 @@ models = lapply(model_params, function(m_params, Xtrain=Xtrain, Ytrain=Ytrain) {
 names(models) = sapply(models, "[[", "name")
 
 layout(matrix(1:2,1), respect=TRUE)
-layout(matrix(1:8,2), respect=TRUE)
+#layout(matrix(1:8,2), respect=TRUE)
 foo = lapply(models, function(m, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytest=Ytest) { 
                          
   predTr = predict(m, Xtrain)
@@ -152,7 +161,7 @@ foo = lapply(models, function(m, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytes
 
 ```{r boostrap}
 ## bootstrap Cross validation for best lambda and alpha
-n_boot = 50
+n_boot = 300
 
 
 bs_probes = epimedtools::monitored_apply(mod=1, t(t(1:n_boot)), 1, function(i) { # Bootstrap sample creation
@@ -187,13 +196,14 @@ For each alpha, we see the occurence of each probes across bootstraps.
 ```{r bootstrap distribution}
 layout(matrix(1:2,1),respect = TRUE)
 # layout(matrix(1:4,1),respect = TRUE)
-for (i in 1:length(alphas)) {
+boot_probes = lapply(1:length(alphas),function(i){
   probes = lapply(bs_probes, "[[", i)
   probes = unlist(probes)
   tmp_tab = table(probes)
-  names(tmp_tab)[tmp_tab >= n_boot/2]
+  tmp_boot_probes = names(tmp_tab)[tmp_tab >= n_boot/2]
   barplot(table(table(probes)), las=2, main=paste0("alpha: ", alphas[i]))
-}
+  return(tmp_boot_probes)
+})
 ```
 
 For each alpha, we see the occurence of Hannum probes across bootstraps.
@@ -234,11 +244,33 @@ for (i in 1:length(alphas)){
     tab_probes = table(nb_probes)
     barplot(tab_probes, las=2)
 }
-end_time = Sys.time()
-print(paste0("Execution time for vignette : ", end_time - start_time))
 ```
 
+```{r stock bootstrap model}
+train = df[idx_train,c(idx_cpg,y_key)] 
+model_boot_coeff = lapply(1:length(alphas), function(i){
+	m_boot = lm(formula(paste0(y_key,"~",paste0(boot_probes[[i]],collapse="+"))),data=train)
+	mean_probes = as.numeric(c("NA",unlist(lapply(boot_probes[[i]], function(j){
+		return(mean(train[,j]))
+	}))))
+	boot_tab = cbind(coefficient = m_boot$coefficients,mean_probes)
+	return(boot_tab)
+})
+```
 
+```{r rmse model}
+layout(matrix(1:2,1), respect=TRUE)
+#layout(matrix(1:8,2), respect=TRUE)
+foo = lapply(model_boot_coeff, function(m, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytest=Ytest) {               
+  predTr = Xtrain[,rownames(m)[-1]] %*% as.matrix(m[-1,"coefficient"]) + m[1,"coefficient"]
+  rmseTr = sqrt(mean((Ytrain - predTr)^2))
+  predTe = Xtest[,rownames(m)[-1]] %*% as.matrix(m[-1,"coefficient"]) + m[1,"coefficient"]
+  rmseTe = sqrt(mean((Ytest - predTe)^2))
+
+  plot(predTr, Ytrain, xlab="Predicted Age", ylab="Chronological Age", main = paste0(" train rmse: ", signif(rmseTr, 3)))
+  plot(predTe, Ytest , xlab="Predicted Age", ylab="Chronological Age", main = paste0(" test  rmse: ", signif(rmseTe, 3)))  
+}, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytest=Ytest)
+```
 
 ```{r}
 end_time = Sys.time()
