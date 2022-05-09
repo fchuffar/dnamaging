@@ -56,14 +56,6 @@ for (cov in covariates) {
   tmp_x = barplot(tmp_tab, col=tmp_col, ylim=c(0,max(tmp_tab)*1.2), main=cov, las=2)
   text(tmp_x, tmp_tab+max(tmp_tab)*.1, labels=tmp_tab)
 
-  # AfG = stats::aggregate(formula(paste0(y_key,"~",cov)),data=df,mean)
-  # bar_AfG = barplot(height = AfG[[y_key]] , names = AfG[[cov]], col=c("pink","blue"), ylim = c(0,100))
-  # text(bar_AfG, AfG[[y_key]] + 2, labels = AfG[[y_key]])
-  # Age_H = df[[y_key]][which(df[[cov]] == "M")]
-  # Age_F = df[[y_key]][which(df[[cov]] == "F")]
-  # WTG = wilcox.test(Age_F,Age_H)
-  # text(x = 1, y = 80, labels = paste0("Wilcoxon p-val =", WTG$p.value))
-
   f = paste0(y_key,"~",cov)
   beanplot::beanplot(formula(f), data=df, border=tmp_col, col=adjustcolor(c(1,1,1,1), alpha.f=.1), method="jitter", log="", ylab=y_key, xlab="", las=2, main=f)
   boxplot(formula(f), data=df, col=adjustcolor(tmp_col, alpha.f=.5), ylab=y_key, xlab="", las=2, main=f)

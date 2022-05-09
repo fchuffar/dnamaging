@@ -26,6 +26,9 @@ idx_samples = rownames(df)
 markers_start = grep("cg",colnames(df))[1]
 idx_clinicals = colnames(df)[1:(markers_start-1)]
 idx_cpg = colnames(df)[markers_start:ncol(df)]
+# services patterns
+if (!exists("mget_full_cpg_matrix")) {mget_full_cpg_matrix = memoise::memoise(function(){as.matrix(df[,idx_cpg])})}
+if (!exists("mget_df")) {mget_df = memoise::memoise(function(){df})}
 ```
 
 # Preparing model 
@@ -40,11 +43,10 @@ idx_test = setdiff(rownames(df), idx_train)
 
 ```{r prepare model}
 #Create Train and Test samples
-tmp_mat_cpg = as.matrix(df[,idx_cpg])
-Xtrain = tmp_mat_cpg[idx_train,]
-Ytrain = df[idx_train,y_key]
-Xtest = tmp_mat_cpg[idx_test,]
-Ytest = df[idx_test,y_key]
+Xtrain = mget_full_cpg_matrix()[idx_train,]
+Ytrain = mget_df()[idx_train,y_key]
+Xtest = mget_full_cpg_matrix()[idx_test,]
+Ytest = mget_df()[idx_test,y_key]
 ``` 
 
 # Find best meta parameters with cross validation
@@ -105,20 +107,19 @@ model_params = lapply(alphas, function(alpha, stat=stat) {
   return(ret)
 }, stat=stat)
 
-# memoise glmnet
+# glmnet model factory, it produces glmnet model objects
 
-if (!exists("mglmnet")) {
-  mglmnet = memoise::memoise(function(...) {
-    glmnet::glmnet(...)
-  }, cache = cachem::cache_mem(max_size = 10*1024 * 1024^2))
-}
-
-#factory function for product models
-
-model_factory_glmnet = function(Xtrain, Ytrain, alpha=alpha, lambda=lambda) {
-  m = mglmnet(Xtrain, Ytrain, alpha=alpha, lambda=lambda, standardize=TRUE) 
+model_factory_glmnet = function(idx_train, y_key, alpha=alpha, lambda=lambda) {
+  Xtrain = mget_full_cpg_matrix()[idx_train,]
+  Ytrain = mget_df()[idx_train,y_key]
+  m = glmnet::glmnet(x=Xtrain, y=Ytrain, alpha=alpha, lambda=lambda, standardize=TRUE) 
   m$name = paste0("glmnet_", signif(alpha,3), "_", signif(lambda,3))
   return(m)
+}
+
+
+if (!exists("mmodel_factory_glmnet")) {
+  mmodel_factory_glmnet = memoise::memoise(model_factory_glmnet)
 }
 
 # Create models 
@@ -127,7 +128,7 @@ models = lapply(model_params, function(m_params, Xtrain=Xtrain, Ytrain=Ytrain) {
   print(m_params)
   alpha = m_params$alpha
   lambda = m_params$lambda
-  m = model_factory_glmnet(Xtrain, Ytrain, alpha=alpha, lambda=lambda) 
+  m = mmodel_factory_glmnet(idx_train, y_key, alpha=alpha, lambda=lambda) 
   return(m)  
 }, Xtrain=Xtrain, Ytrain=Ytrain)
 names(models) = sapply(models, "[[", "name")
@@ -167,31 +168,48 @@ foo = lapply(models, function(m, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytes
 ## bootstrap Cross validation for best lambda and alpha
 n_boot = 500
 
-bs_probes = epimedtools::monitored_apply(mod=1, t(t(1:n_boot)), 1, function(i) { #epimedtools to see evolution of running 
+
+bs_func = function(i, idx_train=idx_train, df=df, model_params) { #epimedtools to see evolution of running 
   # Bootstrap sample creation
   set.seed(i)
-  boot_ind = c(
+  idx_bstrain = c(
     sample(idx_train, ceiling(2/3 * length(idx_train)), replace=FALSE),
     sample(idx_train, floor(  1/3 * length(idx_train)), replace=TRUE)
   )
-  Xtrain = tmp_mat_cpg[boot_ind,]
-  Ytrain = df[boot_ind,y_key]
   # Create model with best meta params and bootstrap sample
-  models = lapply(model_params, function(m_params, Xtrain=Xtrain, Ytrain=Ytrain) { 
+  models = lapply(model_params, function(m_params, idx_bstrain=idx_bstrain, y_key=y_key) { 
     # print(m_params)
     alpha = m_params$alpha
     lambda = m_params$lambda
-    m = model_factory_glmnet(Xtrain, Ytrain, alpha=alpha, lambda=lambda) 
+    m = mmodel_factory_glmnet(idx_bstrain, y_key, alpha=alpha, lambda=lambda) 
     return(m)  
-  }, Xtrain=Xtrain, Ytrain=Ytrain)
+  }, idx_bstrain=idx_bstrain, y_key=y_key)
   # For each bootstrap, capture all probes use in the model 
-  probes = lapply(models, function(m, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytest=Ytest) { 
+  probes = lapply(models, function(m) { 
     probes = rownames(m$beta)[m$beta@i+1]
     return(probes)
   })
   names(probes) = names(models)
   probes
-})
+}
+
+USE_PARAPPLY = FALSE
+
+if (USE_PARAPPLY) {
+  print("bootstrap using parallel::parApply...")
+  if (!exists("cl")) {
+    nb_cores = parallel::detectCores()
+    cl <<- parallel::makeCluster(nb_cores,  type="FORK")
+    # parallel::stopCluster(cl)
+  }
+  ewas = parallel::parApply(cl, t(t(1:n_boot)), 1, bs_func)
+} else {
+  print("bootstrap using epimedtools::monitored_apply")
+  bs_probes = epimedtools::monitored_apply(mod=1, t(t(1:n_boot)), 1, bs_func)
+}
+
+
+
 ```
 
 
