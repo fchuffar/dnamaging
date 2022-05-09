@@ -1,5 +1,5 @@
 gses = c( 
-  "GSE41037", # 27k Genome wide DNA methylation profiling of whole blood in schizophrenia patients and healthy subjects.
+  # "GSE41037", # 27k Genome wide DNA methylation profiling of whole blood in schizophrenia patients and healthy subjects.
   "GSE40279", # 450k Hannum 2013
   # "GSE20067", # 27k Genome wide DNA methylation profiling of diabetic nephropathy in type 1 diabetes mellitus
   # "GSE41169",
@@ -25,5 +25,5 @@ for (gse in gses) {
   rmarkdown::render("03_preproc.Rmd", output_file=paste0("03_preproc_", gse, ".html"))    
   rmarkdown::render("04_model.Rmd", output_file=paste0("04_model_", gse, ".html"))
   rmarkdown::render("05_evaluation.Rmd", output_file=paste0("05_evaluation_", gse, ".html"))
-  # rmarkdown::render("06_amar.Rmd", output_file=paste0("06_amar_", gse, ".html"))
+  rmarkdown::render("06_amar.Rmd", output_file=paste0("06_amar_", gse, ".html"))
 }

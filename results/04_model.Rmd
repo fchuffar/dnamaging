@@ -55,7 +55,7 @@ Ytest = df[idx_test,y_key]
 
 ```{r glmnet model}
 ## Cross validation for best lambda and alpha
-alphas = c(0.1, 0.25, 0.5, 1)
+alphas = c(.1, .15, .2, .25, .5, 1)
 
 
 if (!exists("mcv_glmnet")) {mcv_glmnet = memoise::memoise(glmnet::cv.glmnet)}
@@ -152,7 +152,7 @@ foo = lapply(models, function(m, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytes
 
 ```{r boostrap}
 ## bootstrap Cross validation for best lambda and alpha
-n_boot = 50
+n_boot = 500
 
 
 bs_probes = epimedtools::monitored_apply(mod=1, t(t(1:n_boot)), 1, function(i) { # Bootstrap sample creation
