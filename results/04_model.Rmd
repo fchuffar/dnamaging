@@ -54,15 +54,22 @@ Ytest = mget_df()[idx_test,y_key]
 ## Cross validation for best lambda and alpha
 alphas = c(.1, .15, .2, .25, .5, 1)
 
+if (!exists("mcvglmnet")) {
+  cvglmnet = function(alpha, idx_train, y_key) {
+    Xtrain = mget_full_cpg_matrix()[idx_train,]
+    Ytrain = mget_df()[idx_train, y_key]
+    modelcv = glmnet::cv.glmnet(Xtrain, Ytrain, alpha=alpha, type.measure="mse", standardize=TRUE)
+    cvrecap = data.frame(lambda=modelcv$lambda, rmse=sqrt(modelcv$cvm), nbprobes=modelcv$nzero, alpha=alpha)
+    return(cvrecap)  
+  }
+  mcvglmnet = memoise::memoise(cvglmnet)
+} #Memoise for cvglmnet
 
-if (!exists("mcv_glmnet")) {mcv_glmnet = memoise::memoise(glmnet::cv.glmnet)} #Memoise for glmnet
-stat = lapply(alphas, function(alpha) { #list with cv recap (lambda,rmse,nbprobes) and lambda.min  
+stat = lapply(alphas, function(alpha, idx_train=idx_train, y_key=y_key) { #list with cv recap (lambda,rmse,nbprobes) and lambda.min  
   print(alpha)
-  modelcv = mcv_glmnet(Xtrain, Ytrain, alpha=alpha, type.measure="mse", standardize=TRUE)
-  lambdamin = modelcv$lambda.min
-  cvrecap = data.frame(lambda=modelcv$lambda, rmse=sqrt(modelcv$cvm), nbprobes=modelcv$nzero, alpha=alpha)
+  modelcv = mcvglmnet(alpha=alpha, idx_train=idx_train, y_key=y_key)
   return(cvrecap)  
-})
+}, idx_train=idx_train, y_key=y_key)
 stat = do.call(rbind, stat)
 ```
 
