@@ -37,30 +37,34 @@ idx_cpg = colnames(df)[markers_start:ncol(df)]
 **TODO Fabien**, adding description of what you are doing
 
 ```{r missing values, results="verbatim"}
-if (sum(is.na(df[,idx_cpg]))>0) {
-  # Looking how much got more than 5% missing values
-  # apply_func = epimedtools::monitored_apply
-  if (! exists("apply_func")) {apply_func = apply}
-  prop_na_row =  apply_func(is.na(df[idx_samples,idx_cpg]), 1, sum) / ncol(df)
-  idx_samples = names(prop_na_row)[prop_na_row<.05]
-  prop_na_col =  apply_func(is.na(df[idx_samples,idx_cpg]), 2, sum) / nrow(df)
-  sum(prop_na_col>=.05)
-  idx_cpg = names(prop_na_col)[prop_na_col<.05]
+# get_df_rmnaquantile = memoise::memoise(function() {
+  if (sum(is.na(df[,idx_cpg]))>0) {
+    # Looking how much got more than 5% missing values
+    # apply_func = epimedtools::monitored_apply
+    if (! exists("apply_func")) {apply_func = apply}
+    prop_na_row =  apply_func(is.na(df[idx_samples,idx_cpg]), 1, sum) / ncol(df)
+    idx_samples = names(prop_na_row)[prop_na_row<.05]
+    prop_na_col =  apply_func(is.na(df[idx_samples,idx_cpg]), 2, sum) / nrow(df)
+    sum(prop_na_col>=.05)
+    idx_cpg = names(prop_na_col)[prop_na_col<.05]
 
-  print(paste0("#samples removed: ", sum(prop_na_row>=.05)))
-  print(paste0("#probes removed: ", sum(prop_na_col>=.05)))
+    print(paste0("#samples removed: ", sum(prop_na_row>=.05)))
+    print(paste0("#probes removed: ", sum(prop_na_col>=.05)))
 
-  df = df[idx_samples, c(idx_clinicals, idx_cpg)]
+    df = df[idx_samples, c(idx_clinicals, idx_cpg)]
 
-  ## KNN - We use the function impute.knn of the package impute to replace remaining missing values with KNN method. 
-  dknn = as.matrix(df[,idx_cpg])
-  dknnf = impute::impute.knn(dknn, k=10, maxp=5000, rng.seed=1)
-  dknn = dknnf$data
-  head(dknn[,1:6])
-  df = cbind(df[idx_samples,idx_clinicals],dknn[idx_samples,idx_cpg])
-} else {
-  print("# Aucune valeur manquantes") 
-}
+    ## KNN - We use the function impute.knn of the package impute to replace remaining missing values with KNN method. 
+    dknn = as.matrix(df[,idx_cpg])
+    dknnf = impute::impute.knn(dknn, k=10, maxp=5000, rng.seed=1)
+    dknn = dknnf$data
+    head(dknn[,1:6])
+    df = cbind(df[idx_samples,idx_clinicals],dknn[idx_samples,idx_cpg])
+  } else {
+    print("# Aucune valeur manquantes") 
+  }
+#   return(df)
+# })
+# df = get_df_rmnaquantile()
 ```
 
 

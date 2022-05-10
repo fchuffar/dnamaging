@@ -27,15 +27,16 @@ markers_start = grep("cg",colnames(df))[1]
 idx_clinicals = colnames(df)[1:(markers_start-1)]
 idx_cpg = colnames(df)[markers_start:ncol(df)]
 # services patterns
-if (!exists("mget_full_cpg_matrix")) {mget_full_cpg_matrix = memoise::memoise(function(){as.matrix(df[,idx_cpg])})}
 if (!exists("mget_df")) {mget_df = memoise::memoise(function(){df})}
+if (!exists("mget_full_cpg_matrix")) {mget_full_cpg_matrix = memoise::memoise(function(idx_smp){as.matrix(mget_df()[idx_smp,idx_cpg])}, cache = cachem::cache_mem(max_size = 10*1024 * 1024^2))}
 ```
 
 # Preparing model 
 
 ```{r train/test}
 #Define train and test indexes
-Ntrain = floor(nrow(df)/2)
+# Ntrain = floor(nrow(df)/2)
+Ntrain = floor(482)
 set.seed(1)
 idx_train = sample(rownames(df), Ntrain)
 idx_test = setdiff(rownames(df), idx_train)
@@ -45,11 +46,11 @@ idx_test = setdiff(rownames(df), idx_train)
 # Find best meta parameters with cross validation
 ```{r cvglmnet}
 ## Cross validation for best lambda and alpha
-alphas = c(.1, .15, .2, .25, .5, 1)
+if(!exists("alphas")) alphas = c(.1, .15, .2, .25, .5, 1)
 
 if (!exists("mcvglmnet")) {
   cvglmnet = function(alpha, idx_train, y_key) {
-    x = mget_full_cpg_matrix()[idx_train,]
+    x = mget_full_cpg_matrix(idx_train)
     y = mget_df()[idx_train, y_key]
     modelcv = glmnet::cv.glmnet(x=x, y=y, alpha=alpha, type.measure="mse", standardize=TRUE)
     cvrecap = data.frame(lambda=modelcv$lambda, rmse=sqrt(modelcv$cvm), nbprobes=modelcv$nzero, alpha=alpha)
@@ -102,24 +103,29 @@ legend(x="topright", legend=alphas, fill=1:length(alphas), title="Alpha")
 # With lambda based on nb_probes 
 model_params = lapply(alphas, function(alpha, cvrecaps=cvrecaps) { 
   cvrecap = cvrecaps[cvrecaps$alpha==alpha,]
-  lambda = cvrecap[abs(350-cvrecap$nbprobes)==min(abs(350-cvrecap$nbprobes)),]$lambda[1]
+  # lambda = cvrecap[abs(350-cvrecap$nbprobes)==min(abs(350-cvrecap$nbprobes)),]$lambda[1]
+  lambda = cvrecap[cvrecap$rmse==min(cvrecap$rmse),]$lambda[1]
   ret = list(alpha=alpha, lambda=lambda)
   return(ret)
 }, cvrecaps=cvrecaps)
 
-# glmnet model factory, it produces glmnet model objects
-
-
+# model_factory_glmnet, it produces custom model object based on list by calling glmnet::glmnet function
 
 if (!exists("mmodel_factory_glmnet")) {
   model_factory_glmnet = function(idx_train, y_key, alpha=alpha, lambda=lambda) {
-    x = mget_full_cpg_matrix()[idx_train,]
+    x = mget_full_cpg_matrix(idx_train)
     y = mget_df()[idx_train,y_key]
     m = glmnet::glmnet(x=x, y=y, alpha=alpha, lambda=lambda, standardize=TRUE) 
-    m$name = paste0("glmnet_", signif(alpha,3), "_", signif(lambda,3))
-    return(m)
+    idx = rownames(m$beta)[m$beta@i+1]
+    coeff=data.frame(probes=idx, beta=m$beta[idx,])
+    rownames(coeff) = idx
+    coeff$mean = apply(x[,rownames(coeff)], 2, mean)
+    ret = list(Intercept=m$a0, coeff=coeff)
+    ret$name = paste0("glmnet_", signif(alpha,3), "_", signif(lambda,3))
+    # ret$glmmod = m
+    return(ret)
   }
-  mmodel_factory_glmnet = memoise::memoise(model_factory_glmnet)
+  mmodel_factory_glmnet = memoise::memoise(model_factory_glmnet, cache = cachem::cache_mem(max_size = 10*1024 * 1024^2))
 }
 
 # Create models 
@@ -137,9 +143,9 @@ names(models) = sapply(models, "[[", "name")
 
 ```{r prepare train test set }
 #Create Train and Test samples
-Xtrain = mget_full_cpg_matrix()[idx_train,]
+Xtrain = mget_full_cpg_matrix(idx_train)
 Ytrain = mget_df()[idx_train,y_key]
-Xtest = mget_full_cpg_matrix()[idx_test,]
+Xtest = mget_full_cpg_matrix(idx_test)
 Ytest = mget_df()[idx_test,y_key]
 ``` 
 
@@ -147,14 +153,12 @@ Ytest = mget_df()[idx_test,y_key]
 # Plot predictions with train an test set of each models
 
 layout(matrix(1:2,1), respect=TRUE)
-#layout(matrix(1:8,2), respect=TRUE)
+layout(matrix(1:12,2), respect=TRUE)
 foo = lapply(models, function(m, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytest=Ytest) { 
-                         
-  predTr = predict(m, Xtrain)
+  predTr = Xtrain[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
   rmseTr = sqrt(mean((Ytrain - predTr)^2))
-  predTe = predict(m, Xtest)
+  predTe = Xtest[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
   rmseTe = sqrt(mean((Ytest - predTe)^2))
-
   plot(predTr, Ytrain, xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " train rmse: ", signif(rmseTr, 3)))
   plot(predTe, Ytest , xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " test  rmse: ", signif(rmseTe, 3)))  
 }, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytest=Ytest)
@@ -165,11 +169,12 @@ foo = lapply(models, function(m, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytes
 
 ```{r boostrap}
 ## bootstrap Cross validation for best lambda and alpha
-n_boot = 500
+if (!exists("n_boot")) n_boot = 500
 
 
-bs_func = function(i, idx_train=idx_train, model_params=model_params) { #epimedtools to see evolution of running 
+bs_func = function(i, idx_train, model_params) { #epimedtools to see evolution of running 
   # Bootstrap sample creation
+  print(i)
   set.seed(i)
   idx_bstrain = c(
     sample(idx_train, ceiling(2/3 * length(idx_train)), replace=FALSE),
@@ -185,11 +190,11 @@ bs_func = function(i, idx_train=idx_train, model_params=model_params) { #epimedt
   }, idx_bstrain=idx_bstrain, y_key=y_key)
   # For each bootstrap, capture all probes use in the model 
   probes = lapply(models, function(m) { 
-    probes = rownames(m$beta)[m$beta@i+1]
+    probes = rownames(m$coeff)
     return(probes)
   })
   names(probes) = names(models)
-  probes
+  return(probes)
 }
 
 USE_PARAPPLY = FALSE
@@ -201,14 +206,11 @@ if (USE_PARAPPLY) {
     cl <<- parallel::makeCluster(nb_cores,  type="FORK")
     # parallel::stopCluster(cl)
   }
-  ewas = parallel::parApply(cl, t(t(1:n_boot)), 1, bs_func, idx_train=idx_train, model_params=model_params)
+  bs_probes = parallel::parApply(cl, t(t(1:n_boot)), 1, bs_func, idx_train=idx_train, model_params=model_params)
 } else {
   print("bootstrap using epimedtools::monitored_apply")
   bs_probes = epimedtools::monitored_apply(mod=1, t(t(1:n_boot)), 1, bs_func, idx_train=idx_train, model_params=model_params)
 }
-
-
-
 ```
 
 
@@ -231,12 +233,13 @@ For each alpha, we see the occurence of Hannum probes across bootstraps.
 
 ```{r hannum distribution}
 layout(matrix(1:2,1),respect = TRUE)
-Hannum_Coeff = methylclockData::get_coefHannum() # Get Hannum probes
+if (!exists("mget_coefHannum")) mget_coefHannum = memoise::memoise(methylclockData::get_coefHannum)
+hannum_coeff = mget_coefHannum() # Get Hannum probes
 foo = lapply(1:length(alphas), function(i) {
   probes = lapply(bs_probes, "[[", i)
   probes = unlist(probes)
   tmp_tab = table(probes)
-  tmp_tab_Hannum = tmp_tab[Hannum_Coeff$CpGmarker] # Occurence of each Hannum's probes
+  tmp_tab_Hannum = tmp_tab[hannum_coeff$CpGmarker] # Occurence of each Hannum's probes
   tmp_tab_Hannum[is.na(tmp_tab_Hannum)] = 0  # If no occurences, set 0 
   barplot(table(tmp_tab_Hannum), las=2, main=paste0("alpha=", alphas[i], ": ", sum(tmp_tab_Hannum >= n_boot/2), " probes.")) # Plot occurences of Hannum probes across bootstraps
   ret = names(tmp_tab_Hannum)[tmp_tab_Hannum >= n_boot/2]
@@ -267,32 +270,151 @@ for (i in 1:length(alphas)){ #for each alpha
 }
 ```
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ```{r stock bootstrap model}
-train = df[idx_train,c(idx_cpg,y_key)] # Impute train set with CpG and y_key for lm
-model_boot_coeff = lapply(1:length(alphas), function(i){ # Compute coefficients and mean in the train for each probes of the model for each alpha
-	m_boot = lm(formula(paste0(y_key,"~",paste0(boot_probes[[i]],collapse="+"))),data=train) #lm model with probes previously find with bootstrap
-	mean_probes = as.numeric(c("NA",unlist(lapply(boot_probes[[i]], function(j){
-		return(mean(train[,j])) 
-	})))) # For each probes of the model, compute its mean in the train set
-	boot_tab = cbind(coefficient = m_boot$coefficients,mean_probes) # tab with coeff of lm model and mean of each probes in train set
-	return(boot_tab)
+tmp_idx_probes = unique(unlist(boot_probes))
+tmp_train = df[idx_train,c(tmp_idx_probes,y_key)] # train set with CpG and y_key for lm
+models_bs = lapply(1:length(alphas), function(i){ # Compute coefficients and mean in the train for each probes of the model for each alpha
+	m = lm(formula(paste0(y_key,"~",paste0(boot_probes[[i]],collapse="+"))),data=tmp_train) #lm model with probes previously find with bootstrap
+  idx = boot_probes[[i]]
+  coeff = data.frame(probes=idx, beta=m$coefficients[idx])
+  rownames(coeff) = idx
+  coeff$mean = apply(tmp_train[,rownames(coeff)], 2, mean)
+  head(coeff)
+  ret = list(Intercept=m$coefficients[[1]], coeff=coeff)
+  ret$name = paste0("bs_", alphas[[i]])
+  # ret$glmmod = m
+  return(ret)
 })
+names(models_bs) = sapply(models_bs, "[[", "name")
 ```
 
 ```{r rmse model}
 #Plot rmse like with cross validation but with bootstrap results
 layout(matrix(1:2,1), respect=TRUE)
-#layout(matrix(1:8,2), respect=TRUE)
-foo = lapply(model_boot_coeff, function(m, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytest=Ytest) {               
-  predTr = Xtrain[,rownames(m)[-1]] %*% as.matrix(m[-1,"coefficient"]) + m[1,"coefficient"]
+# layout(matrix(1:8,2), respect=TRUE)
+foo = lapply(models_bs, function(m, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytest=Ytest) {               
+  predTr = Xtrain[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
   rmseTr = sqrt(mean((Ytrain - predTr)^2))
-  predTe = Xtest[,rownames(m)[-1]] %*% as.matrix(m[-1,"coefficient"]) + m[1,"coefficient"]
+  predTe = Xtest[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
   rmseTe = sqrt(mean((Ytest - predTe)^2))
-
-  plot(predTr, Ytrain, xlab="Predicted Age", ylab="Chronological Age", main = paste0(" train rmse: ", signif(rmseTr, 3)))
-  plot(predTe, Ytest , xlab="Predicted Age", ylab="Chronological Age", main = paste0(" test  rmse: ", signif(rmseTe, 3)))  
+  plot(predTr, Ytrain, xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " train rmse: ", signif(rmseTr, 3)))
+  plot(predTe, Ytest , xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " test  rmse: ", signif(rmseTe, 3)))  
 }, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytest=Ytest)
 ```
+
+
+
+
+
+```{r build hannum model, eval=FALSE}
+litterature_models = list()
+
+foo = mget_coefHannum # Get Hannum probes
+hannum_coeffs = foo$CoefficientTraining
+hannum_probes = foo$CpGmarker
+# Build Hannum model with methylclock coeffs 
+idx = hannum_probes
+coeff = data.frame(probes=idx, beta=hannum_coeffs)
+rownames(coeff) = idx
+coeff$mean = apply(df[idx_train,rownames(coeff)], 2, mean)
+head(coeff)
+hannum_model_mc = list(Intercept=0, coeff=coeff)
+hannum_model_mc$name = paste0("hannum_model_mc")
+litterature_models[["hannum_model_mc"]] = hannum_model_mc
+
+m = lm(formula(paste0(y_key,"~0+",paste0(hannum_probes,collapse="+"))),data=df[idx_train,]) #lm model with probes previously find with bootstrap
+idx = hannum_probes
+coeff = data.frame(probes=idx, beta=m$coefficients[idx])
+rownames(coeff) = idx
+coeff$mean = apply(df[idx_train,rownames(coeff)], 2, mean)
+head(coeff)
+hannum_model_dflm = list(Intercept=0, coeff=coeff)
+hannum_model_dflm$name = "hannum_model_dflm"
+litterature_models[["hannum_model_dflm"]] = hannum_model_dflm
+
+foo = methylclockData::get_coefHorvath() # Get Hannum probes
+horvath_coeffs = foo$CoefficientTraining[-1]
+horvath_probes = foo$CpGmarker[-1]
+horvath_median = foo$medianByCpG[-1]
+horvath_intercept = foo$CoefficientTraining[1]
+# Build Hannum model with methylclock coeffs 
+idx = horvath_probes
+coeff = data.frame(probes=idx, beta=horvath_coeffs)
+rownames(coeff) = idx
+coeff$mean = horvath_median
+head(coeff)
+horvath_model_mc = list(Intercept=horvath_intercept, coeff=coeff)
+horvath_model_mc$name = paste0("horvath_model_mc")
+litterature_models[["horvath_model_mc"]] = horvath_model_mc
+
+m = lm(formula(paste0(y_key,"~0+",paste0(horvath_probes,collapse="+"))),data=df[idx_train,]) #lm model with probes previously find with bootstrap
+idx = horvath_probes
+coeff = data.frame(probes=idx, beta=m$coefficients[idx])
+rownames(coeff) = idx
+coeff$mean = apply(df[idx_train,rownames(coeff)], 2, mean)
+head(coeff)
+horvath_model_dflm = list(Intercept=0, coeff=coeff)
+horvath_model_dflm$name = "horvath_model_dflm"
+litterature_models[["horvath_model_dflm"]] = horvath_model_dflm
+
+
+layout(matrix(1:8,2), respect=TRUE)
+
+foo = lapply(litterature_models, function(m, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytest=Ytest) {               
+  predTr = Xtrain[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
+  rmseTr = sqrt(mean((Ytrain - predTr)^2))
+  predTe = Xtest[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
+  rmseTe = sqrt(mean((Ytest - predTe)^2))
+  plot(predTr, Ytrain, xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " train rmse: ", signif(rmseTr, 3)))
+  plot(predTe, Ytest , xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " test  rmse: ", signif(rmseTe, 3)))  
+}, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytest=Ytest)
+
+
+# # predic ages with mc_DNAmAge
+# if (!exists("mmethylclock_DNAmAge")) {mmethylclock_DNAmAge = memoise::memoise(methylclock::DNAmAge)}
+# modelHOTr = mmethylclock_DNAmAge(t(Xtrain), age=Ytrain, cell.count=FALSE, clocks="Hannum")
+# modelHO = mmethylclock_DNAmAge(t(Xtest),age=Ytest,cell.count = FALSE, clocks = "Hannum")
+#
+# rmseHOTr = signif(sqrt(mean((modelHOTr$age - modelHOTr$Hannum)^2)),3)
+# rmseHO = signif(sqrt(mean((modelHO$age - modelHO$Hannum)^2)),3)
+#
+# plot(modelHOTr$Hannum, modelHOTr$age, xlab="Methylomic Age", ylab="Chronological Age", main=paste0("Pred with Hannum Method on Train Set, rmse = ",rmseHOTr))
+# plot(modelHO$Hannum, modelHO$age, xlab="Methylomic Age", ylab="Chronological Age", main=paste0("Pred with Hannum Method on Test Set, rmse = ",rmseHO))
+#
+# predTr = modelHOTr$Hannum
+# Ytrain == modelHOTr$age
+# rmseTr = sqrt(mean((Ytrain - predTr)^2))
+# predTe = modelHO$Hannum
+# Ytest == modelHO$age
+# rmseTe = sqrt(mean((Ytest - predTe)^2))
+# plot(predTr, Ytrain, xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " train rmse: ", signif(rmseTr, 3)))
+# plot(predTe, Ytest , xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " test  rmse: ", signif(rmseTe, 3)))
+
+```
+
+
 
 ```{r}
 end_time = Sys.time()
