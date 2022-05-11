@@ -36,7 +36,7 @@ if (!exists("mget_full_cpg_matrix")) {mget_full_cpg_matrix = memoise::memoise(fu
 ```{r train/test}
 #Define train and test indexes
 # Ntrain = floor(nrow(df)/2)
-Ntrain = floor(482)
+Ntrain = 482
 set.seed(1)
 idx_train = sample(rownames(df), Ntrain)
 idx_test = setdiff(rownames(df), idx_train)
