@@ -99,7 +99,10 @@ idx_clinicals = colnames(df)[1:(markers_start-1)]
 idx_cpg = colnames(df)[markers_start:ncol(df)]
 # services patterns
 if (!exists("mget_df")) {mget_df = memoise::memoise(function(){df})}
-if (!exists("mget_full_cpg_matrix")) {mget_full_cpg_matrix = memoise::memoise(function(idx_smp){as.matrix(mget_df()[idx_smp,idx_cpg])}, cache = cachem::cache_mem(max_size = 10*1024 * 1024^2))}
+if (!exists("mget_full_cpg_matrix")) {
+  get_full_cpg_matrix = function(idx_smp){as.matrix(mget_df()[idx_smp,idx_cpg])}
+  mget_full_cpg_matrix = memoise::memoise(get_full_cpg_matrix, cache = cachem::cache_mem(max_size = 10*1024 * 1024^2))
+}
 ```
 
 # Parameters 
@@ -137,14 +140,6 @@ if (!exists("mcvglmnet")) {
     return(cvrecap)  
   }
   mcvglmnet = memoise::memoise(cvglmnet)
-  # if (exists("cl")) {
-  #   parallel::stopCluster(cl)
-  # }
-  # if (!exists("cl")) {
-  #   nb_cores = parallel::detectCores()
-  #   cl <<- parallel::makeCluster(nb_cores,  type="FORK")
-  #   # parallel::stopCluster(cl)
-  # }
 } # Memoise for 
 
 if (!exists("mcvaglmnet")) {
@@ -164,7 +159,7 @@ if (!exists("mcvaglmnet")) {
 
 
 ```{r glmnet::cv.glmnet call}
-cvrecaps = lapply(alphas, function(alpha, idx_train=idx_train, y_key=y_key) { #list with cv recap (lambda,rmse,nbprobes) and lambda.min  
+cvrecaps = lapply(alphas, function(alpha, idx_train, y_key) { #list with cv recap (lambda,rmse,nbprobes) and lambda.min  
   print(alpha)
   cvrecap = mcvglmnet(alpha=alpha, idx_train=idx_train, y_key=y_key)
   return(cvrecap)  
