@@ -137,23 +137,24 @@ if (!exists("mcvglmnet")) {
     return(cvrecap)  
   }
   mcvglmnet = memoise::memoise(cvglmnet)
-  if (exists("cl")) {
-    parallel::stopCluster(cl)
-  }
-  if (!exists("cl")) {
-    nb_cores = parallel::detectCores()
-    cl <<- parallel::makeCluster(nb_cores,  type="FORK")
-    # parallel::stopCluster(cl)
-  }
+  # if (exists("cl")) {
+  #   parallel::stopCluster(cl)
+  # }
+  # if (!exists("cl")) {
+  #   nb_cores = parallel::detectCores()
+  #   cl <<- parallel::makeCluster(nb_cores,  type="FORK")
+  #   # parallel::stopCluster(cl)
+  # }
 } # Memoise for 
 
 if (!exists("mcvaglmnet")) {
   cvaglmnet = function(idx_train, y_key) {
     x = mget_full_cpg_matrix(idx_train)
     y = mget_df()[idx_train, y_key] # service. Design Oatterns, Gamma et al. 
-    cl.cva = parallel::makeCluster(nb_cores,  type="FORK")
-    modelcva = glmnetUtils::cva.glmnet(x=x, y=y, type.measure="mse", standardize=TRUE, outerParallel = cl.cva)
-    parallel::stopCluster(cl.cva)
+    # cl.cva = parallel::makeCluster(nb_cores,  type="FORK")
+    # modelcva = glmnetUtils::cva.glmnet(x=x, y=y, type.measure="mse", standardize=TRUE, outerParallel = cl.cva)
+    # parallel::stopCluster(cl.cva)
+    modelcva = glmnetUtils::cva.glmnet(x=x, y=y, type.measure="mse", standardize=TRUE)
     # cvrecap = data.frame(lambda=modelcv$lambda, rmse=sqrt(modelcv$cvm), nbprobes=modelcv$nzero, alpha=alpha)
     return(modelcva)  
   }
@@ -363,7 +364,7 @@ bs_func = function(i, idx_train, model_params) { #epimedtools to see evolution o
     sample(idx_train, floor(  1/3 * length(idx_train)), replace=TRUE)
   )
   # Create model with best meta params and bootstrap sample
-  models_bs = apply(model_params, 1, function(m_params, idx_bstrain=idx_bstrain, y_key=y_key) { 
+  models_bs = apply(model_params, 1, function(m_params, idx_bstrain, y_key) { 
     # print(m_params)
     alpha = m_params[["alpha"]]
     lambda = m_params[["lambda"]]
