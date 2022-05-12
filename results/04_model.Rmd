@@ -11,6 +11,77 @@ output:
 ---
 
 
+
+
+# Biological clocks
+
+Biological clocks are statstical tools allowing to **predict** age according bilogical parameters.
+
+*e.g.*
+
+$$Age \sim telomere size$$ [Ref.]
+
+$$Age \sim composition cellulaire$$ 
+
+$$Age \sim DNAm$$
+
+
+Note: Predictive model are different than explanatory model.
+
+*e.g.*
+
+15% of 450k probes are correlated to the age,
+but only 71 probes are used in Hannum 2013 clock.
+
+
+
+
+
+
+
+
+
+
+
+Since, we use the clock metaphore, aging characterizes a shift between chronological age and biologiocal (or predicted) age.
+But, more than aging, epigenetic clock points out the DNAm plastic part over time.
+
+Then, we use epigenetic clock (predictiv model) to study cofactor effects (altitude,  air pollution...) on DNAm.
+Thereby, epigenetic clock becomes a powerfull ligthweight tool to emphasis effects of cofactor on (15% of) DNAm.
+
+*e.g.* 
+
+In Hannum 2013, Aging Methylation Acceleration Rate (AMAR) according do sex shows differential aging.
+
+
+
+
+Lightness of epigenetic clocks allow to treat cases more powerfully than it could be with DMR.
+
+*e.g.*
+
+clock on 27k  vs. DMR on 27k
+
+
+
+
+
+
+
+Hypothèse : etudier la meth au regard de l’age permet de capturer la partie plastique du DNAm
+
+
+
+
+
+
+
+
+
+
+
+ 
+
 ```{r echo=FALSE}
 knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=TRUE, results="verbatim")
 start_time = Sys.time()
@@ -45,7 +116,7 @@ idx_test = setdiff(rownames(df), idx_train)
 if(!exists("alphas")) alphas = c(.1, .15, .2, .25, .5, 1)
 
 # boostrap 
-if (!exists("n_boot")) n_boot = 300
+if (!exists("n_boot")) n_boot = 500
 ``` 
 
 
@@ -66,23 +137,24 @@ if (!exists("mcvglmnet")) {
     return(cvrecap)  
   }
   mcvglmnet = memoise::memoise(cvglmnet)
-  if (exists("cl")) {
-    parallel::stopCluster(cl)
-  }
-  if (!exists("cl")) {
-    nb_cores = parallel::detectCores()
-    cl <<- parallel::makeCluster(nb_cores,  type="FORK")
-    # parallel::stopCluster(cl)
-  }
+  # if (exists("cl")) {
+  #   parallel::stopCluster(cl)
+  # }
+  # if (!exists("cl")) {
+  #   nb_cores = parallel::detectCores()
+  #   cl <<- parallel::makeCluster(nb_cores,  type="FORK")
+  #   # parallel::stopCluster(cl)
+  # }
 } # Memoise for 
 
 if (!exists("mcvaglmnet")) {
-  cvaglmnet = function(alphas, idx_train, y_key) {
+  cvaglmnet = function(idx_train, y_key) {
     x = mget_full_cpg_matrix(idx_train)
     y = mget_df()[idx_train, y_key] # service. Design Oatterns, Gamma et al. 
-    cl.cva = parallel::makeCluster(nb_cores,  type="FORK")
-    modelcva = glmnetUtils::cva.glmnet(x=x, y=y, type.measure="mse", standardize=TRUE, outerParallel = cl.cva)
-    parallel::stopCluster(cl.cva)
+    # cl.cva = parallel::makeCluster(nb_cores,  type="FORK")
+    # modelcva = glmnetUtils::cva.glmnet(x=x, y=y, type.measure="mse", standardize=TRUE, outerParallel = cl.cva)
+    # parallel::stopCluster(cl.cva)
+    modelcva = glmnetUtils::cva.glmnet(x=x, y=y, type.measure="mse", standardize=TRUE)
     # cvrecap = data.frame(lambda=modelcv$lambda, rmse=sqrt(modelcv$cvm), nbprobes=modelcv$nzero, alpha=alpha)
     return(modelcva)  
   }
@@ -103,7 +175,7 @@ dim(cvrecaps)
 ```
 
 ```{r cva.glmnet call, eval=TRUE, echo=TRUE}
-modelcva = mcvaglmnet(alphas=alphas, idx_train=idx_train, y_key=y_key)
+modelcva = mcvaglmnet(idx_train=idx_train, y_key=y_key)
 
 length(modelcva)
 cvarecaps = data.frame(
@@ -137,7 +209,7 @@ foo = lapply(tmp_alphas, function(alpha) {
   sub_recap = cvrecap[cvrecap$rmse==min(cvrecap$rmse),]
   tmp_col = which(alpha==tmp_alphas)
   lines(log10(cvrecap$lambda), cvrecap$rmse             , col=adjustcolor(tmp_col, alpha.f=1), lty=2)
-  abline(v=log10(sub_recap$lambda)                      , col=adjustcolor(tmp_col, alpha.f=1), lty=2)
+  # abline(v=log10(sub_recap$lambda)                      , col=adjustcolor(tmp_col, alpha.f=1), lty=2)
   points(  log10(sub_recap$lambda), sub_recap$rmse  , col=tmp_col, pch=16)
 })
 plot(0, 0, col=0, xlab="log10(lambda)", ylab="nbprobes", main=main, xlim=log10(range(cvrecaps$lambda)), ylim=c(0, ceiling(nb_train)))
@@ -146,7 +218,7 @@ foo = lapply(tmp_alphas, function(alpha) {
   sub_recap = cvrecap[cvrecap$rmse==min(cvrecap$rmse),]
   tmp_col = which(alpha==tmp_alphas)
   lines(log10(cvrecap$lambda), cvrecap$nbprobes         , col=adjustcolor(tmp_col, alpha.f=.5), lty=2)
-  abline(v=log10(sub_recap$lambda)                      , col=adjustcolor(tmp_col, alpha.f=.5), lty=2)
+  # abline(v=log10(sub_recap$lambda)                      , col=adjustcolor(tmp_col, alpha.f=.5), lty=2)
   points(  log10(sub_recap$lambda), sub_recap$nbprobes  , col=tmp_col, pch=16)
 })
 legend(x="topright", legend=tmp_alphas, fill=1:length(tmp_alphas), title="alpha", cex=.5)
@@ -276,10 +348,14 @@ plot(Ytest , predTe, xlab="Chronological Age", ylab="Predicted Age", main=paste0
 
 # Bootstrap
 
-bootstrap Cross validation for best lambda and alpha, **FCh: No, it is wrong.**
+What is bootstrap?
+
+Boostrap allows to increase robustness of results.
+
+#datascientist
 
 ```{r boostrap}
-bs_func = function(i, idx_train, model_params, mmodel_factory_glmnet, y_key=y_key) { #epimedtools to see evolution of running 
+bs_func = function(i, idx_train, model_params) { #epimedtools to see evolution of running 
   # Bootstrap sample creation
   # print(i)
   set.seed(i)
@@ -288,7 +364,7 @@ bs_func = function(i, idx_train, model_params, mmodel_factory_glmnet, y_key=y_ke
     sample(idx_train, floor(  1/3 * length(idx_train)), replace=TRUE)
   )
   # Create model with best meta params and bootstrap sample
-  models_bs = apply(model_params, 1, function(m_params, idx_bstrain=idx_bstrain, y_key=y_key) { 
+  models_bs = apply(model_params, 1, function(m_params, idx_bstrain, y_key) { 
     # print(m_params)
     alpha = m_params[["alpha"]]
     lambda = m_params[["lambda"]]
@@ -306,7 +382,7 @@ bs_func = function(i, idx_train, model_params, mmodel_factory_glmnet, y_key=y_ke
   return(bs)
 }
 
-USE_PARAPPLY = TRUE
+USE_PARAPPLY = FALSE
 
 if (USE_PARAPPLY) {
   print("bootstrap using parallel::parApply...")
@@ -314,7 +390,7 @@ if (USE_PARAPPLY) {
     cl_bs = parallel::makeCluster(parallel::detectCores(),  type="PSOCK")    
     # parallel::stopCluster(cl_bs)
   }
-  bs = parallel::parApply(cl_bs, t(t(1:n_boot)), 1, bs_func, idx_train=idx_train, model_params=model_params, mmodel_factory_glmnet=mmodel_factory_glmnet, y_key=y_key)
+  bs = parallel::parApply(cl_bs, t(t(1:n_boot)), 1, bs_func, idx_train=idx_train, model_params=model_params, mmodel_factory_glmnet=mmodel_factory_glmnet)
 } else {
   print("bootstrap using epimedtools::monitored_apply")
   bs = epimedtools::monitored_apply(mod=1, t(t(1:n_boot)), 1, bs_func, idx_train=idx_train, model_params=model_params)   
@@ -329,11 +405,25 @@ length(bs_probes)
 ```
 
 
+Put there predisction train and test like for CV
+
+
+
+
+# Results and Discussion
+
 For each alpha, we see the occurence of each probes across bootstraps.
+
+
+Discussion, a **core of probes** are always selected by bootstrap.
+
+- What is the relevance of the clock built with only this core of probes? #biostat
+- Which one? What are associated biologiocal functions? #biologist 
+- Are these probes located into wild Differebnttion Metrhylation Region (DMR)? #biologist
 
 ```{r bootstrap distribution}
 layout(1, respect=TRUE)
-# layout(matrix(1:2,1),respect = TRUE)
+layout(matrix(1:2,1),respect = TRUE)
 # layout(matrix(1:4,1),respect = TRUE)
 boot_probes = lapply(1:nrow(model_params),function(i){
   #  probes = lapply(bs_probes, "[[", i) #Probes for each alpha
@@ -345,12 +435,21 @@ boot_probes = lapply(1:nrow(model_params),function(i){
     sub = paste0("keep ", length(tmp_boot_probes), " probes"),
     main=paste0("Probes occurence distribution for ", rownames(model_params)[i]) 
   ) # barplot of occurence of each probes across bootstraps
+
+  barplot(cumsum(rev(table(table(probes)))), las=2, 
+    xlab="nb of cum. occurence", 
+    sub = paste0("keep ", length(tmp_boot_probes), " probes"),
+    main=paste0("Cumulated probes occurence distribution for ", rownames(model_params)[i]) 
+  ) # barplot of occurence of each probes across bootstraps
+  
+  
+  
   return(tmp_boot_probes)
 })
 names(boot_probes) = paste0("bs_", rownames(model_params))
 ```
 
-# Hannum probes
+## Hannum probes
 
 For each alpha, we see the occurence of Hannum probes across bootstraps.
 
@@ -372,7 +471,7 @@ foo = lapply(1:nrow(model_params), function(i) {
 unique(unlist(foo))
 ```
 
-# Occurrence of probes
+## Occurrence of probes along of boostrap process
 
 Follow the number of retained probes along of the bootstraps process
 
@@ -451,7 +550,7 @@ foo = lapply(models_bs, function(m, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Y
 ```
 
 
-
+# AMAR
 
 
 ```{r build hannum model, eval=FALSE}
