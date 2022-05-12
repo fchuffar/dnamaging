@@ -45,7 +45,7 @@ idx_test = setdiff(rownames(df), idx_train)
 if(!exists("alphas")) alphas = c(.1, .15, .2, .25, .5, 1)
 
 # boostrap 
-if (!exists("n_boot")) n_boot = 500
+if (!exists("n_boot")) n_boot = 300
 ``` 
 
 
