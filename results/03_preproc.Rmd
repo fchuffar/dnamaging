@@ -109,6 +109,9 @@ print(paste0("#sample removed: ", nrow(df) - length(idx_samples)))
 df = df[idx_samples,]
 ```
 
+```{r extract preprocess df}
+saveRDS(df, paste0("df_preproc_",gse,".rds"))
+```
 # Session Information
 
 ```{r, results="verbatim"}
