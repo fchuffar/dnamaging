@@ -133,8 +133,8 @@ if (!exists("mcvglmnet")) {
     x = mget_full_cpg_matrix(idx_train)
     y = mget_df()[idx_train, y_key] # service. Design Oatterns, Gamma et al. 
     modelcv = glmnet::cv.glmnet(x=x, y=y, alpha=alpha, type.measure="mse", standardize=TRUE)
-    cvrecap = data.frame(lambda=modelcv$lambda, rmse=sqrt(modelcv$cvm), nbprobes=modelcv$nzero, alpha=alpha)
-    return(cvrecap)  
+    # cvrecap = data.frame(lambda=modelcv$lambda, rmse=sqrt(modelcv$cvm), nbprobes=modelcv$nzero, alpha=alpha)
+    return(modelcv)  
   }
   mcvglmnet = memoise::memoise(cvglmnet)
   # if (exists("cl")) {
@@ -164,12 +164,23 @@ if (!exists("mcvaglmnet")) {
 
 
 ```{r glmnet::cv.glmnet call}
-cvrecaps = lapply(alphas, function(alpha, idx_train=idx_train, y_key=y_key) { #list with cv recap (lambda,rmse,nbprobes) and lambda.min  
-  print(alpha)
-  cvrecap = mcvglmnet(alpha=alpha, idx_train=idx_train, y_key=y_key)
-  return(cvrecap)  
-}, idx_train=idx_train, y_key=y_key)
-cvrecaps = do.call(rbind, cvrecaps)
+modelcv = lapply(alphas, function(alpha){
+  tmp_modelcv = mcvglmnet(idx_train=idx_train, y_key=y_key,alpha)
+  return(tmp_modelcv)
+})
+
+length(modelcv)
+cvrecaps = data.frame(
+  lambda   = unlist(lapply(modelcv, "[[", "lambda")), 
+  cvm      = unlist(lapply(modelcv, "[[", "cvm")   ),
+  cvup     = unlist(lapply(modelcv, "[[", "cvup")  ),
+  cvlo     = unlist(lapply(modelcv, "[[", "cvlo")  ),
+  nbprobes = unlist(lapply(modelcv, "[[", "nzero") ),
+  alpha    = rep(alphas, sapply(lapply(modelcv, "[[", "lambda"), length))
+)
+cvrecaps$rmse = sqrt(cvrecaps$cvm)
+cvrecaps$rmseup = sqrt(cvrecaps$cvup)
+cvrecaps$rmselo = sqrt(cvrecaps$cvlo)
 head(cvrecaps)
 dim(cvrecaps)
 ```
@@ -181,10 +192,14 @@ length(modelcva)
 cvarecaps = data.frame(
   lambda   = unlist(lapply(modelcva$modlist, "[[", "lambda")), 
   cvm      = unlist(lapply(modelcva$modlist, "[[", "cvm")   ), 
+  cvup     = unlist(lapply(modelcva$modlist, "[[", "cvup")  ),
+  cvlo     = unlist(lapply(modelcva$modlist, "[[", "cvlo")  ),
   nbprobes = unlist(lapply(modelcva$modlist, "[[", "nzero") ),
   alpha    = rep(modelcva$alpha, sapply(lapply(modelcva$modlist, "[[", "lambda"), length))
 )
 cvarecaps$rmse = sqrt(cvarecaps$cvm)
+cvarecaps$rmseup = sqrt(cvarecaps$cvup)
+cvarecaps$rmselo = sqrt(cvarecaps$cvlo)
 head(cvarecaps)
 dim(cvarecaps)
 
@@ -194,9 +209,6 @@ if (exists("cvrecaps")) {
   cvrecaps = cvarecaps  
 }
 ```
-
-
-**Need to add error bar**
 
 ```{r plot cvglmnet results, echo=FALSE}
 main = paste0("Cross-Validation nb_train=", nb_train)
@@ -211,6 +223,7 @@ foo = lapply(tmp_alphas, function(alpha) {
   lines(log10(cvrecap$lambda), cvrecap$rmse             , col=adjustcolor(tmp_col, alpha.f=1), lty=2)
   # abline(v=log10(sub_recap$lambda)                      , col=adjustcolor(tmp_col, alpha.f=1), lty=2)
   points(  log10(sub_recap$lambda), sub_recap$rmse  , col=tmp_col, pch=16)
+  arrows(x0=log10(sub_recap$lambda), y0=sub_recap$rmselo, x1=log10(sub_recap$lambda), y1=sub_recap$rmseup, code=3, angle=90, length = 0.03, col=tmp_col, lwd=2)
 })
 plot(0, 0, col=0, xlab="log10(lambda)", ylab="nbprobes", main=main, xlim=log10(range(cvrecaps$lambda)), ylim=c(0, ceiling(nb_train)))
 foo = lapply(tmp_alphas, function(alpha) { 
@@ -283,22 +296,6 @@ plot(Ytrain, predTr, xlab="Chronological Age", ylab="Predicted Age", main=paste0
 plot(Ytest , predTe, xlab="Chronological Age", ylab="Predicted Age", main=paste0(m$name, " test  rmse: ", signif(rmseTe, 3))) 
 ```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ```{r glmnet_build_deprecated, echo=FALSE, eval=FALSE}
 # ## Model evaluation with best meta parameters
 # # best model_params = list(alphas, lambdas)
@@ -354,7 +351,7 @@ Boostrap allows to increase robustness of results.
 
 #datascientist
 
-```{r boostrap}
+```{r bootstrap}
 bs_func = function(i, idx_train, model_params) { #epimedtools to see evolution of running 
   # Bootstrap sample creation
   # print(i)
@@ -553,89 +550,11 @@ foo = lapply(models_bs, function(m, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Y
 # AMAR
 
 
-```{r build hannum model, eval=FALSE}
-litterature_models = list()
-
-foo = mget_coefHannum # Get Hannum probes
-hannum_coeffs = foo$CoefficientTraining
-hannum_probes = foo$CpGmarker
-# Build Hannum model with methylclock coeffs 
-idx = hannum_probes
-coeff = data.frame(probes=idx, beta=hannum_coeffs)
-rownames(coeff) = idx
-coeff$mean = apply(df[idx_train,rownames(coeff)], 2, mean)
-head(coeff)
-hannum_model_mc = list(Intercept=0, coeff=coeff)
-hannum_model_mc$name = paste0("hannum_model_mc")
-litterature_models[["hannum_model_mc"]] = hannum_model_mc
-
-m = lm(formula(paste0(y_key,"~0+",paste0(hannum_probes,collapse="+"))),data=df[idx_train,]) #lm model with probes previously find with bootstrap
-idx = hannum_probes
-coeff = data.frame(probes=idx, beta=m$coefficients[idx])
-rownames(coeff) = idx
-coeff$mean = apply(df[idx_train,rownames(coeff)], 2, mean)
-head(coeff)
-hannum_model_dflm = list(Intercept=0, coeff=coeff)
-hannum_model_dflm$name = "hannum_model_dflm"
-litterature_models[["hannum_model_dflm"]] = hannum_model_dflm
-
-foo = methylclockData::get_coefHorvath() # Get Hannum probes
-horvath_coeffs = foo$CoefficientTraining[-1]
-horvath_probes = foo$CpGmarker[-1]
-horvath_median = foo$medianByCpG[-1]
-horvath_intercept = foo$CoefficientTraining[1]
-# Build Hannum model with methylclock coeffs 
-idx = horvath_probes
-coeff = data.frame(probes=idx, beta=horvath_coeffs)
-rownames(coeff) = idx
-coeff$mean = horvath_median
-head(coeff)
-horvath_model_mc = list(Intercept=horvath_intercept, coeff=coeff)
-horvath_model_mc$name = paste0("horvath_model_mc")
-litterature_models[["horvath_model_mc"]] = horvath_model_mc
-
-m = lm(formula(paste0(y_key,"~0+",paste0(horvath_probes,collapse="+"))),data=df[idx_train,]) #lm model with probes previously find with bootstrap
-idx = horvath_probes
-coeff = data.frame(probes=idx, beta=m$coefficients[idx])
-rownames(coeff) = idx
-coeff$mean = apply(df[idx_train,rownames(coeff)], 2, mean)
-head(coeff)
-horvath_model_dflm = list(Intercept=0, coeff=coeff)
-horvath_model_dflm$name = "horvath_model_dflm"
-litterature_models[["horvath_model_dflm"]] = horvath_model_dflm
 
 
-layout(matrix(1:8,2), respect=TRUE)
+```{amar plotting,eval = FALSE}
+load("litterature_models.txt")
 
-foo = lapply(litterature_models, function(m, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytest=Ytest) {               
-  predTr = Xtrain[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
-  rmseTr = sqrt(mean((Ytrain - predTr)^2))
-  predTe = Xtest[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
-  rmseTe = sqrt(mean((Ytest - predTe)^2))
-  plot(predTr, Ytrain, xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " train rmse: ", signif(rmseTr, 3)))
-  plot(predTe, Ytest , xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " test  rmse: ", signif(rmseTe, 3)))  
-}, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytest=Ytest)
-
-
-# # predic ages with mc_DNAmAge
-# if (!exists("mmethylclock_DNAmAge")) {mmethylclock_DNAmAge = memoise::memoise(methylclock::DNAmAge)}
-# modelHOTr = mmethylclock_DNAmAge(t(Xtrain), age=Ytrain, cell.count=FALSE, clocks="Hannum")
-# modelHO = mmethylclock_DNAmAge(t(Xtest),age=Ytest,cell.count = FALSE, clocks = "Hannum")
-#
-# rmseHOTr = signif(sqrt(mean((modelHOTr$age - modelHOTr$Hannum)^2)),3)
-# rmseHO = signif(sqrt(mean((modelHO$age - modelHO$Hannum)^2)),3)
-#
-# plot(modelHOTr$Hannum, modelHOTr$age, xlab="Methylomic Age", ylab="Chronological Age", main=paste0("Pred with Hannum Method on Train Set, rmse = ",rmseHOTr))
-# plot(modelHO$Hannum, modelHO$age, xlab="Methylomic Age", ylab="Chronological Age", main=paste0("Pred with Hannum Method on Test Set, rmse = ",rmseHO))
-#
-# predTr = modelHOTr$Hannum
-# Ytrain == modelHOTr$age
-# rmseTr = sqrt(mean((Ytrain - predTr)^2))
-# predTe = modelHO$Hannum
-# Ytest == modelHO$age
-# rmseTe = sqrt(mean((Ytest - predTe)^2))
-# plot(predTr, Ytrain, xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " train rmse: ", signif(rmseTr, 3)))
-# plot(predTe, Ytest , xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " test  rmse: ", signif(rmseTe, 3)))
 
 ```
 
