@@ -159,7 +159,6 @@ if (!exists("mcvaglmnet")) {
 
 
 ```{r glmnet::cv.glmnet call}
-<<<<<<< HEAD
 modelcv = lapply(alphas, function(alpha){
   tmp_modelcv = mcvglmnet(idx_train=idx_train, y_key=y_key,alpha)
   return(tmp_modelcv)
@@ -177,14 +176,7 @@ cvrecaps = data.frame(
 cvrecaps$rmse = sqrt(cvrecaps$cvm)
 cvrecaps$rmseup = sqrt(cvrecaps$cvup)
 cvrecaps$rmselo = sqrt(cvrecaps$cvlo)
-=======
-cvrecaps = lapply(alphas, function(alpha, idx_train, y_key) { #list with cv recap (lambda,rmse,nbprobes) and lambda.min  
-  print(alpha)
-  cvrecap = mcvglmnet(alpha=alpha, idx_train=idx_train, y_key=y_key)
-  return(cvrecap)  
-}, idx_train=idx_train, y_key=y_key)
-cvrecaps = do.call(rbind, cvrecaps)
->>>>>>> a66b0f70f3b6b2abfdfaa262d83efeea36d63ea6
+
 head(cvrecaps)
 dim(cvrecaps)
 ```
