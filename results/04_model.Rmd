@@ -123,13 +123,16 @@ if (!exists("n_boot")) n_boot = 500
 ``` 
 
 
-# Cross-Validation 
+# Elastic net regularization
 
-Find best meta parameters with cross validation
+Elastic net regularization is...
+
+Meta-parameters are fixed using cross validation.
 
 #datascientist
 
-```{r glmnet::cv.glmnet and glmnetUtils::cva.glmnet memoisation, echo=FALSE}
+
+```{r glmnet::cv.glmnet call deprecated, eval=FALSE, echo=FALSE}
 ### Memoisation glmnet::cv.glmnet call
 if (!exists("mcvglmnet")) {
   cvglmnet = function(alpha, idx_train, y_key) {
@@ -142,24 +145,6 @@ if (!exists("mcvglmnet")) {
   mcvglmnet = memoise::memoise(cvglmnet)
 } # Memoise for 
 
-if (!exists("mcvaglmnet")) {
-  cvaglmnet = function(idx_train, y_key) {
-    x = mget_full_cpg_matrix(idx_train)
-    y = mget_df()[idx_train, y_key] # service. Design Oatterns, Gamma et al. 
-    # cl.cva = parallel::makeCluster(nb_cores,  type="FORK")
-    # modelcva = glmnetUtils::cva.glmnet(x=x, y=y, type.measure="mse", standardize=TRUE, outerParallel = cl.cva)
-    # parallel::stopCluster(cl.cva)
-    modelcva = glmnetUtils::cva.glmnet(x=x, y=y, type.measure="mse", standardize=TRUE)
-    # cvrecap = data.frame(lambda=modelcv$lambda, rmse=sqrt(modelcv$cvm), nbprobes=modelcv$nzero, alpha=alpha)
-    return(modelcva)  
-  }
-  mcvaglmnet = memoise::memoise(cvaglmnet)
-} # Memoise for cvaglmnet
-```
-
-
-```{r glmnet::cv.glmnet call}
-<<<<<<< HEAD
 modelcv = lapply(alphas, function(alpha){
   tmp_modelcv = mcvglmnet(idx_train=idx_train, y_key=y_key,alpha)
   return(tmp_modelcv)
@@ -177,22 +162,33 @@ cvrecaps = data.frame(
 cvrecaps$rmse = sqrt(cvrecaps$cvm)
 cvrecaps$rmseup = sqrt(cvrecaps$cvup)
 cvrecaps$rmselo = sqrt(cvrecaps$cvlo)
-=======
-cvrecaps = lapply(alphas, function(alpha, idx_train, y_key) { #list with cv recap (lambda,rmse,nbprobes) and lambda.min  
-  print(alpha)
-  cvrecap = mcvglmnet(alpha=alpha, idx_train=idx_train, y_key=y_key)
-  return(cvrecap)  
-}, idx_train=idx_train, y_key=y_key)
-cvrecaps = do.call(rbind, cvrecaps)
->>>>>>> a66b0f70f3b6b2abfdfaa262d83efeea36d63ea6
 head(cvrecaps)
 dim(cvrecaps)
+
+# if (exists("cvrecaps")) {
+#   cvrecaps = rbind(cvrecaps, cvarecaps[, colnames(cvrecaps)])
+# } else {
+  cvrecaps = cvarecaps  
+# }
 ```
 
 ```{r cva.glmnet call, eval=TRUE, echo=TRUE}
+if (!exists("mcvaglmnet")) {
+  cvaglmnet = function(idx_train, y_key) {
+    x = mget_full_cpg_matrix(idx_train)
+    y = mget_df()[idx_train, y_key] # service. Design Oatterns, Gamma et al. 
+    modelcva = glmnetUtils::cva.glmnet(x=x, y=y, type.measure="mse", standardize=TRUE)
+    return(modelcva)  
+  }
+  # Use parallel::makeCluster is not compatible with memoisation.
+  # cl.cva = parallel::makeCluster(nb_cores,  type="FORK")
+  # modelcva = glmnetUtils::cva.glmnet(x=x, y=y, type.measure="mse", standardize=TRUE, outerParallel=cl.cva)
+  # parallel::stopCluster(cl.cva)
+  mcvaglmnet = memoise::memoise(cvaglmnet)
+} # Memoise for cvaglmnet
+
 modelcva = mcvaglmnet(idx_train=idx_train, y_key=y_key)
 
-length(modelcva)
 cvarecaps = data.frame(
   lambda   = unlist(lapply(modelcva$modlist, "[[", "lambda")), 
   cvm      = unlist(lapply(modelcva$modlist, "[[", "cvm")   ), 
@@ -207,11 +203,7 @@ cvarecaps$rmselo = sqrt(cvarecaps$cvlo)
 head(cvarecaps)
 dim(cvarecaps)
 
-if (exists("cvrecaps")) {
-  cvrecaps = rbind(cvrecaps, cvarecaps[, colnames(cvrecaps)])
-} else {
-  cvrecaps = cvarecaps  
-}
+cvrecaps = cvarecaps  
 ```
 
 ```{r plot cvglmnet results, echo=FALSE}
@@ -349,9 +341,9 @@ plot(Ytest , predTe, xlab="Chronological Age", ylab="Predicted Age", main=paste0
 
 # Bootstrap
 
-What is bootstrap?
+Bootstrap bootstrap is...
 
-Boostrap allows to increase robustness of results.
+Boostrap increases robustness of results.
 
 #datascientist
 
@@ -556,10 +548,8 @@ foo = lapply(models_bs, function(m, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Y
 
 
 
-```{amar plotting,eval = FALSE}
-load("litterature_models.txt")
-
-
+```{r amar plotting, eval = FALSE}
+litterature_models = readRDS("litterature_models.rds")
 ```
 
 
