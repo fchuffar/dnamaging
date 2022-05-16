@@ -461,6 +461,8 @@ RMSE = function(data_truth, data_pred) {
     return(sqrt(mean((data_truth - data_pred)^2)))
 }
 
+probes = unlist(bs_probes) # probes of all bootstraps
+tmp_tab = table(probes) # distribution of all probes
 tmp_idx_probes = unique(names(tmp_tab))
 sub_df = df[,c(tmp_idx_probes,y_key)] 
 
