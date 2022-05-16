@@ -10,15 +10,15 @@ output:
     number_sections: true
 ---
 
-```{r setup, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>"
-)
+```{r echo=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=TRUE, results="verbatim")
+start_time = Sys.time()
+source("common.R")
 ```
 
 ```{r call data}
-df = readRDS("df_preproc_GSE40279.rds")
+source("params_GSE40279.R")
+df = mreadRDS("df_preproc_GSE40279.rds")
 
 idx_samples = rownames(df)
 markers_start = grep("cg",colnames(df))[1]
@@ -29,9 +29,6 @@ nb_train = 482
 set.seed(1)
 idx_train = sample(rownames(df), nb_train)
 idx_test = setdiff(rownames(df), idx_train)
-
-if (!exists("mget_coefHannum")) mget_coefHannum = memoise::memoise(methylclockData::get_coefHannum)
-
 ```
 
 ```{r build coeff}
@@ -85,6 +82,5 @@ horvath_model_dflm = list(Intercept=0, coeff=coeff)
 horvath_model_dflm$name = "horvath_model_dflm"
 litterature_models[["horvath_model_dflm"]] = horvath_model_dflm
 
-save(litterature_models, file = "litterature_models.txt")
-
+saveRDS(litterature_models, file="litterature_models.rds")
 ```
