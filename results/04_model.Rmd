@@ -675,7 +675,57 @@ foo = lapply(models_bs, function(m, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Y
 
 
 ```{r amar plotting, eval = FALSE}
+layout(matrix(1:3,1), respect=TRUE)
+
+models = list(m,models_bs[[1]])
 litterature_models = readRDS("litterature_models.rds")
+models = c(models,litterature_models)
+
+
+for (it in covariates) {
+  factors = unique(df[,it])
+  tmp_col = RColorBrewer::brewer.pal(n=max(3,length(factors)), name = "Set1")
+  for (i in 1:length(models)) {
+    m = models[[i]]
+  
+    tmp_Xtrain = Xtrain[,rownames(m$coeff)[rownames(m$coeff) %in% colnames(Xtrain)]] #Keep only common CpG between coeffs and Xtrain
+    tmp_Xtest = Xtest[,rownames(m$coeff)[rownames(m$coeff) %in% colnames(Xtest)]] #Keep only common CpG between coeffs and Xtrain
+  
+    idx_missing_probes = rownames(m$coeff)[!(rownames(m$coeff) %in% colnames(Xtrain))]
+    if (length(idx_missing_probes) != 0) {
+      foo = m$coeff[idx_missing_probes,"mean"]
+      names(foo) = idx_missing_probes
+      tmp_Xtrain = cbind(tmp_Xtrain,do.call("rbind",replicate(nrow(tmp_Xtrain),foo,simplify=FALSE)))
+      tmp_Xtest = cbind(tmp_Xtest,do.call("rbind",replicate(nrow(tmp_Xtest),foo,simplify=FALSE)))
+    }
+  
+    tmp_Xtrain = tmp_Xtrain[,rownames(m$coeff)]
+    tmp_Xtest = tmp_Xtest[,rownames(m$coeff)]
+  
+    predTr = tmp_Xtrain %*% as.matrix(m$coeff$beta) + m$Intercept
+    rmseTr = sqrt(mean((Ytrain - predTr)^2))
+    predTe = tmp_Xtest %*% as.matrix(m$coeff$beta) + m$Intercept
+    rmseTe = sqrt(mean((Ytest - predTe)^2))
+  
+    plot(predTr, Ytrain, xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " train rmse: ", signif(rmseTr, 3)))
+    plot(predTe, Ytest , xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " test  rmse: ", signif(rmseTe, 3)))
+  
+    AMAR_Te = predTe/Ytest
+    AMAR_Te = cbind.data.frame(AMAR_Te,df[rownames(AMAR_Te),it])
+    colnames(AMAR_Te) = c("AMAR",it)
+  
+    density = lapply(factors, function(factor){
+      if(sum(AMAR_Te[,it] == factor) > 1) {
+        return(density(AMAR_Te[AMAR_Te[,it] == factor, "AMAR"]))
+      } # Problem density
+    })
+    plot(0,0, xlim = c(min(unlist(lapply(density, function(d){min(d$x)}))),max(unlist(lapply(density, function(d){max(d$x)})))), ylim = c(min(unlist(lapply(density, function(d){min(d$y)}))),max(unlist(lapply(density, function(d){max(d$y)})))), main = paste0("density for ",m$name))
+		for (j in c(1:length(factors))){
+			lines(density[[j]],col = tmp_col[j])
+		}
+		legend(x="topleft", legend=factors, col=tmp_col, lty = 1, title="factor")
+  }
+}
 ```
 
 
