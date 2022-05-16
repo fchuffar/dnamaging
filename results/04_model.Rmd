@@ -133,43 +133,43 @@ Meta-parameters are fixed using cross validation.
 
 
 ```{r glmnet::cv.glmnet call deprecated, eval=FALSE, echo=FALSE}
-### Memoisation glmnet::cv.glmnet call
-if (!exists("mcvglmnet")) {
-  cvglmnet = function(alpha, idx_train, y_key) {
-    x = mget_full_cpg_matrix(idx_train)
-    y = mget_df()[idx_train, y_key] # service. Design Oatterns, Gamma et al. 
-    modelcv = glmnet::cv.glmnet(x=x, y=y, alpha=alpha, type.measure="mse", standardize=TRUE)
-    # cvrecap = data.frame(lambda=modelcv$lambda, rmse=sqrt(modelcv$cvm), nbprobes=modelcv$nzero, alpha=alpha)
-    return(modelcv)  
-  }
-  mcvglmnet = memoise::memoise(cvglmnet)
-} # Memoise for 
-
-modelcv = lapply(alphas, function(alpha){
-  tmp_modelcv = mcvglmnet(idx_train=idx_train, y_key=y_key,alpha)
-  return(tmp_modelcv)
-})
-
-length(modelcv)
-cvrecaps = data.frame(
-  lambda   = unlist(lapply(modelcv, "[[", "lambda")), 
-  cvm      = unlist(lapply(modelcv, "[[", "cvm")   ),
-  cvup     = unlist(lapply(modelcv, "[[", "cvup")  ),
-  cvlo     = unlist(lapply(modelcv, "[[", "cvlo")  ),
-  nbprobes = unlist(lapply(modelcv, "[[", "nzero") ),
-  alpha    = rep(alphas, sapply(lapply(modelcv, "[[", "lambda"), length))
-)
-cvrecaps$rmse = sqrt(cvrecaps$cvm)
-cvrecaps$rmseup = sqrt(cvrecaps$cvup)
-cvrecaps$rmselo = sqrt(cvrecaps$cvlo)
-head(cvrecaps)
-dim(cvrecaps)
-
-# if (exists("cvrecaps")) {
-#   cvrecaps = rbind(cvrecaps, cvarecaps[, colnames(cvrecaps)])
-# } else {
-  cvrecaps = cvarecaps  
-# }
+# ### Memoisation glmnet::cv.glmnet call
+# if (!exists("mcvglmnet")) {
+#   cvglmnet = function(alpha, idx_train, y_key) {
+#     x = mget_full_cpg_matrix(idx_train)
+#     y = mget_df()[idx_train, y_key] # service. Design Oatterns, Gamma et al.
+#     modelcv = glmnet::cv.glmnet(x=x, y=y, alpha=alpha, type.measure="mse", standardize=TRUE)
+#     # cvrecap = data.frame(lambda=modelcv$lambda, rmse=sqrt(modelcv$cvm), nbprobes=modelcv$nzero, alpha=alpha)
+#     return(modelcv)
+#   }
+#   mcvglmnet = memoise::memoise(cvglmnet)
+# } # Memoise for
+#
+# modelcv = lapply(alphas, function(alpha){
+#   tmp_modelcv = mcvglmnet(idx_train=idx_train, y_key=y_key,alpha)
+#   return(tmp_modelcv)
+# })
+#
+# length(modelcv)
+# cvrecaps = data.frame(
+#   lambda   = unlist(lapply(modelcv, "[[", "lambda")),
+#   cvm      = unlist(lapply(modelcv, "[[", "cvm")   ),
+#   cvup     = unlist(lapply(modelcv, "[[", "cvup")  ),
+#   cvlo     = unlist(lapply(modelcv, "[[", "cvlo")  ),
+#   nbprobes = unlist(lapply(modelcv, "[[", "nzero") ),
+#   alpha    = rep(alphas, sapply(lapply(modelcv, "[[", "lambda"), length))
+# )
+# cvrecaps$rmse = sqrt(cvrecaps$cvm)
+# cvrecaps$rmseup = sqrt(cvrecaps$cvup)
+# cvrecaps$rmselo = sqrt(cvrecaps$cvlo)
+# head(cvrecaps)
+# dim(cvrecaps)
+#
+# # if (exists("cvrecaps")) {
+# #   cvrecaps = rbind(cvrecaps, cvarecaps[, colnames(cvrecaps)])
+# # } else {
+#   cvrecaps = cvarecaps
+# # }
 ```
 
 ```{r cva.glmnet call, eval=TRUE, echo=TRUE}
@@ -339,6 +339,26 @@ plot(Ytest , predTe, xlab="Chronological Age", ylab="Predicted Age", main=paste0
 ```
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Bootstrap
 
 Bootstrap bootstrap is...
@@ -398,7 +418,138 @@ length(bs_probes)
 ```
 
 
-Put there predisction train and test like for CV
+```{r bootstrap distribution}
+layout(matrix(1:2,1),respect = TRUE)
+# layout(matrix(1:4,1),respect = TRUE)
+boot_probes = lapply(1:nrow(model_params),function(i){
+  #  probes = lapply(bs_probes, "[[", i) #Probes for each alpha
+  probes = unlist(bs_probes) # probes of all bootstraps
+  tmp_tab = table(probes) # distribution of all probes
+  tmp_boot_probes = names(tmp_tab)[tmp_tab >= n_boot/2] # probes which appears in more than 50% of models
+  barplot(table(table(probes)), las=2, 
+    xlab="occurence", 
+    main=paste0("Probes occurence distribution for ", n_boot, " bootstrap models based on ", names(model_params)[i]) 
+  ) # barplot of occurence of each probes across bootstraps
+
+  barplot(cumsum(rev(table(table(probes)))), las=2, 
+    xlab="cumulated occurence", 
+    main=paste0("Cumulated probes occurence distribution") 
+  ) # barplot of occurence of each probes across bootstraps
+  abline(h=length(tmp_boot_probes), lty=2, col=2)
+  text(n_boot/4, length(tmp_boot_probes), pos=3, paste0(length(tmp_boot_probes), " probes"), col=2)
+  return(tmp_boot_probes)
+})
+names(boot_probes) = paste0("bs_", rownames(model_params))
+```
+
+```{r cv_bs}
+#  1. folds
+flds = list()
+n_fold = 5
+fold_size = floor(length(idx_train) / n_fold)
+idx_train_remaining = idx_train
+set.seed(1)
+for (i in 1:n_fold) {
+  foo = sample(idx_train_remaining, fold_size)
+  flds[[i]] = list(idx_train=setdiff(idx_train, foo), idx_test=foo)
+  idx_train_remaining = setdiff(idx_train, unlist(lapply(flds, "[[", "idx_test")))
+}
+
+# 2. eval
+RMSE = function(data_truth, data_pred) {
+    # Root Mean Square Error
+    return(sqrt(mean((data_truth - data_pred)^2)))
+}
+
+tmp_idx_probes = unique(names(tmp_tab))
+sub_df = df[,c(tmp_idx_probes,y_key)] 
+
+stats = lapply(unique(tmp_tab[tmp_tab>=n_boot/2]), function(occ) {
+  # print(occ)
+  tmp_probes = names(tmp_tab)[tmp_tab>=occ]
+
+  stats = lapply(1:n_fold, function(fold) {
+    # print(fold)
+    tmp_idx_train = flds[[fold]]$idx_train
+    tmp_idx_test = flds[[fold]]$idx_test
+
+    m = lm(formula(paste0(y_key,"~0+",paste0(tmp_probes, collapse="+"))), data=sub_df[tmp_idx_train,])
+    train_pred = predict(m, sub_df[tmp_idx_train,], type="response")
+    train_truth = sub_df[tmp_idx_train, y_key]
+    train_err = RMSE(train_truth, train_pred)
+    test_pred = predict(m, sub_df[tmp_idx_test,], type="response")
+    test_truth = sub_df[tmp_idx_test, y_key]
+    test_err = RMSE(test_truth, test_pred)
+    # print(paste0("nb_probes:", length(tmp_probes), ", train_err: ", signif(train_err, 3), ", test_err: ", signif(test_err, 3)))
+    ret = data.frame(
+      occurence=occ, 
+      nb_probes=length(tmp_probes), 
+      train_err=train_err, 
+      test_err=test_err,
+      fold=fold
+    )
+    return(ret)
+  })
+  stats = do.call(rbind, stats)
+  stats
+})
+stats = do.call(rbind, stats)
+head(stats)
+
+# 3. plot
+layout(matrix(1:2,1),respect = TRUE)
+plot  (stats$occurence, stats$train_err, col=1, xlab="probes occurence", ylab="RMSE", main="Cross Validation")
+points(stats$occurence, stats$test_err, col=2)
+plot  (stats$nb_probes, stats$train_err, col=1, xlab="nb_probes", ylab="RMSE", main="Cross Validation")
+points(stats$nb_probes, stats$test_err, col=2)
+legend("bottomleft", col=1:2, c("train", "test"), pch=1)
+```
+
+
+```{r}
+probes = unlist(bs_probes) # probes of all bootstraps
+tmp_tab = rev(sort(table(probes))) # distribution of all probes
+
+tmp_idx_probes = unique(names(tmp_tab))
+tmp_train = df[idx_train,c(tmp_idx_probes,y_key)] # train set with CpG and y_key for lm
+
+for (i in unique(tmp_tab[tmp_tab>=n_boot/2])) {
+  print(i)
+  tmp_probes = names(tmp_tab)[tmp_tab>=i]
+  m = lm(formula(paste0(y_key,"~",paste0(tmp_probes,collapse="+"))),data=tmp_train) #lm model with probes previously find with bootstrap
+  idx = tmp_probes
+  coeff = data.frame(probes=idx, beta=m$coefficients[idx])
+  rownames(coeff) = idx
+  coeff$mean = apply(tmp_train[,rownames(coeff)], 2, mean)
+  head(coeff)
+  m = list(Intercept=m$coefficients[[1]], coeff=coeff)
+
+
+  layout(matrix(1:2,1), respect=TRUE)
+    predTr = Xtrain[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
+    rmseTr = sqrt(mean((Ytrain - predTr)^2))
+    predTe = Xtest[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
+    rmseTe = sqrt(mean((Ytest - predTe)^2))
+    plot(predTr, Ytrain, xlab="Predicted Age", ylab="Chronological Age", main = paste0("occurence: ", i, m$name, " train rmse: ", signif(rmseTr, 3)))
+    plot(predTe, Ytest , xlab="Predicted Age", ylab="Chronological Age", main = paste0("occurence: ", i, m$name, " test  rmse: ", signif(rmseTe, 3)))
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -414,33 +565,6 @@ Discussion, a **core of probes** are always selected by bootstrap.
 - Which one? What are associated biologiocal functions? #biologist 
 - Are these probes located into wild Differebnttion Metrhylation Region (DMR)? #biologist
 
-```{r bootstrap distribution}
-layout(1, respect=TRUE)
-layout(matrix(1:2,1),respect = TRUE)
-# layout(matrix(1:4,1),respect = TRUE)
-boot_probes = lapply(1:nrow(model_params),function(i){
-  #  probes = lapply(bs_probes, "[[", i) #Probes for each alpha
-  probes = unlist(bs_probes) # probes of all bootstraps
-  tmp_tab = table(probes) # distribution of all probes
-  tmp_boot_probes = names(tmp_tab)[tmp_tab >= n_boot/2] # probes which appears in more than 50% of models
-  barplot(table(table(probes)), las=2, 
-    xlab="nb of occurence", 
-    sub = paste0("keep ", length(tmp_boot_probes), " probes"),
-    main=paste0("Probes occurence distribution for ", rownames(model_params)[i]) 
-  ) # barplot of occurence of each probes across bootstraps
-
-  barplot(cumsum(rev(table(table(probes)))), las=2, 
-    xlab="nb of cum. occurence", 
-    sub = paste0("keep ", length(tmp_boot_probes), " probes"),
-    main=paste0("Cumulated probes occurence distribution for ", rownames(model_params)[i]) 
-  ) # barplot of occurence of each probes across bootstraps
-  
-  
-  
-  return(tmp_boot_probes)
-})
-names(boot_probes) = paste0("bs_", rownames(model_params))
-```
 
 ## Hannum probes
 
