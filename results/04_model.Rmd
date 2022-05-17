@@ -418,7 +418,7 @@ length(bs_probes)
 ```
 
 
-```{r bootstrap distribution}
+```{r bootstrap distribution, echo=FALSE}
 layout(matrix(1:2,1),respect = TRUE)
 # layout(matrix(1:4,1),respect = TRUE)
 boot_probes = lapply(1:nrow(model_params),function(i){
@@ -442,18 +442,24 @@ boot_probes = lapply(1:nrow(model_params),function(i){
 names(boot_probes) = paste0("bs_", rownames(model_params))
 ```
 
-```{r cv_bs}
+```{r cv_bs, results="hide"}
 #  1. folds
-flds = list()
-n_fold = 5
-fold_size = floor(length(idx_train) / n_fold)
-idx_train_remaining = idx_train
-set.seed(1)
-for (i in 1:n_fold) {
-  foo = sample(idx_train_remaining, fold_size)
-  flds[[i]] = list(idx_train=setdiff(idx_train, foo), idx_test=foo)
-  idx_train_remaining = setdiff(idx_train, unlist(lapply(flds, "[[", "idx_test")))
-}
+n_folds = 3
+n_seeds = 3
+fold_size = floor(length(idx_train) / n_folds)
+
+folds = lapply(1:n_seeds, function(seed) {
+  tmp_folds = list()
+  set.seed(seed)
+  idx_train_remaining = idx_train
+  for (i in 1:n_folds) {
+    foo = sample(idx_train_remaining, fold_size)
+    tmp_folds[[i]] = list(idx_train=setdiff(idx_train, foo), idx_test=foo)
+    idx_train_remaining = setdiff(idx_train, unlist(lapply(tmp_folds, "[[", "idx_test")))
+  }
+  tmp_folds
+})
+folds = unlist(folds, recursive=FALSE)
 
 # 2. eval
 RMSE = function(data_truth, data_pred) {
@@ -466,14 +472,14 @@ tmp_tab = table(probes) # distribution of all probes
 tmp_idx_probes = unique(names(tmp_tab))
 sub_df = df[,c(tmp_idx_probes,y_key)] 
 
-stats = lapply(unique(tmp_tab[tmp_tab>=n_boot/2]), function(occ) {
-  # print(occ)
+stats = lapply(sort(unique(tmp_tab[tmp_tab>=n_boot/2])), function(occ) {
+  print(occ)
   tmp_probes = names(tmp_tab)[tmp_tab>=occ]
 
-  stats = lapply(1:n_fold, function(fold) {
+  stats = lapply(1:length(folds), function(fold) {
     # print(fold)
-    tmp_idx_train = flds[[fold]]$idx_train
-    tmp_idx_test = flds[[fold]]$idx_test
+    tmp_idx_train = folds[[fold]]$idx_train
+    tmp_idx_test = folds[[fold]]$idx_test
 
     m = lm(formula(paste0(y_key,"~0+",paste0(tmp_probes, collapse="+"))), data=sub_df[tmp_idx_train,])
     train_pred = predict(m, sub_df[tmp_idx_train,], type="response")
@@ -505,10 +511,37 @@ points(stats$occurence, stats$test_err, col=2)
 plot  (stats$nb_probes, stats$train_err, col=1, xlab="nb_probes", ylab="RMSE", main="Cross Validation")
 points(stats$nb_probes, stats$test_err, col=2)
 legend("bottomleft", col=1:2, c("train", "test"), pch=1)
+
+layout(matrix(1:2,1),respect = TRUE)
+foo = boxplot(train_err~occurence, data=stats, border=1, las=2, ylab="RMSE", main="Cross Validation", xlab="probes occurence")
+bar = boxplot( test_err~occurence, data=stats, border=2, las=2, ylab="RMSE", main="Cross Validation", add=TRUE, xlab="probes occurence")
+idx = 2
+for(lty in 3:1) {
+  tmp_lev = mean(bar$stats[3,1:floor(idx/2)])
+  idx = which(foo$stats[3,] - tmp_lev>0)[1]
+  abline(h=tmp_lev, col=2, lty=lty)
+  abline(v=idx, col=1, lty=lty)
+  # x = (idx:ncol(foo$stats))
+  # y = foo$stats[3,idx:ncol(foo$stats)]
+  # points(x, y, pch=16)
+  # m = lm(y ~ x)
+  # abline(m,lty=lty)
+}
+
+idx = rev(which(bar$stats[3,] < tmp_lev))[1]
+abline(v=idx, col=2, lty=1)
+
+boxplot(train_err~nb_probes, data=stats, border=1, las=2, ylab="RMSE", main="Cross Validation", xlab="nb_probes")
+boxplot( test_err~nb_probes, data=stats, border=2, las=2, ylab="RMSE", main="Cross Validation", add=TRUE, xlab="nb_probes")
+legend("bottomleft", col=1:2, c("train", "test"), pch=1)
+abline(v=ncol(foo$stats)-idx, col=2, lty=1)
+
+
+
 ```
 
 
-```{r}
+```{r echo=FALSE, eval=FALSE}
 probes = unlist(bs_probes) # probes of all bootstraps
 tmp_tab = rev(sort(table(probes))) # distribution of all probes
 
@@ -708,6 +741,7 @@ for (it in covariates) {
     rmseTe = sqrt(mean((Ytest - predTe)^2))
   
     plot(predTr, Ytrain, xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " train rmse: ", signif(rmseTr, 3)))
+		legend(x="topleft", legend=factors, col=tmp_col, lty = 1, title="factor")
     plot(predTe, Ytest , xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " test  rmse: ", signif(rmseTe, 3)))
   
     AMAR_Te = predTe/Ytest
@@ -723,7 +757,6 @@ for (it in covariates) {
 		for (j in c(1:length(factors))){
 			lines(density[[j]],col = tmp_col[j])
 		}
-		legend(x="topleft", legend=factors, col=tmp_col, lty = 1, title="factor")
   }
 }
 ```
