@@ -93,6 +93,7 @@ source("params_default.R")
 ```
 
 ```{r building_indexes, echo=FALSE}
+df = mreadRDS(paste0("df_preproc_",gse,".rds"))
 idx_samples = rownames(df)
 markers_start = grep("cg",colnames(df))[1]
 idx_clinicals = colnames(df)[1:(markers_start-1)]
@@ -130,7 +131,7 @@ Elastic net regularization is a method consisting in mix Lasso and Ridge regress
 Meta-parameters are fixed using cross validation.
 
 Cross validation is a process consisting in cutting the train set in k folds. We learn our model on k-1 folds and validate it on the last fold, and we make that k times to validate the model on each folds. We can after make the mean mse to take the best parameters.
- 
+
 
 ```{r glmnet::cv.glmnet call deprecated, eval=FALSE, echo=FALSE}
 # ### Memoisation glmnet::cv.glmnet call
@@ -170,13 +171,108 @@ Cross validation is a process consisting in cutting the train set in k folds. We
 # # } else {
 #   cvrecaps = cvarecaps
 # # }
+
+
+
+dim(df)
+df = readRDS(paste0("df_preproc_",gse,".rds"))
+dim(df)
+
+idx_train %in% rownames(df)
+sum(!idx_train %in% rownames(df))
+sum(!rownames(df) %in% idx_train)
+
+x = as.matrix(df[idx_train,idx_cpg])
+y = df[idx_train, y_key] # service. Design Oatterns, Gamma et al.
+
+alpha=1
+
+modelcv = glmnet::cv.glmnet       (x=x, y=y, alpha=alpha, type.measure="mse", standardize=TRUE)
+modelcva = glmnetUtils::cva.glmnet(x=x, y=y, alpha=alpha, type.measure="mse", standardize=TRUE)
+# modelcva_orig = mcvaglmnet(idx_train=idx_train, y_key=y_key)
+
+dev.off()
+m1 = modelcv
+m2 = modelcva$modlist[[1]]
+m3 = modelcva_orig$modlist[[11]]
+layout(matrix(1:3,1),respect = TRUE)
+plot(log(m1$lambda), sqrt(m1$cvm))
+abline(v=log(m1$lambda.min))
+plot(log(m2$lambda), sqrt(m2$cvm))
+abline(v=log(m2$lambda.min))
+plot(log(m3$lambda), sqrt(m3$cvm))
+abline(v=log(m3$lambda.min))
+
+layout(matrix(1:3,1),respect = TRUE)
+plot(log(m1$lambda), m1$nzero)
+abline(v=log(m1$lambda.min))
+plot(log(m2$lambda), m2$nzero)
+abline(v=log(m2$lambda.min))
+plot(log(m3$lambda), m3$nzero)
+abline(v=log(m3$lambda.min))
+
+dev.off()
+
+
+
+
+
+
+
+
+
+layout(matrix(1:2,1),respect = TRUE)
+plot( log(modelcv$lambda), log(modelcva$modlist[[1]]$lambda))
+plot(sqrt(modelcv$cvm) ,  sqrt(modelcva$modlist[[1]]$cvm))
+
+modelcva$modlist[[1]]$lambda
+
+modelcv$lambda
+modelcva$modlist[[11]]$lambda
+
+
+
+
+
+m1 = modelcv
+m2 = modelcva$modlist[[1]]
+layout(matrix(1:2,1),respect = TRUE)
+plot(log(m1$lambda), sqrt(m1$cvm))
+abline(v=log(m1$lambda.min))
+plot(log(m2$lambda), sqrt(m2$cvm))
+abline(v=log(m2$lambda.min))
+
+layout(matrix(1:2,1),respect = TRUE)
+plot(log(m1$lambda), m1$nzero)
+abline(v=log(m1$lambda.min))
+plot(log(m2$lambda), m2$nzero)
+abline(v=log(m2$lambda.min))
+
+
+m3 = modelcva$modlist[[11]]
+plot(log(m3$lambda), m3$nzero)
+abline(v=log(m3$lambda.min))
+dev.off()
+
 ```
+
+
+
+
+
+
+
+
+
+
+
+
 
 ```{r cva.glmnet call, eval=TRUE, echo=TRUE}
 if (!exists("mcvaglmnet")) {
   cvaglmnet = function(idx_train, y_key) {
     x = mget_full_cpg_matrix(idx_train)
-    y = mget_df()[idx_train, y_key] # service. Design Oatterns, Gamma et al. 
+    y = mget_df()[idx_train, y_key] # service. Design Patterns, Gamma et al. 
     modelcva = glmnetUtils::cva.glmnet(x=x, y=y, type.measure="mse", standardize=TRUE)
     return(modelcva)  
   }
@@ -364,6 +460,7 @@ plot(Ytest , predTe, xlab="Chronological Age", ylab="Predicted Age", main=paste0
 Bootstrap is a method consisting in sample a new train set based on the original train set. We repete the method a big number of times, more we repete it, more the results are robusts. 
 To create the new train set, we sample 2/3 of sample on original train set without replace and 1/3 with replace. That create a new train set used to make our model. We repete this method n_boot times and, at the end, we select for our final model only the markers shows on more than a certain pourcentage on bootstraps models. That create a final model more robusts than if we just make one model on our original train set, so this method increases robustness of results.
 
+
 ```{r bootstrap}
 bs_func = function(i, idx_train, model_params) { #epimedtools to see evolution of running 
   # Bootstrap sample creation
@@ -415,7 +512,7 @@ length(bs_probes)
 ```
 
 
-```{r bootstrap distribution}
+```{r bootstrap distribution, echo=FALSE}
 layout(matrix(1:2,1),respect = TRUE)
 # layout(matrix(1:4,1),respect = TRUE)
 boot_probes = lapply(1:nrow(model_params),function(i){
@@ -439,18 +536,24 @@ boot_probes = lapply(1:nrow(model_params),function(i){
 names(boot_probes) = paste0("bs_", rownames(model_params))
 ```
 
-```{r cv_bs}
+```{r cv_bs, results="hide"}
 #  1. folds
-flds = list()
-n_fold = 5
-fold_size = floor(length(idx_train) / n_fold)
-idx_train_remaining = idx_train
-set.seed(1)
-for (i in 1:n_fold) {
-  foo = sample(idx_train_remaining, fold_size)
-  flds[[i]] = list(idx_train=setdiff(idx_train, foo), idx_test=foo)
-  idx_train_remaining = setdiff(idx_train, unlist(lapply(flds, "[[", "idx_test")))
-}
+n_folds = 3
+n_seeds = 3
+fold_size = floor(length(idx_train) / n_folds)
+
+folds = lapply(1:n_seeds, function(seed) {
+  tmp_folds = list()
+  set.seed(seed)
+  idx_train_remaining = idx_train
+  for (i in 1:n_folds) {
+    foo = sample(idx_train_remaining, fold_size)
+    tmp_folds[[i]] = list(idx_train=setdiff(idx_train, foo), idx_test=foo)
+    idx_train_remaining = setdiff(idx_train, unlist(lapply(tmp_folds, "[[", "idx_test")))
+  }
+  tmp_folds
+})
+folds = unlist(folds, recursive=FALSE)
 
 # 2. eval
 RMSE = function(data_truth, data_pred) {
@@ -463,15 +566,9 @@ tmp_tab = table(probes) # distribution of all probes
 tmp_idx_probes = unique(names(tmp_tab))
 sub_df = df[,c(tmp_idx_probes,y_key)] 
 
-stats = lapply(unique(tmp_tab[tmp_tab>=n_boot/2]), function(occ) {
-  # print(occ)
-  tmp_probes = names(tmp_tab)[tmp_tab>=occ]
 
-  stats = lapply(1:n_fold, function(fold) {
-    # print(fold)
-    tmp_idx_train = flds[[fold]]$idx_train
-    tmp_idx_test = flds[[fold]]$idx_test
-
+if (!exists("mcall_lm_mod")) {
+  call_lm_mod = function(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, fold) {
     m = lm(formula(paste0(y_key,"~0+",paste0(tmp_probes, collapse="+"))), data=sub_df[tmp_idx_train,])
     train_pred = predict(m, sub_df[tmp_idx_train,], type="response")
     train_truth = sub_df[tmp_idx_train, y_key]
@@ -487,6 +584,19 @@ stats = lapply(unique(tmp_tab[tmp_tab>=n_boot/2]), function(occ) {
       test_err=test_err,
       fold=fold
     )
+  }
+  mcall_lm_mod = memoise::memoise(call_lm_mod)
+}
+
+
+stats = epimedtools::monitored_apply(mod=1, t(t(sort(unique(tmp_tab[tmp_tab>=n_boot/2])))), 1, function(occ) {
+  # print(occ)
+  tmp_probes = names(tmp_tab)[tmp_tab>=occ]
+  stats = lapply(1:length(folds), function(fold) {
+    # print(fold)
+    tmp_idx_train = folds[[fold]]$idx_train
+    tmp_idx_test = folds[[fold]]$idx_test
+    ret = mcall_lm_mod(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, fold)
     return(ret)
   })
   stats = do.call(rbind, stats)
@@ -502,10 +612,37 @@ points(stats$occurence, stats$test_err, col=2)
 plot  (stats$nb_probes, stats$train_err, col=1, xlab="nb_probes", ylab="RMSE", main="Cross Validation")
 points(stats$nb_probes, stats$test_err, col=2)
 legend("bottomleft", col=1:2, c("train", "test"), pch=1)
+
+# layout(matrix(1:2,1),respect = TRUE)
+# foo = boxplot(train_err~occurence, data=stats, border=1, las=2, ylab="RMSE", main="Cross Validation", xlab="probes occurence")
+# bar = boxplot( test_err~occurence, data=stats, border=2, las=2, ylab="RMSE", main="Cross Validation", add=TRUE, xlab="probes occurence")
+# idx = 2
+# for(lty in 3:1) {
+#   tmp_lev = mean(bar$stats[3,1:floor(idx/2)])
+#   idx = which(foo$stats[3,] - tmp_lev>0)[1]
+#   abline(h=tmp_lev, col=2, lty=lty)
+#   abline(v=idx, col=1, lty=lty)
+#   # x = (idx:ncol(foo$stats))
+#   # y = foo$stats[3,idx:ncol(foo$stats)]
+#   # points(x, y, pch=16)
+#   # m = lm(y ~ x)
+#   # abline(m,lty=lty)
+# }
+#
+# idx = rev(which(bar$stats[3,] < tmp_lev))[1]
+# abline(v=idx, col=2, lty=1)
+#
+# boxplot(train_err~nb_probes, data=stats, border=1, las=2, ylab="RMSE", main="Cross Validation", xlab="nb_probes")
+# boxplot( test_err~nb_probes, data=stats, border=2, las=2, ylab="RMSE", main="Cross Validation", add=TRUE, xlab="nb_probes")
+# legend("bottomleft", col=1:2, c("train", "test"), pch=1)
+# abline(v=ncol(foo$stats)-idx, col=2, lty=1)
+
+
+
 ```
 
 
-```{r}
+```{r echo=FALSE, eval=FALSE}
 probes = unlist(bs_probes) # probes of all bootstraps
 tmp_tab = rev(sort(table(probes))) # distribution of all probes
 
@@ -533,24 +670,6 @@ for (i in unique(tmp_tab[tmp_tab>=n_boot/2])) {
     plot(predTe, Ytest , xlab="Predicted Age", ylab="Chronological Age", main = paste0("occurence: ", i, m$name, " test  rmse: ", signif(rmseTe, 3)))
 }
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 # Results and Discussion
@@ -591,7 +710,7 @@ unique(unlist(foo))
 
 Follow the number of retained probes along of the bootstraps process
 
-```{r probes_occurrence }
+```{r probes_occurrence, eval=FALSE}
 layout(matrix(1:2,1),respect = TRUE)
 # layout(matrix(1:(length(models)*2),2), respect=TRUE)
 x = seq(2,n_boot,2) # Sequence of even bootstraps
@@ -617,11 +736,14 @@ tmp_train = df[idx_train,c(tmp_idx_probes,y_key)] # train set with CpG and y_key
 models_bs = lapply(1:length(boot_probes), function(i){ # Compute coefficients and mean in the train for each probes of the model for each alpha
 	m = lm(formula(paste0(y_key,"~",paste0(boot_probes[[i]],collapse="+"))),data=tmp_train) #lm model with probes previously find with bootstrap
   idx = boot_probes[[i]]
-  coeff = data.frame(probes=idx, beta=m$coefficients[idx])
+  idx = idx[!is.na(m$coefficients[idx])]
+  beta = m$coefficients[idx]
+  coeff = data.frame(probes=idx, beta=beta)
   rownames(coeff) = idx
   coeff$mean = apply(tmp_train[,rownames(coeff)], 2, mean)
   head(coeff)
   ret = list(Intercept=m$coefficients[[1]], coeff=coeff)
+  
   ret$name = names(boot_probes)[i]
   # ret$glmmod = m
   return(ret)
@@ -629,7 +751,7 @@ models_bs = lapply(1:length(boot_probes), function(i){ # Compute coefficients an
 names(models_bs) = sapply(models_bs, "[[", "name")
 ```
 
-```{r rmse model}
+```{r plot models_bs}
 #Plot rmse like with cross validation but with bootstrap results
 layout(matrix(1:2,1), respect=TRUE)
 # layout(matrix(1:8,2), respect=TRUE)
@@ -642,7 +764,12 @@ foo = lapply(models_bs, function(m, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Y
   plot(predTe, Ytest , xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " test  rmse: ", signif(rmseTe, 3)))  
 }, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytest=Ytest)
 ```
+
+
 # AMAR
+
+
+
 
 ```{r amar plotting}
 layout(matrix(1:3,1), respect=TRUE)
@@ -650,7 +777,6 @@ layout(matrix(1:3,1), respect=TRUE)
 models = list(m_glmnet,models_bs[[1]])
 litterature_models = readRDS("litterature_models.rds")
 models = c(models,litterature_models)
-
 
 for (it in covariates) {
   factors = unique(df[,it])
@@ -696,6 +822,7 @@ for (it in covariates) {
 		legend(x="topright", legend=factors, col=tmp_col, lty = 1,cex = 0.75, title="factor")
   }
 }
+
 ```
 
 

@@ -20,7 +20,7 @@ gses = c(
 for (gse in gses) {
   rm(list = ls()[-which(ls()%in%c("gse", "gses"))])
   n_boot = 500
-  # n_boot = 50
+  n_boot = 300
   print(paste0("************ ", gse, " ************"))
   # rmarkdown::render("01_build_study_generic.Rmd", output_file=paste0("01_build_study_", gse, ".html"))
   rmarkdown::render("02_stats_desc.Rmd", output_file=paste0("02_stats_desc_", gse, ".html"))    
