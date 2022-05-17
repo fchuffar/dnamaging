@@ -93,6 +93,7 @@ source("params_default.R")
 ```
 
 ```{r building_indexes, echo=FALSE}
+df = mreadRDS(paste0("df_preproc_",gse,".rds"))
 idx_samples = rownames(df)
 markers_start = grep("cg",colnames(df))[1]
 idx_clinicals = colnames(df)[1:(markers_start-1)]
@@ -170,13 +171,108 @@ Meta-parameters are fixed using cross validation.
 # # } else {
 #   cvrecaps = cvarecaps
 # # }
+
+
+
+dim(df)
+df = readRDS(paste0("df_preproc_",gse,".rds"))
+dim(df)
+
+idx_train %in% rownames(df)
+sum(!idx_train %in% rownames(df))
+sum(!rownames(df) %in% idx_train)
+
+x = as.matrix(df[idx_train,idx_cpg])
+y = df[idx_train, y_key] # service. Design Oatterns, Gamma et al.
+
+alpha=1
+
+modelcv = glmnet::cv.glmnet       (x=x, y=y, alpha=alpha, type.measure="mse", standardize=TRUE)
+modelcva = glmnetUtils::cva.glmnet(x=x, y=y, alpha=alpha, type.measure="mse", standardize=TRUE)
+# modelcva_orig = mcvaglmnet(idx_train=idx_train, y_key=y_key)
+
+dev.off()
+m1 = modelcv
+m2 = modelcva$modlist[[1]]
+m3 = modelcva_orig$modlist[[11]]
+layout(matrix(1:3,1),respect = TRUE)
+plot(log(m1$lambda), sqrt(m1$cvm))
+abline(v=log(m1$lambda.min))
+plot(log(m2$lambda), sqrt(m2$cvm))
+abline(v=log(m2$lambda.min))
+plot(log(m3$lambda), sqrt(m3$cvm))
+abline(v=log(m3$lambda.min))
+
+layout(matrix(1:3,1),respect = TRUE)
+plot(log(m1$lambda), m1$nzero)
+abline(v=log(m1$lambda.min))
+plot(log(m2$lambda), m2$nzero)
+abline(v=log(m2$lambda.min))
+plot(log(m3$lambda), m3$nzero)
+abline(v=log(m3$lambda.min))
+
+dev.off()
+
+
+
+
+
+
+
+
+
+layout(matrix(1:2,1),respect = TRUE)
+plot( log(modelcv$lambda), log(modelcva$modlist[[1]]$lambda))
+plot(sqrt(modelcv$cvm) ,  sqrt(modelcva$modlist[[1]]$cvm))
+
+modelcva$modlist[[1]]$lambda
+
+modelcv$lambda
+modelcva$modlist[[11]]$lambda
+
+
+
+
+
+m1 = modelcv
+m2 = modelcva$modlist[[1]]
+layout(matrix(1:2,1),respect = TRUE)
+plot(log(m1$lambda), sqrt(m1$cvm))
+abline(v=log(m1$lambda.min))
+plot(log(m2$lambda), sqrt(m2$cvm))
+abline(v=log(m2$lambda.min))
+
+layout(matrix(1:2,1),respect = TRUE)
+plot(log(m1$lambda), m1$nzero)
+abline(v=log(m1$lambda.min))
+plot(log(m2$lambda), m2$nzero)
+abline(v=log(m2$lambda.min))
+
+
+m3 = modelcva$modlist[[11]]
+plot(log(m3$lambda), m3$nzero)
+abline(v=log(m3$lambda.min))
+dev.off()
+
 ```
+
+
+
+
+
+
+
+
+
+
+
+
 
 ```{r cva.glmnet call, eval=TRUE, echo=TRUE}
 if (!exists("mcvaglmnet")) {
   cvaglmnet = function(idx_train, y_key) {
     x = mget_full_cpg_matrix(idx_train)
-    y = mget_df()[idx_train, y_key] # service. Design Oatterns, Gamma et al. 
+    y = mget_df()[idx_train, y_key] # service. Design Patterns, Gamma et al. 
     modelcva = glmnetUtils::cva.glmnet(x=x, y=y, type.measure="mse", standardize=TRUE)
     return(modelcva)  
   }
@@ -634,7 +730,7 @@ unique(unlist(foo))
 
 Follow the number of retained probes along of the bootstraps process
 
-```{r probes_occurrence }
+```{r probes_occurrence, eval=FALSE}
 layout(matrix(1:2,1),respect = TRUE)
 # layout(matrix(1:(length(models)*2),2), respect=TRUE)
 x = seq(2,n_boot,2) # Sequence of even bootstraps
@@ -682,11 +778,14 @@ tmp_train = df[idx_train,c(tmp_idx_probes,y_key)] # train set with CpG and y_key
 models_bs = lapply(1:length(boot_probes), function(i){ # Compute coefficients and mean in the train for each probes of the model for each alpha
 	m = lm(formula(paste0(y_key,"~",paste0(boot_probes[[i]],collapse="+"))),data=tmp_train) #lm model with probes previously find with bootstrap
   idx = boot_probes[[i]]
-  coeff = data.frame(probes=idx, beta=m$coefficients[idx])
+  idx = idx[!is.na(m$coefficients[idx])]
+  beta = m$coefficients[idx]
+  coeff = data.frame(probes=idx, beta=beta)
   rownames(coeff) = idx
   coeff$mean = apply(tmp_train[,rownames(coeff)], 2, mean)
   head(coeff)
   ret = list(Intercept=m$coefficients[[1]], coeff=coeff)
+  
   ret$name = names(boot_probes)[i]
   # ret$glmmod = m
   return(ret)
