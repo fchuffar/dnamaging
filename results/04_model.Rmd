@@ -495,8 +495,8 @@ if (!exists("mcall_lm_mod")) {
 }
 
 
-stats = lapply(sort(unique(tmp_tab[tmp_tab>=n_boot/2])), function(occ) {
-  print(occ)
+stats = epimedtools::monitored_apply(mod=1, t(t(sort(unique(tmp_tab[tmp_tab>=n_boot/2])))), 1, function(occ) {
+  # print(occ)
   tmp_probes = names(tmp_tab)[tmp_tab>=occ]
   stats = lapply(1:length(folds), function(fold) {
     # print(fold)
@@ -519,29 +519,29 @@ plot  (stats$nb_probes, stats$train_err, col=1, xlab="nb_probes", ylab="RMSE", m
 points(stats$nb_probes, stats$test_err, col=2)
 legend("bottomleft", col=1:2, c("train", "test"), pch=1)
 
-layout(matrix(1:2,1),respect = TRUE)
-foo = boxplot(train_err~occurence, data=stats, border=1, las=2, ylab="RMSE", main="Cross Validation", xlab="probes occurence")
-bar = boxplot( test_err~occurence, data=stats, border=2, las=2, ylab="RMSE", main="Cross Validation", add=TRUE, xlab="probes occurence")
-idx = 2
-for(lty in 3:1) {
-  tmp_lev = mean(bar$stats[3,1:floor(idx/2)])
-  idx = which(foo$stats[3,] - tmp_lev>0)[1]
-  abline(h=tmp_lev, col=2, lty=lty)
-  abline(v=idx, col=1, lty=lty)
-  # x = (idx:ncol(foo$stats))
-  # y = foo$stats[3,idx:ncol(foo$stats)]
-  # points(x, y, pch=16)
-  # m = lm(y ~ x)
-  # abline(m,lty=lty)
-}
-
-idx = rev(which(bar$stats[3,] < tmp_lev))[1]
-abline(v=idx, col=2, lty=1)
-
-boxplot(train_err~nb_probes, data=stats, border=1, las=2, ylab="RMSE", main="Cross Validation", xlab="nb_probes")
-boxplot( test_err~nb_probes, data=stats, border=2, las=2, ylab="RMSE", main="Cross Validation", add=TRUE, xlab="nb_probes")
-legend("bottomleft", col=1:2, c("train", "test"), pch=1)
-abline(v=ncol(foo$stats)-idx, col=2, lty=1)
+# layout(matrix(1:2,1),respect = TRUE)
+# foo = boxplot(train_err~occurence, data=stats, border=1, las=2, ylab="RMSE", main="Cross Validation", xlab="probes occurence")
+# bar = boxplot( test_err~occurence, data=stats, border=2, las=2, ylab="RMSE", main="Cross Validation", add=TRUE, xlab="probes occurence")
+# idx = 2
+# for(lty in 3:1) {
+#   tmp_lev = mean(bar$stats[3,1:floor(idx/2)])
+#   idx = which(foo$stats[3,] - tmp_lev>0)[1]
+#   abline(h=tmp_lev, col=2, lty=lty)
+#   abline(v=idx, col=1, lty=lty)
+#   # x = (idx:ncol(foo$stats))
+#   # y = foo$stats[3,idx:ncol(foo$stats)]
+#   # points(x, y, pch=16)
+#   # m = lm(y ~ x)
+#   # abline(m,lty=lty)
+# }
+#
+# idx = rev(which(bar$stats[3,] < tmp_lev))[1]
+# abline(v=idx, col=2, lty=1)
+#
+# boxplot(train_err~nb_probes, data=stats, border=1, las=2, ylab="RMSE", main="Cross Validation", xlab="nb_probes")
+# boxplot( test_err~nb_probes, data=stats, border=2, las=2, ylab="RMSE", main="Cross Validation", add=TRUE, xlab="nb_probes")
+# legend("bottomleft", col=1:2, c("train", "test"), pch=1)
+# abline(v=ncol(foo$stats)-idx, col=2, lty=1)
 
 
 
@@ -694,7 +694,7 @@ models_bs = lapply(1:length(boot_probes), function(i){ # Compute coefficients an
 names(models_bs) = sapply(models_bs, "[[", "name")
 ```
 
-```{r rmse model}
+```{r plot models_bs}
 #Plot rmse like with cross validation but with bootstrap results
 layout(matrix(1:2,1), respect=TRUE)
 # layout(matrix(1:8,2), respect=TRUE)
