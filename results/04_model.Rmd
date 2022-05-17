@@ -474,7 +474,7 @@ sub_df = df[,c(tmp_idx_probes,y_key)]
 
 
 if (!exists("mcall_lm_mod")) {
-  call_lm_mod = function(tmp_idx_train, tmp_idx_test, y_key, tmp_probes) {
+  call_lm_mod = function(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, fold) {
     m = lm(formula(paste0(y_key,"~0+",paste0(tmp_probes, collapse="+"))), data=sub_df[tmp_idx_train,])
     train_pred = predict(m, sub_df[tmp_idx_train,], type="response")
     train_truth = sub_df[tmp_idx_train, y_key]
@@ -502,7 +502,7 @@ stats = lapply(sort(unique(tmp_tab[tmp_tab>=n_boot/2])), function(occ) {
     # print(fold)
     tmp_idx_train = folds[[fold]]$idx_train
     tmp_idx_test = folds[[fold]]$idx_test
-    ret = mcall_lm_mod(tmp_idx_train, tmp_idx_test, y_key, tmp_probes)
+    ret = mcall_lm_mod(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, fold)
     return(ret)
   })
   stats = do.call(rbind, stats)
