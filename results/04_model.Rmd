@@ -390,7 +390,7 @@ tmp_tab = table(probes) # distribution of all probes
 robust_probes = names(tmp_tab)[tmp_tab >= n_boot/2] # probes which appears in more than 50% of models
 barplot(table(table(probes)), las=2, 
   xlab="occurence", 
-  main=paste0("Probes occurence distribution for ", n_boot, " bootstrap models based on ", names(model_params)[i]) 
+  main=paste0("Probes occurence distribution for ", n_boot, " bootstrap models based on ", best_model_cvaglmnet$name) 
 ) # barplot of occurence of each probes across bootstraps
 
 barplot(cumsum(rev(table(table(probes)))), las=2, 
@@ -526,16 +526,12 @@ layout(1, respect=TRUE)
 # layout(matrix(1:2,1),respect = TRUE)
 if (!exists("mget_coefHannum")) mget_coefHannum = memoise::memoise(methylclockData::get_coefHannum)
 hannum_coeff = mget_coefHannum() # Get Hannum probes
-foo = lapply(1:nrow(model_params), function(i) {
-  # probes = lapply(bs_probes, "[[", i)
-  probes = unlist(bs_probes)
-  tmp_tab = table(probes)
-  tmp_tab_Hannum = tmp_tab[hannum_coeff$CpGmarker] # Occurence of each Hannum's probes
-  tmp_tab_Hannum[is.na(tmp_tab_Hannum)] = 0  # If no occurences, set 0 
-  barplot(table(tmp_tab_Hannum), las=2, main=paste0("Hannum probes in ", rownames(model_params)[i], " ", sum(tmp_tab_Hannum >= n_boot/2), " probes.")) # Plot occurences of Hannum probes across bootstraps
-  ret = names(tmp_tab_Hannum)[tmp_tab_Hannum >= n_boot/2]
-  return(ret)
-})
+probes = unlist(bs_probes)
+tmp_tab = table(probes)
+tmp_tab_Hannum = tmp_tab[hannum_coeff$CpGmarker] # Occurence of each Hannum's probes
+tmp_tab_Hannum[is.na(tmp_tab_Hannum)] = 0  # If no occurences, set 0 
+barplot(table(tmp_tab_Hannum), las=2, main=paste0("Hannum probes in ", sum(tmp_tab_Hannum >= n_boot/2), " probes.")) # Plot occurences of Hannum probes across bootstraps
+foo = names(tmp_tab_Hannum)[tmp_tab_Hannum >= n_boot/2]
 unique(unlist(foo))
 ```
 
@@ -547,20 +543,17 @@ Follow the number of retained probes along of the bootstraps process
 layout(matrix(1:2,1),respect = TRUE)
 # layout(matrix(1:(length(models)*2),2), respect=TRUE)
 x = seq(2,n_boot,2) # Sequence of even bootstraps
-for (i in 1:nrow(model_params)){ #for each alpha
-  tmp_probes = lapply(x, function(nb_boot){ # when the number of bootstrap is even 
-    tmp_probes = unlist(bs_probes[1:nb_boot]) 
-    tmp_tab = table(tmp_probes)
-    tmp_boot_cpg = names(tmp_tab)[tmp_tab >= nb_boot/2] # Check probes appears more than 50% times
-    return(tmp_boot_cpg)
-  })
-  # barplot(sort(table(unlist(tmp_probes))))
-  nb_probes = unlist(sapply(tmp_probes, length)) # Check number of probes across boostraps
-  plot(x, nb_probes, type = "l", main = paste0("alpha: ", rownames(model_params)[i])) # Plot number of probes across bootstraps
-  tab_probes = table(nb_probes) 
-  barplot(tab_probes, las=2) # Check when number of probes stabilised
-}
-# tab_probes
+tmp_probes = lapply(x, function(nb_boot){ # when the number of bootstrap is even 
+  tmp_probes = unlist(bs_probes[1:nb_boot]) 
+  tmp_tab = table(tmp_probes)
+  tmp_boot_cpg = names(tmp_tab)[tmp_tab >= nb_boot/2] # Check probes appears more than 50% times
+  return(tmp_boot_cpg)
+})
+# barplot(sort(table(unlist(tmp_probes))))
+nb_probes = unlist(sapply(tmp_probes, length)) # Check number of probes across boostraps
+plot(x, nb_probes, type = "l", main ="") # Plot number of probes across bootstraps
+tab_probes = table(nb_probes) 
+barplot(tab_probes, las=2) # Check when number of probes stabilised
 ```
 
 
