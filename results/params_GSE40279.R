@@ -1,5 +1,5 @@
 gse = "GSE40279"
 y_key = "age__y_"
-covariates = c("gender", "ethnicity")
+covariates = c("gender")
 sample_blacklist = c("GSM1007327")
 
