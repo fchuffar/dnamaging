@@ -620,7 +620,7 @@ horvath_probes = intersect(colnames(df), litterature_models$horvath_model_mc$coe
 sub_df = df[idx_train, c(horvath_probes,y_key)]
 horvath_model = build_model_from_probes(horvath_probes, sub_df, y_key, name="horvath_model")
 
-models = list(best_model_cvaglmnet, best_model_bs, hannum_model, horvath_model, horvath_model)
+models = list(best_model_cvaglmnet, best_model_bs, hannum_model, horvath_model)
 
 
 for (covariate in covariates) {
