@@ -111,7 +111,7 @@ if (!exists("mget_full_cpg_matrix")) {
 ```{r parameters}
 #Define train and test indexes
 # nb_train = floor(nrow(df)/2)
-nb_train = 482
+
 set.seed(1)
 idx_train = sample(rownames(df), nb_train)
 idx_test = setdiff(rownames(df), idx_train)
