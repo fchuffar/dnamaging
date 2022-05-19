@@ -1,5 +1,5 @@
 gses = c( 
-  # "GSE41037", # 27k Genome wide DNA methylation profiling of whole blood in schizophrenia patients and healthy subjects.
+  "GSE41037", # 27k Genome wide DNA methylation profiling of whole blood in schizophrenia patients and healthy subjects.
   # # "GSE20067", # 27k Genome wide DNA methylation profiling of diabetic nephropathy in type 1 diabetes mellitus
   # "27kGSE40279", # Hannum 2013 27k version
   "GSE40279", # 450k Hannum 2013
