@@ -276,6 +276,9 @@ plot(Ytrain, predTr, xlab="Chronological Age", ylab="Predicted Age", main=paste0
 plot(Ytest , predTe, xlab="Chronological Age", ylab="Predicted Age", main=paste0(m$name, " test  rmse: ", signif(rmseTe, 3))) 
 
 
+best_model_cvaglmnet = m
+best_model_cvaglmnet_probes = best_model_cvaglmnet$coeff$probes
+
 
 
 build_model_from_probes = function(probes, sub_df, y_key, name) {
@@ -291,14 +294,8 @@ build_model_from_probes = function(probes, sub_df, y_key, name) {
   return(model)  
 }
 
-best_model_cvaglmnet_probes = m$coeff$probes
 sub_df = df[idx_train, c(best_model_cvaglmnet_probes,y_key)]
-best_model_cvaglmnet = build_model_from_probes(best_model_cvaglmnet_probes, sub_df, y_key, name="best_model_cvaglmnet")
-
-
-
-
-m = best_model_cvaglmnet
+m = build_model_from_probes(best_model_cvaglmnet_probes, sub_df, y_key, name="best_model_cvaglmnet")
 
 # build model
 predTr = Xtrain[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
@@ -611,8 +608,8 @@ plot(predTe, Ytest , xlab="Predicted Age", ylab="Chronological Age", main = past
 
 
 
-```{r amar plotting, , fig.height=3}
-layout(matrix(1:3,1), respect=TRUE)
+```{r amar plotting, fig.width=12, fig.height=9}
+layout(matrix(1:12,3), respect=TRUE)
 litterature_models = readRDS("litterature_models.rds")
 
 hannum_probes = intersect(colnames(df), litterature_models$hannum_model_mc$coeff$probes)
