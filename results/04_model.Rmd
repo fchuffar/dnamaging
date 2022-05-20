@@ -611,6 +611,7 @@ for (covariate in covariates) {
   
     den = density(AMAR_Te[, "AMAR"], na.rm=TRUE)
     den_bw = den$bw
+    # den_bw = .1
     density = lapply(levls, function(lev){
       if (sum(AMAR_Te[,covariate] %in% lev) > 1) {
         den = density(bw=den_bw, AMAR_Te[AMAR_Te[,covariate] %in% lev, "AMAR"])
