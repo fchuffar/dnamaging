@@ -167,6 +167,8 @@ head(cvrecaps)
 dim(cvrecaps)
 ```
 
+# Best Model cvaglmnet
+
 ```{r best_model_cvaglmnet_params}
 tmp_alphas = sort(unique(cvrecaps$alpha))
 tmp_alphas = unlist(sapply(tmp_alphas, function(alpha) { 
@@ -253,7 +255,7 @@ if (!exists("mmodel_factory_glmnet")) {
     rownames(coeff) = idx
     coeff$mean = apply(x[,rownames(coeff)], 2, mean)
     ret = list(Intercept=m$a0, coeff=coeff)
-    ret$name = paste0("glmnet_", signif(alpha,3), "_", signif(lambda,3))
+    ret$name = paste0("cvaglmnet (a=", signif(alpha,3), ", l=", signif(lambda,3, ")"))
     # ret$glmmod = m
     return(ret)
   }
@@ -583,7 +585,7 @@ barplot(tab_probes, las=2) # Check when number of probes stabilised
 
 ```{r best_model_bs}
 sub_df = df[idx_train,c(probes,y_key)] 
-best_model_bs = build_model_from_probes(best_model_bs_probes, sub_df, y_key, name="best_model_bs")
+best_model_bs = build_model_from_probes(best_model_bs_probes, sub_df, y_key, name="BMBS")
 ```
 
 
@@ -598,38 +600,40 @@ predTr = Xtrain[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
 rmseTr = sqrt(mean((Ytrain - predTr)^2))
 predTe = Xtest[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
 rmseTe = sqrt(mean((Ytest - predTe)^2))
-plot(predTr, Ytrain, xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " train rmse: ", signif(rmseTr, 3)))
-plot(predTe, Ytest , xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " test  rmse: ", signif(rmseTe, 3)))  
+plot(predTr, Ytrain, xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " RMSE: ", signif(rmseTr, 3)))
+plot(predTe, Ytest , xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " RMSE: ", signif(rmseTe, 3)))  
 ```
 
 
-# Evaluation
+
+# Model Evaluation
 
 
 
-
-```{r amar plotting, fig.width=12, fig.height=9}
+```{r amar plotting, fig.width=12, fig.height=9, echo=FALSE}
 layout(matrix(1:12,3), respect=TRUE)
 litterature_models = readRDS("litterature_models.rds")
 
 hannum_probes = intersect(colnames(df), litterature_models$hannum_model_mc$coeff$probes)
 sub_df = df[idx_train, c(hannum_probes,y_key)]
-hannum_model = build_model_from_probes(hannum_probes, sub_df, y_key, name="hannum_model")
+hannum_model = build_model_from_probes(hannum_probes, sub_df, y_key, name="Hannum")
 
 horvath_probes = intersect(colnames(df), litterature_models$horvath_model_mc$coeff$probes)
 sub_df = df[idx_train, c(horvath_probes,y_key)]
-horvath_model = build_model_from_probes(horvath_probes, sub_df, y_key, name="horvath_model")
+horvath_model = build_model_from_probes(horvath_probes, sub_df, y_key, name="Horvath")
 
 models = list(best_model_cvaglmnet, best_model_bs, hannum_model, horvath_model)
 
 
 for (covariate in covariates) {
-  factors = unique(df[,covariate])
-  tmp_col = RColorBrewer::brewer.pal(n=max(3,length(factors)), name = "Set1")
+  levls = levels(df[,covariate])
+  tmp_col = RColorBrewer::brewer.pal(n=max(3,length(levls)), name = "Set1")
   for (m in models) {
+  
+    # Imputing missing probes (litterature_models)
     tmp_Xtrain = Xtrain[,rownames(m$coeff)[rownames(m$coeff) %in% colnames(Xtrain)]] #Keep only common CpG between coeffs and Xtrain
     tmp_Xtest = Xtest[,rownames(m$coeff)[rownames(m$coeff) %in% colnames(Xtest)]] #Keep only common CpG between coeffs and Xtrain
-  
+
     idx_missing_probes = rownames(m$coeff)[!(rownames(m$coeff) %in% colnames(Xtrain))]
     if (length(idx_missing_probes) != 0) {
       foo = m$coeff[idx_missing_probes,"mean"]
@@ -645,24 +649,42 @@ for (covariate in covariates) {
     rmseTr = sqrt(mean((Ytrain - predTr)^2))
     predTe = tmp_Xtest %*% as.matrix(m$coeff$beta) + m$Intercept
     rmseTe = sqrt(mean((Ytest - predTe)^2))
-  
-    plot(Ytrain, predTr, xlab="Chronological Age", ylab="Predicted Age", main = paste0(m$name, " train rmse: ", signif(rmseTr, 3)), sub=paste0(nrow(m$coeff), " probes"))
-		legend(x="topleft", legend=factors, col=tmp_col, lty = 1, title="factor")
-    abline(a=0, b=1)
-    plot(Ytest , predTe, xlab="Chronological Age", ylab="Predicted Age", main = paste0(m$name, " test  rmse: ", signif(rmseTe, 3)), sub=paste0(nrow(m$coeff), " probes"))
-    abline(a=0, b=1)
-  
     AMAR_Te = predTe/Ytest
     AMAR_Te = cbind.data.frame(AMAR_Te,df[rownames(AMAR_Te),covariate])
-    colnames(AMAR_Te) = c("AMAR",covariate)
+
+    colnames(AMAR_Te) = c("AMAR", covariate)
   
-    density = lapply(factors, function(factor){
-      if(sum(AMAR_Te[,covariate] == factor) > 1) {
-        return(density(AMAR_Te[AMAR_Te[,covariate] == factor, "AMAR"]))
-      } # Problem density
+    pval = anova(lm(AMAR_Te[,1]~AMAR_Te[,2], data=AMAR_Te))[1,5]
+  
+    density = lapply(levls, function(lev){
+      if (sum(AMAR_Te[,covariate] %in% lev) > 1) {
+        den = density(AMAR_Te[AMAR_Te[,covariate] == lev, "AMAR"])
+        return(den)
+      } # Patch density
     })
-    plot(0,0, xlim = c(min(unlist(lapply(density, function(d){min(d$x)}))),max(unlist(lapply(density, function(d){max(d$x)})))), ylim = c(min(unlist(lapply(density, function(d){min(d$y)}))),max(unlist(lapply(density, function(d){max(d$y)})))), main = paste0("density for ",m$name))
-		for (j in c(1:length(factors))){
+
+
+
+    plot(Ytrain, predTr,
+      main=paste0(m$name), 
+      sub=paste0("TRAIN (", nrow(m$coeff), " pbs)", " RMSE: ", signif(rmseTr, 3)), 
+      xlab="Chronological Age", 
+      ylab="Predicted Age"
+      )
+    abline(a=0, b=1)                                                                    
+		legend(x="topleft", legend=levls, col=tmp_col, lty = 1, title=covariate)           
+
+    plot(Ytest , predTe, 
+      main = paste0(m$name), 
+      sub=paste0("TEST (", nrow(m$coeff), " pbs) RMSE: ", signif(rmseTe, 3)), 
+      xlab="Chronological Age", 
+      ylab="Predicted Age" 
+    )
+    abline(a=0, b=1)
+
+
+    plot(0,0, xlim = c(min(unlist(lapply(density, function(d){min(d$x)}))),max(unlist(lapply(density, function(d){max(d$x)})))), ylim = c(min(unlist(lapply(density, function(d){min(d$y)}))),max(unlist(lapply(density, function(d){max(d$y)})))), main = paste0("AMAR for ", covariate, " pval=", signif(pval ,3)))
+		for (j in c(1:length(levls))){
 			lines(density[[j]],col = tmp_col[j])
 		}
   }
