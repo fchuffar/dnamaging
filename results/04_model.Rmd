@@ -111,160 +111,15 @@ if (!exists("mget_full_cpg_matrix")) {
 ```{r parameters}
 #Define train and test indexes
 # nb_train = floor(nrow(df)/2)
-nb_train = 482
+
 set.seed(1)
 idx_train = sample(rownames(df), nb_train)
 idx_test = setdiff(rownames(df), idx_train)
-
-# cross-validation
-if(!exists("alphas")) alphas = c(.1, .15, .2, .25, .5, 1)
-
+# alphas for cva.glmnet
+if(!exists("alphas")) alphas = c(.1, .2, .3, .5, .8, 1)
 # boostrap 
 if (!exists("n_boot")) n_boot = 500
 ``` 
-
-
-# Elastic net regularization
-
-Elastic net regularization is a method consisting in mix Lasso and Ridge regression methods. We have the metaparameter lambda for Ridge and Lasso regression model (regularization parameter) and the meta parameter alpha corresponding in the proportion of Lasso and Ridge (principe of Elastic net regression).
-
-Meta-parameters are fixed using cross validation.
-
-Cross validation is a process consisting in cutting the train set in k folds. We learn our model on k-1 folds and validate it on the last fold, and we make that k times to validate the model on each folds. We can after make the mean mse to take the best parameters.
-
-
-```{r glmnet::cv.glmnet call deprecated, eval=FALSE, echo=FALSE}
-# ### Memoisation glmnet::cv.glmnet call
-# if (!exists("mcvglmnet")) {
-#   cvglmnet = function(alpha, idx_train, y_key) {
-#     x = mget_full_cpg_matrix(idx_train)
-#     y = mget_df()[idx_train, y_key] # service. Design Oatterns, Gamma et al.
-#     modelcv = glmnet::cv.glmnet(x=x, y=y, alpha=alpha, type.measure="mse", standardize=TRUE)
-#     # cvrecap = data.frame(lambda=modelcv$lambda, rmse=sqrt(modelcv$cvm), nbprobes=modelcv$nzero, alpha=alpha)
-#     return(modelcv)
-#   }
-#   mcvglmnet = memoise::memoise(cvglmnet)
-# } # Memoise for
-#
-# modelcv = lapply(alphas, function(alpha){
-#   tmp_modelcv = mcvglmnet(idx_train=idx_train, y_key=y_key,alpha)
-#   return(tmp_modelcv)
-# })
-#
-# length(modelcv)
-# cvrecaps = data.frame(
-#   lambda   = unlist(lapply(modelcv, "[[", "lambda")),
-#   cvm      = unlist(lapply(modelcv, "[[", "cvm")   ),
-#   cvup     = unlist(lapply(modelcv, "[[", "cvup")  ),
-#   cvlo     = unlist(lapply(modelcv, "[[", "cvlo")  ),
-#   nbprobes = unlist(lapply(modelcv, "[[", "nzero") ),
-#   alpha    = rep(alphas, sapply(lapply(modelcv, "[[", "lambda"), length))
-# )
-# cvrecaps$rmse = sqrt(cvrecaps$cvm)
-# cvrecaps$rmseup = sqrt(cvrecaps$cvup)
-# cvrecaps$rmselo = sqrt(cvrecaps$cvlo)
-# head(cvrecaps)
-# dim(cvrecaps)
-#
-# # if (exists("cvrecaps")) {
-# #   cvrecaps = rbind(cvrecaps, cvarecaps[, colnames(cvrecaps)])
-# # } else {
-#   cvrecaps = cvarecaps
-# # }
-
-
-
-dim(df)
-df = readRDS(paste0("df_preproc_",gse,".rds"))
-dim(df)
-
-idx_train %in% rownames(df)
-sum(!idx_train %in% rownames(df))
-sum(!rownames(df) %in% idx_train)
-
-x = as.matrix(df[idx_train,idx_cpg])
-y = df[idx_train, y_key] # service. Design Oatterns, Gamma et al.
-
-alpha=1
-
-modelcv = glmnet::cv.glmnet       (x=x, y=y, alpha=alpha, type.measure="mse", standardize=TRUE)
-modelcva = glmnetUtils::cva.glmnet(x=x, y=y, alpha=alpha, type.measure="mse", standardize=TRUE)
-# modelcva_orig = mcvaglmnet(idx_train=idx_train, y_key=y_key)
-
-dev.off()
-m1 = modelcv
-m2 = modelcva$modlist[[1]]
-m3 = modelcva_orig$modlist[[11]]
-layout(matrix(1:3,1),respect = TRUE)
-plot(log(m1$lambda), sqrt(m1$cvm))
-abline(v=log(m1$lambda.min))
-plot(log(m2$lambda), sqrt(m2$cvm))
-abline(v=log(m2$lambda.min))
-plot(log(m3$lambda), sqrt(m3$cvm))
-abline(v=log(m3$lambda.min))
-
-layout(matrix(1:3,1),respect = TRUE)
-plot(log(m1$lambda), m1$nzero)
-abline(v=log(m1$lambda.min))
-plot(log(m2$lambda), m2$nzero)
-abline(v=log(m2$lambda.min))
-plot(log(m3$lambda), m3$nzero)
-abline(v=log(m3$lambda.min))
-
-dev.off()
-
-
-
-
-
-
-
-
-
-layout(matrix(1:2,1),respect = TRUE)
-plot( log(modelcv$lambda), log(modelcva$modlist[[1]]$lambda))
-plot(sqrt(modelcv$cvm) ,  sqrt(modelcva$modlist[[1]]$cvm))
-
-modelcva$modlist[[1]]$lambda
-
-modelcv$lambda
-modelcva$modlist[[11]]$lambda
-
-
-
-
-
-m1 = modelcv
-m2 = modelcva$modlist[[1]]
-layout(matrix(1:2,1),respect = TRUE)
-plot(log(m1$lambda), sqrt(m1$cvm))
-abline(v=log(m1$lambda.min))
-plot(log(m2$lambda), sqrt(m2$cvm))
-abline(v=log(m2$lambda.min))
-
-layout(matrix(1:2,1),respect = TRUE)
-plot(log(m1$lambda), m1$nzero)
-abline(v=log(m1$lambda.min))
-plot(log(m2$lambda), m2$nzero)
-abline(v=log(m2$lambda.min))
-
-
-m3 = modelcva$modlist[[11]]
-plot(log(m3$lambda), m3$nzero)
-abline(v=log(m3$lambda.min))
-dev.off()
-
-```
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -288,58 +143,88 @@ modelcva = mcvaglmnet(idx_train=idx_train, y_key=y_key)
 cvarecaps = data.frame(
   lambda   = unlist(lapply(modelcva$modlist, "[[", "lambda")), 
   cvm      = unlist(lapply(modelcva$modlist, "[[", "cvm")   ), 
+  cvsd     = unlist(lapply(modelcva$modlist, "[[", "cvsd")   ), 
   cvup     = unlist(lapply(modelcva$modlist, "[[", "cvup")  ),
   cvlo     = unlist(lapply(modelcva$modlist, "[[", "cvlo")  ),
   nbprobes = unlist(lapply(modelcva$modlist, "[[", "nzero") ),
-  alpha    = rep(modelcva$alpha, sapply(lapply(modelcva$modlist, "[[", "lambda"), length))
+  alpha    = rep(modelcva$alpha, sapply(lapply(modelcva$modlist, "[[", "lambda"), length)),
+  nfolds   = modelcva$nfolds
 )
 cvarecaps$rmse = sqrt(cvarecaps$cvm)
 cvarecaps$rmseup = sqrt(cvarecaps$cvup)
 cvarecaps$rmselo = sqrt(cvarecaps$cvlo)
-head(cvarecaps)
-dim(cvarecaps)
-
 cvrecaps = cvarecaps  
+
+head(cvrecaps)
+dim(cvrecaps)
 ```
+
+
+
+
+
+```{r best_model_cvaglmnet_params}
+tmp_alphas = sort(unique(cvrecaps$alpha))
+tmp_alphas = unlist(sapply(tmp_alphas, function(alpha) { 
+  cvrecap = cvrecaps[cvrecaps$alpha==alpha,]
+  if (cvrecap[cvrecap$rmse==min(cvrecap$rmse),]$nbprobes<=.66*length(idx_train)) {
+    alpha
+  } else {
+    NULL
+  }
+}))
+
+cvrecaps = cvrecaps[cvrecaps$alpha%in%tmp_alphas,] 
+best_model_cvaglmnet_params = cvrecaps[cvrecaps$cvm==min(cvrecaps$cvm),][1,]
+best_model_cvaglmnet_params
+```
+
+# Method
+
+## Elastic net regularization
+
+Elastic net regularization is a method consisting in mix Lasso and Ridge regression methods. We have the metaparameter lambda for Ridge and Lasso regression model (regularization parameter) and the meta parameter alpha corresponding in the proportion of Lasso and Ridge (principe of Elastic net regression).
+
+Meta-parameters are fixed using cross validation.
+
+Cross validation is a process consisting in cutting the train set in k folds. We learn our model on k-1 folds and validate it on the last fold, and we make that k times to validate the model on each folds. We can after make the mean mse to take the best parameters.
+
+
+
+
 
 ```{r plot cvglmnet results, echo=FALSE}
 main = paste0("Cross-Validation nb_train=", nb_train)
 # Plotting rmse and nbprobes depending on alpha and lambda (with cv results)
 layout(matrix(1:2,1),respect = TRUE)
-plot(0, 0, col=0, xlab="log10(lambda)", ylab="RMSE", main=main, xlim=log10(range(cvrecaps$lambda)), ylim=c(0, min(cvrecaps$rmse)^2))
+plot(0, 0, col=0, xlab="log10(lambda)", ylab="RMSE", main=main, xlim=log10(range(cvrecaps$lambda)), ylim=c(0, min(cvrecaps$rmse)*2))
 tmp_alphas = sort(unique(cvrecaps$alpha))
 foo = lapply(tmp_alphas, function(alpha) { 
   cvrecap = cvrecaps[cvrecaps$alpha==alpha,]
   sub_recap = cvrecap[cvrecap$rmse==min(cvrecap$rmse),]
   tmp_col = which(alpha==tmp_alphas)
-  lines(log10(cvrecap$lambda), cvrecap$rmse             , col=adjustcolor(tmp_col, alpha.f=1), lty=2)
-  # abline(v=log10(sub_recap$lambda)                      , col=adjustcolor(tmp_col, alpha.f=1), lty=2)
-  points(  log10(sub_recap$lambda), sub_recap$rmse  , col=tmp_col, pch=16)
-  arrows(x0=log10(sub_recap$lambda), y0=sub_recap$rmselo, x1=log10(sub_recap$lambda), y1=sub_recap$rmseup, code=3, angle=90, length = 0.03, col=tmp_col, lwd=2)
+  lines(log10(cvrecap$lambda), cvrecap$rmse             , col=tmp_col, lty=2)
+  points(  log10(sub_recap$lambda), sub_recap$rmse  , col=tmp_col, pch=1)
+  if (best_model_cvaglmnet_params$alpha==alpha & best_model_cvaglmnet_params$lambda==sub_recap$lambda) {
+    points(  log10(sub_recap$lambda), sub_recap$rmse  , col=tmp_col, pch=16)
+    arrows(x0=log10(sub_recap$lambda), y0=sub_recap$rmselo, x1=log10(sub_recap$lambda), y1=sub_recap$rmseup, code=3, angle=90, length = 0.03, col=tmp_col, lwd=2)
+  }    
 })
 plot(0, 0, col=0, xlab="log10(lambda)", ylab="nbprobes", main=main, xlim=log10(range(cvrecaps$lambda)), ylim=c(0, ceiling(nb_train)))
 foo = lapply(tmp_alphas, function(alpha) { 
   cvrecap = cvrecaps[cvrecaps$alpha==alpha,]
   sub_recap = cvrecap[cvrecap$rmse==min(cvrecap$rmse),]
   tmp_col = which(alpha==tmp_alphas)
-  lines(log10(cvrecap$lambda), cvrecap$nbprobes         , col=adjustcolor(tmp_col, alpha.f=.5), lty=2)
-  # abline(v=log10(sub_recap$lambda)                      , col=adjustcolor(tmp_col, alpha.f=.5), lty=2)
-  points(  log10(sub_recap$lambda), sub_recap$nbprobes  , col=tmp_col, pch=16)
+  lines(log10(cvrecap$lambda), cvrecap$nbprobes         , col=tmp_col, lty=2)
+  points(  log10(sub_recap$lambda), sub_recap$nbprobes  , col=tmp_col, pch=1)
+  if (best_model_cvaglmnet_params$alpha==alpha & best_model_cvaglmnet_params$lambda==sub_recap$lambda) points(  log10(sub_recap$lambda), sub_recap$nbprobes  , col=tmp_col, pch=16)
 })
 legend(x="topright", legend=tmp_alphas, fill=1:length(tmp_alphas), title="alpha", cex=.5)
 ```
 
 
-```{r best model}
-best_model = cvrecaps[cvrecaps$rmse==min(cvrecaps$rmse),][1,]
-best_model
 
-alpha = best_model[["alpha"]]
-lambda = best_model[["lambda"]]
-m_params = c(alpha=alpha, lambda=lambda)
-model_params = data.frame(alpha=alpha, lambda=lambda)
-rownames(model_params) = paste0("glmnet_a", signif(alpha,3), "_l", signif(lambda,3))
-```
+
 
 ```{r loading train/test sets}
 #Create Train and Test samples
@@ -348,6 +233,20 @@ Ytrain = mget_df()[idx_train,y_key]
 Xtest = mget_full_cpg_matrix(idx_test)
 Ytest = mget_df()[idx_test,y_key]
 ``` 
+
+```{r plot prediction for best model, echo=FALSE}
+m = modelcva$modlist[[which(modelcva$alpha==best_model_cvaglmnet_params$alpha)]]
+predTr = predict(m, Xtrain, type="response", s="lambda.min")
+rmseTr = sqrt(mean((Ytrain - predTr)^2))
+predTe = predict(m, Xtest, type="response", s="lambda.min")
+rmseTe = sqrt(mean((Ytest - predTe)^2))
+
+layout(matrix(1:2,1), respect=TRUE)
+plot(Ytrain, predTr, xlab="Chronological Age", ylab="Predicted Age", main=paste0(m$name, " train rmse: ", signif(rmseTr, 3)))
+plot(Ytest , predTe, xlab="Chronological Age", ylab="Predicted Age", main=paste0(m$name, " test  rmse: ", signif(rmseTe, 3))) 
+```
+
+
 
 
 ```{r glmnet::glmnet memoisation, echo=FALSE}
@@ -362,7 +261,7 @@ if (!exists("mmodel_factory_glmnet")) {
     rownames(coeff) = idx
     coeff$mean = apply(x[,rownames(coeff)], 2, mean)
     ret = list(Intercept=m$a0, coeff=coeff)
-    ret$name = paste0("glmnet_", signif(alpha,3), "_", signif(lambda,3))
+    ret$name = paste0("cvaglmnet (a=", signif(alpha,3), ", l=", signif(lambda,3, ")"))
     # ret$glmmod = m
     return(ret)
   }
@@ -370,68 +269,52 @@ if (!exists("mmodel_factory_glmnet")) {
 }
 ```
 
-```{r prediction for best model}
+
+```{r best_model_cvaglmnet}
+m = mmodel_factory_glmnet(idx_train=idx_train, y_key=y_key, alpha=best_model_cvaglmnet_params$alpha, lambda=best_model_cvaglmnet_params$lambda) 
+
 # build model
-alpha = m_params[["alpha"]]
-lambda = m_params[["lambda"]]
-m_glmnet = mmodel_factory_glmnet(idx_train=idx_train, y_key=y_key, alpha=alpha, lambda=lambda) 
-# prediction 
-predTr = Xtrain[,rownames(m_glmnet$coeff)] %*% as.matrix(m_glmnet$coeff$beta) + m_glmnet$Intercept
+predTr = Xtrain[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
 rmseTr = sqrt(mean((Ytrain - predTr)^2))
-predTe = Xtest[,rownames(m_glmnet$coeff)] %*% as.matrix(m_glmnet$coeff$beta) + m_glmnet$Intercept
+predTe = Xtest[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
 rmseTe = sqrt(mean((Ytest - predTe)^2))
-```
 
-```{r plot prediction for best model, echo=FALSE}
 layout(matrix(1:2,1), respect=TRUE)
-plot(Ytrain, predTr, xlab="Chronological Age", ylab="Predicted Age", main=paste0(m_glmnet$name, " train rmse: ", signif(rmseTr, 3)))
-plot(Ytest , predTe, xlab="Chronological Age", ylab="Predicted Age", main=paste0(m_glmnet$name, " test  rmse: ", signif(rmseTe, 3))) 
-```
+plot(Ytrain, predTr, xlab="Chronological Age", ylab="Predicted Age", main=paste0(m$name, " train rmse: ", signif(rmseTr, 3)))
+plot(Ytest , predTe, xlab="Chronological Age", ylab="Predicted Age", main=paste0(m$name, " test  rmse: ", signif(rmseTe, 3))) 
 
-```{r glmnet_build_deprecated, echo=FALSE, eval=FALSE}
-# ## Model evaluation with best meta parameters
-# # best model_params = list(alphas, lambdas)
-# model_params = data.frame(t(sapply(alphas, function(alpha, cvrecaps=cvrecaps) {
-#   cvrecap = cvrecaps[cvrecaps$alpha==alpha,]
-#   # lambda = cvrecap[abs(350-cvrecap$nbprobes)==min(abs(350-cvrecap$nbprobes)),]$lambda[1]
-#   lambda = cvrecap[cvrecap$rmse==min(cvrecap$rmse),]$lambda[1]
-#   ret = c(alpha=alpha, lambda=lambda)
-#   return(ret)
-# }, cvrecaps=cvrecaps)))
-# # model_params
-#
-#
-# ## Create models
-#
-# models = apply(model_params, 1, function(m_params, idx_train=idx_train, y_key=y_key) {
-#   # print(m_params)
-#   alpha = m_params[["alpha"]]
-#   lambda = m_params[["lambda"]]
-#   m = mmodel_factory_glmnet(idx_train=idx_train, y_key=y_key, alpha=alpha, lambda=lambda)
-#   return(m)
-# }, idx_train=idx_train, y_key=y_key)
-# names(models) = sapply(models, "[[", "name")
-#
-#
-#
-# ## Plot predictions with train an test set of each models
-#
-# #Create Train and Test samples
-# Xtrain = mget_full_cpg_matrix(idx_train)
-# Ytrain = mget_df()[idx_train,y_key]
-# Xtest = mget_full_cpg_matrix(idx_test)
-# Ytest = mget_df()[idx_test,y_key]
-#
-# layout(matrix(1:2,1), respect=TRUE)
-# # layout(matrix(1:(length(models)*2),2), respect=TRUE)
-# foo = lapply(models, function(m, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytest=Ytest) {
-#   predTr = Xtrain[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
-#   rmseTr = sqrt(mean((Ytrain - predTr)^2))
-#   predTe = Xtest[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
-#   rmseTe = sqrt(mean((Ytest - predTe)^2))
-#   plot(predTr, Ytrain, xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " train rmse: ", signif(rmseTr, 3)))
-#   plot(predTe, Ytest , xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " test  rmse: ", signif(rmseTe, 3)))
-# }, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytest=Ytest)
+
+best_model_cvaglmnet = m
+best_model_cvaglmnet_probes = best_model_cvaglmnet$coeff$probes
+
+
+
+build_model_from_probes = function(probes, sub_df, y_key, name) {
+  tmp_m = lm(formula(paste0(y_key,"~0+",paste0(probes,collapse="+"))), data=sub_df) #lm model with probes previously find with bootstrap
+  idx = probes
+  idx = idx[!is.na(tmp_m$coefficients[idx])]
+  beta = tmp_m$coefficients[idx]
+  coeff = data.frame(probes=idx, beta=beta)
+  rownames(coeff) = idx
+  coeff$mean = apply(sub_df[,rownames(coeff)], 2, mean)
+  head(coeff)
+  model = list(coeff=coeff, Intercept=0, name=name)  
+  return(model)  
+}
+
+sub_df = df[idx_train, c(best_model_cvaglmnet_probes,y_key)]
+m = build_model_from_probes(best_model_cvaglmnet_probes, sub_df, y_key, name="best_model_cvaglmnet")
+
+# build model
+predTr = Xtrain[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
+rmseTr = sqrt(mean((Ytrain - predTr)^2))
+predTe = Xtest[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
+rmseTe = sqrt(mean((Ytest - predTe)^2))
+
+layout(matrix(1:2,1), respect=TRUE)
+plot(Ytrain, predTr, xlab="Chronological Age", ylab="Predicted Age", main=paste0(m$name, " train rmse: ", signif(rmseTr, 3)))
+plot(Ytest , predTe, xlab="Chronological Age", ylab="Predicted Age", main=paste0(m$name, " test  rmse: ", signif(rmseTe, 3))) 
+
 ```
 
 
@@ -455,14 +338,22 @@ plot(Ytest , predTe, xlab="Chronological Age", ylab="Predicted Age", main=paste0
 
 
 
-# Bootstrap
 
-Bootstrap is a method consisting in sample a new train set based on the original train set. We repete the method a big number of times, more we repete it, more the results are robusts. 
-To create the new train set, we sample 2/3 of sample on original train set without replace and 1/3 with replace. That create a new train set used to make our model. We repete this method n_boot times and, at the end, we select for our final model only the markers shows on more than a certain pourcentage on bootstraps models. That create a final model more robusts than if we just make one model on our original train set, so this method increases robustness of results.
+
+
+
+
+
+
+
+
+
+
+
 
 
 ```{r bootstrap}
-bs_func = function(i, idx_train, model_params) { #epimedtools to see evolution of running 
+bs_func = function(i, idx_train, best_model_cvaglmnet_params) { #epimedtools to see evolution of running 
   # Bootstrap sample creation
   # print(i)
   set.seed(i)
@@ -471,22 +362,13 @@ bs_func = function(i, idx_train, model_params) { #epimedtools to see evolution o
     sample(idx_train, floor(  1/3 * length(idx_train)), replace=TRUE)
   )
   # Create model with best meta params and bootstrap sample
-  models_bs = apply(model_params, 1, function(m_params, idx_bstrain, y_key) { 
-    # print(m_params)
-    alpha = m_params[["alpha"]]
-    lambda = m_params[["lambda"]]
-    m = mmodel_factory_glmnet(idx_bstrain, y_key, alpha=alpha, lambda=lambda) 
-    return(m)  
-  }, idx_bstrain=idx_bstrain, y_key=y_key)
-  names(models_bs) = paste0(rownames(model_params), "_rnd", i)
+  # print(best_model_cvaglmnet_params)
+  alpha = best_model_cvaglmnet_params$alpha
+  lambda = best_model_cvaglmnet_params$lambda
+  models_bs = mmodel_factory_glmnet(idx_bstrain, y_key, alpha=alpha, lambda=lambda) 
   # For each bootstrap, capture all probes use in the model 
-  probes = lapply(models_bs, function(m) { 
-    probes = rownames(m$coeff)
-    return(probes)
-  })
-  names(probes) = names(models_bs)
-  bs = list(probes=probes)
-  return(bs)
+  probes = rownames(models_bs$coeff)
+  return(probes)
 }
 
 USE_PARAPPLY = FALSE
@@ -497,43 +379,32 @@ if (USE_PARAPPLY) {
     cl_bs = parallel::makeCluster(parallel::detectCores(),  type="PSOCK")    
     # parallel::stopCluster(cl_bs)
   }
-  bs = parallel::parApply(cl_bs, t(t(1:n_boot)), 1, bs_func, idx_train=idx_train, model_params=model_params, mmodel_factory_glmnet=mmodel_factory_glmnet)
+  bs = parallel::parApply(cl_bs, t(t(1:n_boot)), 1, bs_func, idx_train=idx_train, best_model_cvaglmnet_params=best_model_cvaglmnet_params)
 } else {
   print("bootstrap using epimedtools::monitored_apply")
-  bs = epimedtools::monitored_apply(mod=1, t(t(1:n_boot)), 1, bs_func, idx_train=idx_train, model_params=model_params)   
+  bs_probes = epimedtools::monitored_apply(mod=1, t(t(1:n_boot)), 1, bs_func, idx_train=idx_train, best_model_cvaglmnet_params=best_model_cvaglmnet_params)   
 }
 
-bs_probes = unlist(unlist(bs, recursive=FALSE), recursive=FALSE)
 length(bs_probes)
-
-# bs_probes = unlist(lapply(bs, "[[", "probes"), recursive=FALSE)
-# bs_probes = lapply(bs, "[[", "probes")
-# bs_models = bs$models
 ```
 
 
-```{r bootstrap distribution, echo=FALSE}
+```{r robust_probes, echo=FALSE}
 layout(matrix(1:2,1),respect = TRUE)
-# layout(matrix(1:4,1),respect = TRUE)
-boot_probes = lapply(1:nrow(model_params),function(i){
-  #  probes = lapply(bs_probes, "[[", i) #Probes for each alpha
-  probes = unlist(bs_probes) # probes of all bootstraps
-  tmp_tab = table(probes) # distribution of all probes
-  tmp_boot_probes = names(tmp_tab)[tmp_tab >= n_boot/2] # probes which appears in more than 50% of models
-  barplot(table(table(probes)), las=2, 
-    xlab="occurence", 
-    main=paste0("Probes occurence distribution for ", n_boot, " bootstrap models based on ", names(model_params)[i]) 
-  ) # barplot of occurence of each probes across bootstraps
+probes = unlist(bs_probes) # probes of all bootstraps
+tmp_tab = table(probes) # distribution of all probes
+robust_probes = names(tmp_tab)[tmp_tab >= n_boot/2] # probes which appears in more than 50% of models
+barplot(table(table(probes)), las=2, 
+  xlab="occurence", 
+  main=paste0("Probes occurence distribution for ", n_boot, " bootstrap models based on ", best_model_cvaglmnet$name) 
+) # barplot of occurence of each probes across bootstraps
 
-  barplot(cumsum(rev(table(table(probes)))), las=2, 
-    xlab="cumulated occurence", 
-    main=paste0("Cumulated probes occurence distribution") 
-  ) # barplot of occurence of each probes across bootstraps
-  abline(h=length(tmp_boot_probes), lty=2, col=2)
-  text(n_boot/4, length(tmp_boot_probes), pos=3, paste0(length(tmp_boot_probes), " probes"), col=2)
-  return(tmp_boot_probes)
-})
-names(boot_probes) = paste0("bs_", rownames(model_params))
+barplot(cumsum(rev(table(table(probes)))), las=2, 
+  xlab="cumulated occurence", 
+  main=paste0("Cumulated probes occurence distribution") 
+) # barplot of occurence of each probes across bootstraps
+abline(h=length(robust_probes), lty=2, col=2)
+text(n_boot/4, length(robust_probes), pos=3, paste0(length(robust_probes), " probes"), col=2)
 ```
 
 ```{r cv_bs, results="hide"}
@@ -561,12 +432,6 @@ RMSE = function(data_truth, data_pred) {
     return(sqrt(mean((data_truth - data_pred)^2)))
 }
 
-probes = unlist(bs_probes) # probes of all bootstraps
-tmp_tab = table(probes) # distribution of all probes
-tmp_idx_probes = unique(names(tmp_tab))
-sub_df = df[,c(tmp_idx_probes,y_key)] 
-
-
 if (!exists("mcall_lm_mod")) {
   call_lm_mod = function(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, fold) {
     m = lm(formula(paste0(y_key,"~0+",paste0(tmp_probes, collapse="+"))), data=sub_df[tmp_idx_train,])
@@ -589,9 +454,18 @@ if (!exists("mcall_lm_mod")) {
 }
 
 
-stats = epimedtools::monitored_apply(mod=1, t(t(sort(unique(tmp_tab[tmp_tab>=n_boot/2])))), 1, function(occ) {
+sub_df = df[idx_train, c(robust_probes,y_key)] 
+pb_occ_tab = sort(table(unlist(bs_probes))) # probe occurence
+
+
+iterator = sort(unique(pb_occ_tab[pb_occ_tab>=n_boot/2]))
+if (length(iterator) == 1 ) {
+  iterator = sort(unique(pb_occ_tab))
+  sub_df = df[idx_train, c(names(pb_occ_tab),y_key)] 
+}
+stats = epimedtools::monitored_apply(mod=1, t(t(iterator)), 1, function(occ) {
   # print(occ)
-  tmp_probes = names(tmp_tab)[tmp_tab>=occ]
+  tmp_probes = names(pb_occ_tab)[pb_occ_tab>=occ]
   stats = lapply(1:length(folds), function(fold) {
     # print(fold)
     tmp_idx_train = folds[[fold]]$idx_train
@@ -604,75 +478,179 @@ stats = epimedtools::monitored_apply(mod=1, t(t(sort(unique(tmp_tab[tmp_tab>=n_b
 })
 stats = do.call(rbind, stats)
 head(stats)
+```
 
-# 3. plot
-layout(matrix(1:2,1),respect = TRUE)
-plot  (stats$occurence, stats$train_err, col=1, xlab="probes occurence", ylab="RMSE", main="Cross Validation")
-points(stats$occurence, stats$test_err, col=2)
-plot  (stats$nb_probes, stats$train_err, col=1, xlab="nb_probes", ylab="RMSE", main="Cross Validation")
-points(stats$nb_probes, stats$test_err, col=2)
-legend("bottomleft", col=1:2, c("train", "test"), pch=1)
 
-# layout(matrix(1:2,1),respect = TRUE)
-# foo = boxplot(train_err~occurence, data=stats, border=1, las=2, ylab="RMSE", main="Cross Validation", xlab="probes occurence")
-# bar = boxplot( test_err~occurence, data=stats, border=2, las=2, ylab="RMSE", main="Cross Validation", add=TRUE, xlab="probes occurence")
+
+
+## Bootstrap
+
+Bootstrap is a method consisting in sample a new train set based on the original train set. We repete the method a big number of times, more we repete it, more the results are robusts. 
+To create the new train set, we sample 2/3 of sample on original train set without replace and 1/3 with replace. That create a new train set used to make our model.
+We repete this method n_boot times and, at the end, we select for our final model only the markers shows on more than a certain pourcentage on bootstraps models. That create a final model more robusts than if we just make one model on our original train set, so this method increases robustness of results.
+
+```{r plot_cv_each_bs, echo=FALSE, eval=TRUE}
+# # 3. plot
+stats$labs = factor(paste0(stats$occurence, "  (", stats$nb_probes, " probes)"))
+layout(1,respect = TRUE)
+par(mar=c(10, 4.1, 4.1, 2.1))
+foo = boxplot(train_err~labs, data=stats, border=1, las=2, ylab="RMSE", main="Cross Validation for occurence min", xlab="")
+bar = boxplot( test_err~labs, data=stats, border=2, las=2, ylab="RMSE", main="Cross Validation", add=TRUE, xlab="probes occurence")
+legend("bottomright", col=1:2, c("train", "test"), pch=1)
+idx = floor(ncol(bar$stats)*.5)
 # idx = 2
 # for(lty in 3:1) {
 #   tmp_lev = mean(bar$stats[3,1:floor(idx/2)])
 #   idx = which(foo$stats[3,] - tmp_lev>0)[1]
 #   abline(h=tmp_lev, col=2, lty=lty)
 #   abline(v=idx, col=1, lty=lty)
-#   # x = (idx:ncol(foo$stats))
-#   # y = foo$stats[3,idx:ncol(foo$stats)]
-#   # points(x, y, pch=16)
-#   # m = lm(y ~ x)
-#   # abline(m,lty=lty)
 # }
-#
 # idx = rev(which(bar$stats[3,] < tmp_lev))[1]
-# abline(v=idx, col=2, lty=1)
-#
-# boxplot(train_err~nb_probes, data=stats, border=1, las=2, ylab="RMSE", main="Cross Validation", xlab="nb_probes")
-# boxplot( test_err~nb_probes, data=stats, border=2, las=2, ylab="RMSE", main="Cross Validation", add=TRUE, xlab="nb_probes")
-# legend("bottomleft", col=1:2, c("train", "test"), pch=1)
-# abline(v=ncol(foo$stats)-idx, col=2, lty=1)
-
-
-
+abline(v=idx, col=2, lty=1)
+best_params = bar$names[idx]
+text(idx-1, min(foo$stats[3,]), best_params, col=2, srt=90, pos=3)
+occ_optim = as.numeric(strsplit(best_params, " ")[[1]][1])
+best_model_bs_probes = names(pb_occ_tab[pb_occ_tab>occ_optim])
+par(mar=c(5.1, 4.1, 4.1, 2.1))
 ```
 
 
-```{r echo=FALSE, eval=FALSE}
-probes = unlist(bs_probes) # probes of all bootstraps
-tmp_tab = rev(sort(table(probes))) # distribution of all probes
-
-tmp_idx_probes = unique(names(tmp_tab))
-tmp_train = df[idx_train,c(tmp_idx_probes,y_key)] # train set with CpG and y_key for lm
-
-for (i in unique(tmp_tab[tmp_tab>=n_boot/2])) {
-  print(i)
-  tmp_probes = names(tmp_tab)[tmp_tab>=i]
-  m = lm(formula(paste0(y_key,"~",paste0(tmp_probes,collapse="+"))),data=tmp_train) #lm model with probes previously find with bootstrap
-  idx = tmp_probes
-  coeff = data.frame(probes=idx, beta=m$coefficients[idx])
-  rownames(coeff) = idx
-  coeff$mean = apply(tmp_train[,rownames(coeff)], 2, mean)
-  head(coeff)
-  m = list(Intercept=m$coefficients[[1]], coeff=coeff)
+```{r best_model_bs_probes}
+best_model_bs_probes
+```
 
 
-  layout(matrix(1:2,1), respect=TRUE)
-    predTr = Xtrain[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r best_model_bs}
+sub_df = df[idx_train,c(probes,y_key)] 
+best_model_bs = build_model_from_probes(best_model_bs_probes, sub_df, y_key, name="BMBS")
+```
+
+
+
+
+
+```{r plot models_bs}
+#Plot rmse like with cross validation but with bootstrap results
+layout(matrix(1:2,1), respect=TRUE)
+m = best_model_bs
+predTr = Xtrain[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
+rmseTr = sqrt(mean((Ytrain - predTr)^2))
+predTe = Xtest[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
+rmseTe = sqrt(mean((Ytest - predTe)^2))
+plot(predTr, Ytrain, xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " RMSE: ", signif(rmseTr, 3)))
+plot(predTe, Ytest , xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " RMSE: ", signif(rmseTe, 3)))  
+```
+
+
+
+# Model Evaluation
+
+
+
+```{r amar plotting, fig.width=12, fig.height=9, echo=FALSE}
+layout(matrix(1:12,3), respect=TRUE)
+litterature_models = readRDS("litterature_models.rds")
+
+hannum_probes = intersect(colnames(df), litterature_models$hannum_model_mc$coeff$probes)
+sub_df = df[idx_train, c(hannum_probes,y_key)]
+hannum_model = build_model_from_probes(hannum_probes, sub_df, y_key, name="Hannum")
+
+horvath_probes = intersect(colnames(df), litterature_models$horvath_model_mc$coeff$probes)
+sub_df = df[idx_train, c(horvath_probes,y_key)]
+horvath_model = build_model_from_probes(horvath_probes, sub_df, y_key, name="Horvath")
+
+models = list(best_model_cvaglmnet, best_model_bs, hannum_model, horvath_model)
+
+
+for (covariate in covariates) {
+  levls = levels(df[,covariate])
+  tmp_col = RColorBrewer::brewer.pal(n=max(3,length(levls)), name = "Set1")
+  for (m in models) {
+  
+    # Imputing missing probes (litterature_models)
+    tmp_Xtrain = Xtrain[,rownames(m$coeff)[rownames(m$coeff) %in% colnames(Xtrain)]] #Keep only common CpG between coeffs and Xtrain
+    tmp_Xtest = Xtest[,rownames(m$coeff)[rownames(m$coeff) %in% colnames(Xtest)]] #Keep only common CpG between coeffs and Xtrain
+
+    idx_missing_probes = rownames(m$coeff)[!(rownames(m$coeff) %in% colnames(Xtrain))]
+    if (length(idx_missing_probes) != 0) {
+      foo = m$coeff[idx_missing_probes,"mean"]
+      names(foo) = idx_missing_probes
+      tmp_Xtrain = cbind(tmp_Xtrain,do.call("rbind",replicate(nrow(tmp_Xtrain),foo,simplify=FALSE)))
+      tmp_Xtest = cbind(tmp_Xtest,do.call("rbind",replicate(nrow(tmp_Xtest),foo,simplify=FALSE)))
+    }
+  
+    tmp_Xtrain = tmp_Xtrain[,rownames(m$coeff)]
+    tmp_Xtest = tmp_Xtest[,rownames(m$coeff)]
+  
+    predTr = tmp_Xtrain %*% as.matrix(m$coeff$beta) + m$Intercept
     rmseTr = sqrt(mean((Ytrain - predTr)^2))
-    predTe = Xtest[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
+    predTe = tmp_Xtest %*% as.matrix(m$coeff$beta) + m$Intercept
     rmseTe = sqrt(mean((Ytest - predTe)^2))
-    plot(predTr, Ytrain, xlab="Predicted Age", ylab="Chronological Age", main = paste0("occurence: ", i, m$name, " train rmse: ", signif(rmseTr, 3)))
-    plot(predTe, Ytest , xlab="Predicted Age", ylab="Chronological Age", main = paste0("occurence: ", i, m$name, " test  rmse: ", signif(rmseTe, 3)))
+    AMAR_Te = predTe/Ytest
+    AMAR_Te = cbind.data.frame(AMAR_Te,df[rownames(AMAR_Te),covariate])
+
+    colnames(AMAR_Te) = c("AMAR", covariate)
+  
+    pval = anova(lm(AMAR_Te[,1]~AMAR_Te[,2], data=AMAR_Te))[1,5]
+  
+    den = density(AMAR_Te[, "AMAR"], na.rm=TRUE)
+    den_bw = den$bw
+    density = lapply(levls, function(lev){
+      if (sum(AMAR_Te[,covariate] %in% lev) > 1) {
+        den = density(bw=den_bw, AMAR_Te[AMAR_Te[,covariate] %in% lev, "AMAR"])
+        return(den)
+      } # Patch density
+    })
+
+
+
+    plot(Ytrain, predTr,
+      main=paste0(m$name), 
+      sub=paste0("TRAIN (", nrow(m$coeff), " pbs)", " RMSE: ", signif(rmseTr, 3)), 
+      xlab="Chronological Age", 
+      ylab="Predicted Age"
+      )
+    abline(a=0, b=1)                                                                    
+
+    plot(Ytest , predTe, 
+      main = paste0(m$name), 
+      sub=paste0("TEST (", nrow(m$coeff), " pbs) RMSE: ", signif(rmseTe, 3)), 
+      xlab="Chronological Age", 
+      ylab="Predicted Age" 
+    )
+    abline(a=0, b=1)
+
+
+    plot(0,0, xlim = c(0.5, 1.5), #min(unlist(lapply(density, function(d){min(d$x)}))),max(unlist(lapply(density, function(d){max(d$x)})))), 
+      ylim = c(min(unlist(lapply(density, function(d){min(d$y)}))),max(unlist(lapply(density, function(d){max(d$y)})))), 
+    main = paste0("AMAR pval=", signif(pval ,3)))
+    sub="ANOVA"
+		for (j in c(1:length(levls))){
+			lines(density[[j]],col = tmp_col[j])
+		}
+		legend(x="topright", legend=levls, col=tmp_col, lty = 1, title=covariate)           
+  }
 }
 ```
 
 
-# Results and Discussion
+
+# Discussion
 
 For each alpha, we see the occurence of each probes across bootstraps.
 
@@ -693,16 +671,12 @@ layout(1, respect=TRUE)
 # layout(matrix(1:2,1),respect = TRUE)
 if (!exists("mget_coefHannum")) mget_coefHannum = memoise::memoise(methylclockData::get_coefHannum)
 hannum_coeff = mget_coefHannum() # Get Hannum probes
-foo = lapply(1:nrow(model_params), function(i) {
-  # probes = lapply(bs_probes, "[[", i)
-  probes = unlist(bs_probes)
-  tmp_tab = table(probes)
-  tmp_tab_Hannum = tmp_tab[hannum_coeff$CpGmarker] # Occurence of each Hannum's probes
-  tmp_tab_Hannum[is.na(tmp_tab_Hannum)] = 0  # If no occurences, set 0 
-  barplot(table(tmp_tab_Hannum), las=2, main=paste0("Hannum probes in ", rownames(model_params)[i], " ", sum(tmp_tab_Hannum >= n_boot/2), " probes.")) # Plot occurences of Hannum probes across bootstraps
-  ret = names(tmp_tab_Hannum)[tmp_tab_Hannum >= n_boot/2]
-  return(ret)
-})
+probes = unlist(bs_probes)
+tmp_tab = table(probes)
+tmp_tab_Hannum = tmp_tab[hannum_coeff$CpGmarker] # Occurence of each Hannum's probes
+tmp_tab_Hannum[is.na(tmp_tab_Hannum)] = 0  # If no occurences, set 0 
+barplot(table(tmp_tab_Hannum), las=2, main=paste0("Hannum probes in ", sum(tmp_tab_Hannum >= n_boot/2), " probes.")) # Plot occurences of Hannum probes across bootstraps
+foo = names(tmp_tab_Hannum)[tmp_tab_Hannum >= n_boot/2]
 unique(unlist(foo))
 ```
 
@@ -714,116 +688,29 @@ Follow the number of retained probes along of the bootstraps process
 layout(matrix(1:2,1),respect = TRUE)
 # layout(matrix(1:(length(models)*2),2), respect=TRUE)
 x = seq(2,n_boot,2) # Sequence of even bootstraps
-for (i in 1:nrow(model_params)){ #for each alpha
-  tmp_probes = lapply(x, function(nb_boot){ # when the number of bootstrap is even 
-    tmp_probes = unlist(bs_probes[1:nb_boot]) 
-    tmp_tab = table(tmp_probes)
-    tmp_boot_cpg = names(tmp_tab)[tmp_tab >= nb_boot/2] # Check probes appears more than 50% times
-    return(tmp_boot_cpg)
-  })
-  # barplot(sort(table(unlist(tmp_probes))))
-  nb_probes = unlist(sapply(tmp_probes, length)) # Check number of probes across boostraps
-  plot(x, nb_probes, type = "l", main = paste0("alpha: ", rownames(model_params)[i])) # Plot number of probes across bootstraps
-  tab_probes = table(nb_probes) 
-  barplot(tab_probes, las=2) # Check when number of probes stabilised
-}
-# tab_probes
-```
-
-```{r stock bootstrap model}
-tmp_idx_probes = unique(unlist(boot_probes))
-tmp_train = df[idx_train,c(tmp_idx_probes,y_key)] # train set with CpG and y_key for lm
-models_bs = lapply(1:length(boot_probes), function(i){ # Compute coefficients and mean in the train for each probes of the model for each alpha
-	m = lm(formula(paste0(y_key,"~",paste0(boot_probes[[i]],collapse="+"))),data=tmp_train) #lm model with probes previously find with bootstrap
-  idx = boot_probes[[i]]
-  idx = idx[!is.na(m$coefficients[idx])]
-  beta = m$coefficients[idx]
-  coeff = data.frame(probes=idx, beta=beta)
-  rownames(coeff) = idx
-  coeff$mean = apply(tmp_train[,rownames(coeff)], 2, mean)
-  head(coeff)
-  ret = list(Intercept=m$coefficients[[1]], coeff=coeff)
-  
-  ret$name = names(boot_probes)[i]
-  # ret$glmmod = m
-  return(ret)
+tmp_probes = lapply(x, function(nb_boot){ # when the number of bootstrap is even 
+  tmp_probes = unlist(bs_probes[1:nb_boot]) 
+  tmp_tab = table(tmp_probes)
+  tmp_boot_cpg = names(tmp_tab)[tmp_tab >= nb_boot/2] # Check probes appears more than 50% times
+  return(tmp_boot_cpg)
 })
-names(models_bs) = sapply(models_bs, "[[", "name")
-```
-
-```{r plot models_bs}
-#Plot rmse like with cross validation but with bootstrap results
-layout(matrix(1:2,1), respect=TRUE)
-# layout(matrix(1:8,2), respect=TRUE)
-foo = lapply(models_bs, function(m, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytest=Ytest) {               
-  predTr = Xtrain[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
-  rmseTr = sqrt(mean((Ytrain - predTr)^2))
-  predTe = Xtest[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
-  rmseTe = sqrt(mean((Ytest - predTe)^2))
-  plot(predTr, Ytrain, xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " train rmse: ", signif(rmseTr, 3)))
-  plot(predTe, Ytest , xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " test  rmse: ", signif(rmseTe, 3)))  
-}, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytest=Ytest)
+# barplot(sort(table(unlist(tmp_probes))))
+nb_probes = unlist(sapply(tmp_probes, length)) # Check number of probes across boostraps
+plot(x, nb_probes, type = "l", main ="") # Plot number of probes across bootstraps
+tab_probes = table(nb_probes) 
+barplot(tab_probes, las=2) # Check when number of probes stabilised
 ```
 
 
-# AMAR
 
 
 
 
-```{r amar plotting}
-layout(matrix(1:3,1), respect=TRUE)
 
-models = list(m_glmnet,models_bs[[1]])
-litterature_models = readRDS("litterature_models.rds")
-models = c(models,litterature_models)
 
-for (it in covariates) {
-  factors = unique(df[,it])
-  tmp_col = RColorBrewer::brewer.pal(n=max(3,length(factors)), name = "Set1")
-  for (i in 1:length(models)) {
-    m = models[[i]]
-  
-    tmp_Xtrain = Xtrain[,rownames(m$coeff)[rownames(m$coeff) %in% colnames(Xtrain)]] #Keep only common CpG between coeffs and Xtrain
-    tmp_Xtest = Xtest[,rownames(m$coeff)[rownames(m$coeff) %in% colnames(Xtest)]] #Keep only common CpG between coeffs and Xtrain
-  
-    idx_missing_probes = rownames(m$coeff)[!(rownames(m$coeff) %in% colnames(Xtrain))]
-    if (length(idx_missing_probes) != 0) {
-      foo = m$coeff[idx_missing_probes,"mean"]
-      names(foo) = idx_missing_probes
-      tmp_Xtrain = cbind(tmp_Xtrain,do.call("rbind",replicate(nrow(tmp_Xtrain),foo,simplify=FALSE)))
-      tmp_Xtest = cbind(tmp_Xtest,do.call("rbind",replicate(nrow(tmp_Xtest),foo,simplify=FALSE)))
-    }
-  
-    tmp_Xtrain = tmp_Xtrain[,rownames(m$coeff)]
-    tmp_Xtest = tmp_Xtest[,rownames(m$coeff)]
-  
-    predTr = tmp_Xtrain %*% as.matrix(m$coeff$beta) + m$Intercept
-    rmseTr = sqrt(mean((Ytrain - predTr)^2))
-    predTe = tmp_Xtest %*% as.matrix(m$coeff$beta) + m$Intercept
-    rmseTe = sqrt(mean((Ytest - predTe)^2))
-  
-    AMAR_Te = predTe/Ytest
-    AMAR_Te = cbind.data.frame(AMAR_Te,df[rownames(AMAR_Te),it])
-    colnames(AMAR_Te) = c("AMAR",it)
-  	
-  	plot(predTr, Ytrain, xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " train rmse: ", signif(rmseTr, 3)),col = tmp_col[AMAR_Te[,it]])
-    plot(predTe, Ytest , xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " test  rmse: ", signif(rmseTe, 3)),col = tmp_col[AMAR_Te[,it]])
-    
-    density = lapply(factors, function(factor){
-      if(sum(AMAR_Te[,it] == factor) > 1) {
-        return(density(AMAR_Te[AMAR_Te[,it] == factor, "AMAR"]))
-      } # Problem density
-    })
-    plot(0,0, xlim = c(min(unlist(lapply(density, function(d){min(d$x)}))),max(unlist(lapply(density, function(d){max(d$x)})))), ylim = c(min(unlist(lapply(density, function(d){min(d$y)}))),max(unlist(lapply(density, function(d){max(d$y)})))), main = paste0("density for ",m$name))
-		for (j in c(1:length(factors))){
-			lines(density[[j]],col = tmp_col[j])
-		}
-		legend(x="topright", legend=factors, col=tmp_col, lty = 1,cex = 0.75, title="factor")
-  }
-}
 
-```
+
+
 
 
 
