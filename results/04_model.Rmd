@@ -174,10 +174,12 @@ tmp_alphas = unlist(sapply(tmp_alphas, function(alpha) {
   }
 }))
 
-if (! is.null(tmp_alphas)) {
-  best_model_cvaglmnet_params = cvrecaps[cvrecaps$cvm==min(cvrecaps$cvm),][1,]  
-}
+if (!is.null(tmp_alphas)) {
+  cvrecaps = cvrecaps[cvrecaps$alpha%in%tmp_alphas,] 
+} 
 
+best_model_cvaglmnet_params = cvrecaps[cvrecaps$cvm==min(cvrecaps$cvm),][1,]
+best_model_cvaglmnet_params
 best_model_cvaglmnet_params
 ```
 
@@ -613,7 +615,7 @@ for (covariate in covariates) {
   
     den = density(AMAR_Te[, "AMAR"], na.rm=TRUE)
     den_bw = den$bw
-    # den_bw = .1
+    # den_bw = .07
     density = lapply(levls, function(lev){
       if (sum(AMAR_Te[,covariate] %in% lev) > 1) {
         den = density(bw=den_bw, AMAR_Te[AMAR_Te[,covariate] %in% lev, "AMAR"])
