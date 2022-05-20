@@ -122,14 +122,6 @@ if (!exists("n_boot")) n_boot = 500
 ``` 
 
 
-# Elastic net regularization
-
-Elastic net regularization is...
-
-Meta-parameters are fixed using cross validation.
-
-#datascientist
-
 
 ```{r cva.glmnet call, eval=TRUE, echo=TRUE}
 if (!exists("mcvaglmnet")) {
@@ -167,7 +159,9 @@ head(cvrecaps)
 dim(cvrecaps)
 ```
 
-# Best Model cvaglmnet
+
+
+
 
 ```{r best_model_cvaglmnet_params}
 tmp_alphas = sort(unique(cvrecaps$alpha))
@@ -184,6 +178,17 @@ cvrecaps = cvrecaps[cvrecaps$alpha%in%tmp_alphas,]
 best_model_cvaglmnet_params = cvrecaps[cvrecaps$cvm==min(cvrecaps$cvm),][1,]
 best_model_cvaglmnet_params
 ```
+
+# Method
+
+## Elastic net regularization
+
+Elastic net regularization is...
+
+Meta-parameters are fixed using cross validation.
+
+#datascientist
+
 
 
 
@@ -333,13 +338,14 @@ plot(Ytest , predTe, xlab="Chronological Age", ylab="Predicted Age", main=paste0
 
 
 
-# Bootstrap
 
-Bootstrap consists in ...
 
-Boostrap increases robustness of results.
 
-#datascientist
+
+
+
+
+
 
 
 
@@ -474,6 +480,16 @@ head(stats)
 ```
 
 
+
+
+## Bootstrap
+
+Bootstrap consists in ...
+
+Boostrap increases robustness of results.
+
+#datascientist
+
 ```{r plot_cv_each_bs, echo=FALSE, eval=TRUE}
 # # 3. plot
 stats$labs = factor(paste0(stats$occurence, "  (", stats$nb_probes, " probes)"))
@@ -482,14 +498,15 @@ par(mar=c(10, 4.1, 4.1, 2.1))
 foo = boxplot(train_err~labs, data=stats, border=1, las=2, ylab="RMSE", main="Cross Validation for occurence min", xlab="")
 bar = boxplot( test_err~labs, data=stats, border=2, las=2, ylab="RMSE", main="Cross Validation", add=TRUE, xlab="probes occurence")
 legend("bottomright", col=1:2, c("train", "test"), pch=1)
-idx = 2
-for(lty in 3:1) {
-  tmp_lev = mean(bar$stats[3,1:floor(idx/2)])
-  idx = which(foo$stats[3,] - tmp_lev>0)[1]
-  abline(h=tmp_lev, col=2, lty=lty)
-  abline(v=idx, col=1, lty=lty)
-}
-idx = rev(which(bar$stats[3,] < tmp_lev))[1]
+idx = floor(ncol(bar$stats)*.5)
+# idx = 2
+# for(lty in 3:1) {
+#   tmp_lev = mean(bar$stats[3,1:floor(idx/2)])
+#   idx = which(foo$stats[3,] - tmp_lev>0)[1]
+#   abline(h=tmp_lev, col=2, lty=lty)
+#   abline(v=idx, col=1, lty=lty)
+# }
+# idx = rev(which(bar$stats[3,] < tmp_lev))[1]
 abline(v=idx, col=2, lty=1)
 best_params = bar$names[idx]
 text(idx-1, min(foo$stats[3,]), best_params, col=2, srt=90, pos=3)
@@ -502,70 +519,6 @@ par(mar=c(5.1, 4.1, 4.1, 2.1))
 ```{r best_model_bs_probes}
 best_model_bs_probes
 ```
-
-
-
-
-
-
-
-
-# Results and Discussion
-
-For each alpha, we see the occurence of each probes across bootstraps.
-
-
-Discussion, a **core of probes** are always selected by bootstrap.
-
-- What is the relevance of the clock built with only this core of probes? #biostat
-- Which one? What are associated biologiocal functions? #biologist 
-- Are these probes located into wild Differebnttion Metrhylation Region (DMR)? #biologist
-
-
-## Hannum probes
-
-For each alpha, we see the occurence of Hannum probes across bootstraps.
-
-```{r hannum distribution}
-layout(1, respect=TRUE)
-# layout(matrix(1:2,1),respect = TRUE)
-if (!exists("mget_coefHannum")) mget_coefHannum = memoise::memoise(methylclockData::get_coefHannum)
-hannum_coeff = mget_coefHannum() # Get Hannum probes
-probes = unlist(bs_probes)
-tmp_tab = table(probes)
-tmp_tab_Hannum = tmp_tab[hannum_coeff$CpGmarker] # Occurence of each Hannum's probes
-tmp_tab_Hannum[is.na(tmp_tab_Hannum)] = 0  # If no occurences, set 0 
-barplot(table(tmp_tab_Hannum), las=2, main=paste0("Hannum probes in ", sum(tmp_tab_Hannum >= n_boot/2), " probes.")) # Plot occurences of Hannum probes across bootstraps
-foo = names(tmp_tab_Hannum)[tmp_tab_Hannum >= n_boot/2]
-unique(unlist(foo))
-```
-
-## Occurrence of probes along of boostrap process
-
-Follow the number of retained probes along of the bootstraps process
-
-```{r probes_occurrence, eval=FALSE}
-layout(matrix(1:2,1),respect = TRUE)
-# layout(matrix(1:(length(models)*2),2), respect=TRUE)
-x = seq(2,n_boot,2) # Sequence of even bootstraps
-tmp_probes = lapply(x, function(nb_boot){ # when the number of bootstrap is even 
-  tmp_probes = unlist(bs_probes[1:nb_boot]) 
-  tmp_tab = table(tmp_probes)
-  tmp_boot_cpg = names(tmp_tab)[tmp_tab >= nb_boot/2] # Check probes appears more than 50% times
-  return(tmp_boot_cpg)
-})
-# barplot(sort(table(unlist(tmp_probes))))
-nb_probes = unlist(sapply(tmp_probes, length)) # Check number of probes across boostraps
-plot(x, nb_probes, type = "l", main ="") # Plot number of probes across bootstraps
-tab_probes = table(nb_probes) 
-barplot(tab_probes, las=2) # Check when number of probes stabilised
-```
-
-
-
-
-
-
 
 
 
@@ -656,9 +609,11 @@ for (covariate in covariates) {
   
     pval = anova(lm(AMAR_Te[,1]~AMAR_Te[,2], data=AMAR_Te))[1,5]
   
+    den = density(AMAR_Te[, "AMAR"], na.rm=TRUE)
+    den_bw = den$bw
     density = lapply(levls, function(lev){
       if (sum(AMAR_Te[,covariate] %in% lev) > 1) {
-        den = density(AMAR_Te[AMAR_Te[,covariate] == lev, "AMAR"])
+        den = density(bw=den_bw, AMAR_Te[AMAR_Te[,covariate] %in% lev, "AMAR"])
         return(den)
       } # Patch density
     })
@@ -672,7 +627,6 @@ for (covariate in covariates) {
       ylab="Predicted Age"
       )
     abline(a=0, b=1)                                                                    
-		legend(x="topleft", legend=levls, col=tmp_col, lty = 1, title=covariate)           
 
     plot(Ytest , predTe, 
       main = paste0(m$name), 
@@ -683,13 +637,81 @@ for (covariate in covariates) {
     abline(a=0, b=1)
 
 
-    plot(0,0, xlim = c(min(unlist(lapply(density, function(d){min(d$x)}))),max(unlist(lapply(density, function(d){max(d$x)})))), ylim = c(min(unlist(lapply(density, function(d){min(d$y)}))),max(unlist(lapply(density, function(d){max(d$y)})))), main = paste0("AMAR for ", covariate, " pval=", signif(pval ,3)))
+    plot(0,0, xlim = c(0.5, 1.5), #min(unlist(lapply(density, function(d){min(d$x)}))),max(unlist(lapply(density, function(d){max(d$x)})))), 
+      ylim = c(min(unlist(lapply(density, function(d){min(d$y)}))),max(unlist(lapply(density, function(d){max(d$y)})))), 
+    main = paste0("AMAR pval=", signif(pval ,3)))
+    sub="ANOVA"
 		for (j in c(1:length(levls))){
 			lines(density[[j]],col = tmp_col[j])
 		}
+		legend(x="topright", legend=levls, col=tmp_col, lty = 1, title=covariate)           
   }
 }
 ```
+
+
+
+# Discussion
+
+For each alpha, we see the occurence of each probes across bootstraps.
+
+
+Discussion, a **core of probes** are always selected by bootstrap.
+
+- What is the relevance of the clock built with only this core of probes? #biostat
+- Which one? What are associated biologiocal functions? #biologist 
+- Are these probes located into wild Differebnttion Metrhylation Region (DMR)? #biologist
+
+
+## Hannum probes
+
+For each alpha, we see the occurence of Hannum probes across bootstraps.
+
+```{r hannum distribution}
+layout(1, respect=TRUE)
+# layout(matrix(1:2,1),respect = TRUE)
+if (!exists("mget_coefHannum")) mget_coefHannum = memoise::memoise(methylclockData::get_coefHannum)
+hannum_coeff = mget_coefHannum() # Get Hannum probes
+probes = unlist(bs_probes)
+tmp_tab = table(probes)
+tmp_tab_Hannum = tmp_tab[hannum_coeff$CpGmarker] # Occurence of each Hannum's probes
+tmp_tab_Hannum[is.na(tmp_tab_Hannum)] = 0  # If no occurences, set 0 
+barplot(table(tmp_tab_Hannum), las=2, main=paste0("Hannum probes in ", sum(tmp_tab_Hannum >= n_boot/2), " probes.")) # Plot occurences of Hannum probes across bootstraps
+foo = names(tmp_tab_Hannum)[tmp_tab_Hannum >= n_boot/2]
+unique(unlist(foo))
+```
+
+## Occurrence of probes along of boostrap process
+
+Follow the number of retained probes along of the bootstraps process
+
+```{r probes_occurrence, eval=FALSE}
+layout(matrix(1:2,1),respect = TRUE)
+# layout(matrix(1:(length(models)*2),2), respect=TRUE)
+x = seq(2,n_boot,2) # Sequence of even bootstraps
+tmp_probes = lapply(x, function(nb_boot){ # when the number of bootstrap is even 
+  tmp_probes = unlist(bs_probes[1:nb_boot]) 
+  tmp_tab = table(tmp_probes)
+  tmp_boot_cpg = names(tmp_tab)[tmp_tab >= nb_boot/2] # Check probes appears more than 50% times
+  return(tmp_boot_cpg)
+})
+# barplot(sort(table(unlist(tmp_probes))))
+nb_probes = unlist(sapply(tmp_probes, length)) # Check number of probes across boostraps
+plot(x, nb_probes, type = "l", main ="") # Plot number of probes across bootstraps
+tab_probes = table(nb_probes) 
+barplot(tab_probes, las=2) # Check when number of probes stabilised
+```
+
+
+
+
+
+
+
+
+
+
+
 
 
 
