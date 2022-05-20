@@ -174,8 +174,10 @@ tmp_alphas = unlist(sapply(tmp_alphas, function(alpha) {
   }
 }))
 
-cvrecaps = cvrecaps[cvrecaps$alpha%in%tmp_alphas,] 
-best_model_cvaglmnet_params = cvrecaps[cvrecaps$cvm==min(cvrecaps$cvm),][1,]
+if (! is.null(tmp_alphas)) {
+  best_model_cvaglmnet_params = cvrecaps[cvrecaps$cvm==min(cvrecaps$cvm),][1,]  
+}
+
 best_model_cvaglmnet_params
 ```
 
@@ -192,7 +194,7 @@ Meta-parameters are fixed using cross validation.
 
 
 
-```{r plot cvglmnet results, echo=FALSE}
+```{r plot cva.glmnet results, echo=FALSE}
 main = paste0("Cross-Validation nb_train=", nb_train)
 # Plotting rmse and nbprobes depending on alpha and lambda (with cv results)
 layout(matrix(1:2,1),respect = TRUE)
@@ -209,7 +211,7 @@ foo = lapply(tmp_alphas, function(alpha) {
     arrows(x0=log10(sub_recap$lambda), y0=sub_recap$rmselo, x1=log10(sub_recap$lambda), y1=sub_recap$rmseup, code=3, angle=90, length = 0.03, col=tmp_col, lwd=2)
   }    
 })
-plot(0, 0, col=0, xlab="log10(lambda)", ylab="nbprobes", main=main, xlim=log10(range(cvrecaps$lambda)), ylim=c(0, ceiling(nb_train)))
+plot(0, 0, col=0, xlab="log10(lambda)", ylab="nbprobes", main=main, xlim=log10(range(cvrecaps$lambda)), ylim=c(0, max(nb_train, best_model_cvaglmnet_params$nbprobes*1.5)))
 foo = lapply(tmp_alphas, function(alpha) { 
   cvrecap = cvrecaps[cvrecaps$alpha==alpha,]
   sub_recap = cvrecap[cvrecap$rmse==min(cvrecap$rmse),]
@@ -260,7 +262,7 @@ if (!exists("mmodel_factory_glmnet")) {
     rownames(coeff) = idx
     coeff$mean = apply(x[,rownames(coeff)], 2, mean)
     ret = list(Intercept=m$a0, coeff=coeff)
-    ret$name = paste0("cvaglmnet (a=", signif(alpha,3), ", l=", signif(lambda,3, ")"))
+    ret$name = paste0("cvaglmnet (a=", signif(alpha,3), ", l=", signif(lambda,3), ")")
     # ret$glmmod = m
     return(ret)
   }
