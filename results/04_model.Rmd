@@ -583,6 +583,7 @@ models = list(best_model_cvaglmnet, best_model_bs, hannum_model, horvath_model)
 
 
 for (covariate in covariates) {
+  df[,covariate] = as.factor(df[,covariate])
   levls = levels(df[,covariate])
   tmp_col = RColorBrewer::brewer.pal(n=max(3,length(levls)), name = "Set1")
   for (m in models) {
@@ -643,7 +644,7 @@ for (covariate in covariates) {
 
 
     plot(0,0, xlim = c(0.5, 1.5), #min(unlist(lapply(density, function(d){min(d$x)}))),max(unlist(lapply(density, function(d){max(d$x)})))), 
-      ylim = c(min(unlist(lapply(density, function(d){min(d$y)}))),max(unlist(lapply(density, function(d){max(d$y)})))), 
+      ylim = c(0, max(unlist(lapply(density, function(d){max(d$y)})))), 
     main = paste0("AMAR pval=", signif(pval ,3)))
     sub="ANOVA"
 		for (j in c(1:length(levls))){
