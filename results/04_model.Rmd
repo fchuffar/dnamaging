@@ -261,7 +261,7 @@ if (!exists("mmodel_factory_glmnet")) {
     rownames(coeff) = idx
     coeff$mean = apply(x[,rownames(coeff)], 2, mean)
     ret = list(Intercept=m$a0, coeff=coeff)
-    ret$name = paste0("cvaglmnet (a=", signif(alpha,3), ", l=", signif(lambda,3, ")"))
+    ret$name = paste0("cvaglmnet (a=", signif(alpha,3), ", l=", signif(lambda,3), ")")
     # ret$glmmod = m
     return(ret)
   }
