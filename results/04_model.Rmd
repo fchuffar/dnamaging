@@ -679,6 +679,8 @@ table(probes_annot$Relation_to_Island)
 WriteXLS::WriteXLS(probes_annot, paste0("04_probes_annot_", gse, ".xlsx"))
 ```
 
+[./`r paste0("04_probes_annot_", gse, ".xlsx")`](`r paste0("04_probes_annot_", gse, ".xlsx")`)
+
 ## Hannum probes
 
 For each alpha, we see the occurence of Hannum probes across bootstraps.
