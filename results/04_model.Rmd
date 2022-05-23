@@ -273,7 +273,7 @@ if (!exists("mmodel_factory_glmnet")) {
 ```
 
 
-```{r best_model_cvaglmnet}
+```{r instanciate best_model_cvaglmnet}
 m = mmodel_factory_glmnet(idx_train=idx_train, y_key=y_key, alpha=best_model_cvaglmnet_params$alpha, lambda=best_model_cvaglmnet_params$lambda) 
 
 # build model
@@ -542,7 +542,7 @@ best_model_bs_probes
 
 ```{r best_model_bs}
 sub_df = df[idx_train,c(probes,y_key)] 
-best_model_bs = build_model_from_probes(best_model_bs_probes, sub_df, y_key, name="BMBS")
+best_model_bs = build_model_from_probes(best_model_bs_probes, sub_df, y_key, name="Bootstraped model")
 ```
 
 
@@ -616,7 +616,7 @@ for (covariate in covariates) {
   
     den = density(AMAR_Te[, "AMAR"], na.rm=TRUE)
     den_bw = den$bw
-    # den_bw = .07
+    den_bw = .06
     density = lapply(levls, function(lev){
       if (sum(AMAR_Te[,covariate] %in% lev) > 1) {
         den = density(bw=den_bw, AMAR_Te[AMAR_Te[,covariate] %in% lev, "AMAR"])
@@ -668,6 +668,16 @@ Discussion, a **core of probes** are always selected by bootstrap.
 - Which one? What are associated biologiocal functions? #biologist 
 - Are these probes located into wild Differebnttion Metrhylation Region (DMR)? #biologist
 
+
+## Probe annotations
+
+```{r}
+library(IlluminaHumanMethylation450kanno.ilmn12.hg19)
+pf450k = data.frame(getAnnotation(IlluminaHumanMethylation450kanno.ilmn12.hg19))
+probes_annot = pf450k[models[[2]]$coeff$probes,]
+table(probes_annot$Relation_to_Island)
+WriteXLS::WriteXLS(probes_annot, paste0("04_probes_annot_", gse, ".xlsx"))
+```
 
 ## Hannum probes
 
