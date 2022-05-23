@@ -187,11 +187,12 @@ best_model_cvaglmnet_params
 
 ## Elastic net regularization
 
-Elastic net regularization is...
+Elastic net regularization is a method consisting in mix Lasso and Ridge regression methods. We have the metaparameter lambda for Ridge and Lasso regression model (regularization parameter) and the meta parameter alpha corresponding in the proportion of Lasso and Ridge (principe of Elastic net regression).
 
 Meta-parameters are fixed using cross validation.
 
-#datascientist
+Cross validation is a process consisting in cutting the train set in k folds. We learn our model on k-1 folds and validate it on the last fold, and we make that k times to validate the model on each folds. We can after make the mean mse to take the best parameters.
+
 
 
 
@@ -488,11 +489,9 @@ head(stats)
 
 ## Bootstrap
 
-Bootstrap consists in ...
-
-Boostrap increases robustness of results.
-
-#datascientist
+Bootstrap is a method consisting in sample a new train set based on the original train set. We repete the method a big number of times, more we repete it, more the results are robusts. 
+To create the new train set, we sample 2/3 of sample on original train set without replace and 1/3 with replace. That create a new train set used to make our model.
+We repete this method n_boot times and, at the end, we select for our final model only the markers shows on more than a certain pourcentage on bootstraps models. That create a final model more robusts than if we just make one model on our original train set, so this method increases robustness of results.
 
 ```{r plot_cv_each_bs, echo=FALSE, eval=TRUE}
 # # 3. plot
