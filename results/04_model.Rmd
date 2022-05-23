@@ -687,11 +687,15 @@ For each alpha, we see the occurence of Hannum probes across bootstraps.
 ```{r hannum distribution}
 layout(1, respect=TRUE)
 # layout(matrix(1:2,1),respect = TRUE)
-if (!exists("mget_coefHannum")) mget_coefHannum = memoise::memoise(methylclockData::get_coefHannum)
-hannum_coeff = mget_coefHannum() # Get Hannum probes
+
 probes = unlist(bs_probes)
 tmp_tab = table(probes)
-tmp_tab_Hannum = tmp_tab[hannum_coeff$CpGmarker] # Occurence of each Hannum's probes
+
+litterature_models = readRDS("litterature_models.rds")
+# hannum_probes = intersect(names(tmp_tab), litterature_models$hannum_model_mc$coeff$probes)
+hannum_probes = litterature_models$hannum_model_mc$coeff$probes
+
+tmp_tab_Hannum = tmp_tab[hannum_probes] # Occurence of each Hannum's probes
 tmp_tab_Hannum[is.na(tmp_tab_Hannum)] = 0  # If no occurences, set 0 
 barplot(table(tmp_tab_Hannum), las=2, main=paste0("Hannum probes in ", sum(tmp_tab_Hannum >= n_boot/2), " probes.")) # Plot occurences of Hannum probes across bootstraps
 foo = names(tmp_tab_Hannum)[tmp_tab_Hannum >= n_boot/2]
