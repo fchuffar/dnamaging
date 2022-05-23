@@ -174,8 +174,12 @@ tmp_alphas = unlist(sapply(tmp_alphas, function(alpha) {
   }
 }))
 
-cvrecaps = cvrecaps[cvrecaps$alpha%in%tmp_alphas,] 
+if (!is.null(tmp_alphas)) {
+  cvrecaps = cvrecaps[cvrecaps$alpha%in%tmp_alphas,] 
+} 
+
 best_model_cvaglmnet_params = cvrecaps[cvrecaps$cvm==min(cvrecaps$cvm),][1,]
+best_model_cvaglmnet_params
 best_model_cvaglmnet_params
 ```
 
@@ -193,7 +197,7 @@ Cross validation is a process consisting in cutting the train set in k folds. We
 
 
 
-```{r plot cvglmnet results, echo=FALSE}
+```{r plot cva.glmnet results, echo=FALSE}
 main = paste0("Cross-Validation nb_train=", nb_train)
 # Plotting rmse and nbprobes depending on alpha and lambda (with cv results)
 layout(matrix(1:2,1),respect = TRUE)
@@ -210,7 +214,7 @@ foo = lapply(tmp_alphas, function(alpha) {
     arrows(x0=log10(sub_recap$lambda), y0=sub_recap$rmselo, x1=log10(sub_recap$lambda), y1=sub_recap$rmseup, code=3, angle=90, length = 0.03, col=tmp_col, lwd=2)
   }    
 })
-plot(0, 0, col=0, xlab="log10(lambda)", ylab="nbprobes", main=main, xlim=log10(range(cvrecaps$lambda)), ylim=c(0, ceiling(nb_train)))
+plot(0, 0, col=0, xlab="log10(lambda)", ylab="nbprobes", main=main, xlim=log10(range(cvrecaps$lambda)), ylim=c(0, max(nb_train, best_model_cvaglmnet_params$nbprobes*1.5)))
 foo = lapply(tmp_alphas, function(alpha) { 
   cvrecap = cvrecaps[cvrecaps$alpha==alpha,]
   sub_recap = cvrecap[cvrecap$rmse==min(cvrecap$rmse),]
@@ -578,6 +582,7 @@ models = list(best_model_cvaglmnet, best_model_bs, hannum_model, horvath_model)
 
 
 for (covariate in covariates) {
+  df[,covariate] = as.factor(df[,covariate])
   levls = levels(df[,covariate])
   tmp_col = RColorBrewer::brewer.pal(n=max(3,length(levls)), name = "Set1")
   for (m in models) {
@@ -610,6 +615,7 @@ for (covariate in covariates) {
   
     den = density(AMAR_Te[, "AMAR"], na.rm=TRUE)
     den_bw = den$bw
+    # den_bw = .07
     density = lapply(levls, function(lev){
       if (sum(AMAR_Te[,covariate] %in% lev) > 1) {
         den = density(bw=den_bw, AMAR_Te[AMAR_Te[,covariate] %in% lev, "AMAR"])
@@ -637,7 +643,7 @@ for (covariate in covariates) {
 
 
     plot(0,0, xlim = c(0.5, 1.5), #min(unlist(lapply(density, function(d){min(d$x)}))),max(unlist(lapply(density, function(d){max(d$x)})))), 
-      ylim = c(min(unlist(lapply(density, function(d){min(d$y)}))),max(unlist(lapply(density, function(d){max(d$y)})))), 
+      ylim = c(0, max(unlist(lapply(density, function(d){max(d$y)})))), 
     main = paste0("AMAR pval=", signif(pval ,3)))
     sub="ANOVA"
 		for (j in c(1:length(levls))){
