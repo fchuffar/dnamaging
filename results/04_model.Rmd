@@ -438,6 +438,7 @@ RMSE = function(data_truth, data_pred) {
 
 if (!exists("mcall_lm_mod")) {
   call_lm_mod = function(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, fold) {
+    # replace lm by cv.glmnet(alpha=0, )
     m = lm(formula(paste0(y_key,"~0+",paste0(tmp_probes, collapse="+"))), data=sub_df[tmp_idx_train,])
     train_pred = predict(m, sub_df[tmp_idx_train,], type="response")
     train_truth = sub_df[tmp_idx_train, y_key]
@@ -690,10 +691,6 @@ plot_model_eval = function(m, df, covariate) {
     col=as.numeric(df[rownames(predTe),covariate])
   )
   abline(a=0, b=1)
-  # AMAR Bias over Age
-  # n=1000; x=sort(floor(runif(n)*100)); y = x+5*rnorm(n); plot(x, y); plot(density(y/x)); lines(density(y[1:500]/x[1:500]), col=2); lines(density(y[501:1000]/x[501:1000]), col=4)
-  # No Bias with over Age with diff
-  # n=1000; x=sort(floor(runif(n)*100)); y = x+5*rnorm(n); plot(x, y); plot(density(y-x)); lines(density(y[1:500]-x[1:500]), col=2); lines(density(y[501:1000]-x[501:1000]), col=4)
   plot(0,0, 
     xlab=paste0("ANOVA pval=", signif(pval ,3)),
     xlim = c(0.5, 1.5), 

@@ -1,0 +1,106 @@
+---
+title: "AMAR simulator"
+author: "Fabien Jossaud, Florent Chuffart"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+
+```{r echo=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=TRUE, results="verbatim")
+start_time = Sys.time()
+source("common.R")
+```
+
+```{r}
+plot_models = function(age, ypred) {
+  layout(matrix(1:4,1), respect=TRUE); 
+  m0 = lm(age~ypred)
+  plot(ypred, age, col=rep(c(2,4), each=500), main=signif(m0$coef[[2]],3)); 
+  abline(m0)
+  abline(a=0, b=1, col="grey", lty=3)
+  regres = m0$residuals
+  amar = age / ypred
+  diff = age - ypred
+  # AMAR Bias over Age
+  # age + err / age = age / age + err / age = 1 + err / age
+  plot(density(amar), xlim=c(-1,3)); lines(density(amar[1:500]), col=2); lines(density(amar[501:1000]), col=4)
+  # No Bias with over Age with diff
+  # age + err - age = err
+  plot(density(diff)); lines(density(diff[1:500]), col=2); lines(density(diff[501:1000]), col=4)
+  # regres is robust to missing propbesf
+  plot(density(regres)); lines(density(regres[1:500]), col=2); lines(density(regres[501:1000]), col=4)
+  
+}
+
+
+n=1000; 
+age = sort(floor(runif(n)*90)) + 10
+x = age; 
+
+
+
+y = x+5*rnorm(n); 
+plot_models(x, y)
+
+
+
+
+p1 = 2*x + 50*rnorm(n)
+p2 = 4*x + 50*rnorm(n)
+p3 = 6*x + 50*rnorm(n)
+df = data.frame(age=age, p1=p1, p2=p2, p3=p3)
+m = lm(age~p1+p2+p3, df)
+y = predict(m, df)
+plot_models(x, y)
+
+
+probes = c("p1", "p2", "p3")
+y = as.matrix(df[,probes]) %*% t(t(m$coef[probes])) + m$coef[[1]]
+plot_models(x, y)
+
+
+
+
+probes = c("p1", "p2")
+y = as.matrix(df[,probes]) %*% t(t(m$coef[probes])) + m$coef[[1]]
+plot_models(x, y)
+
+
+
+
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Session Information
+
+```{r, results="verbatim"}
+end_time = Sys.time()
+print(paste0("Execution time for vignette : ", end_time - start_time))
+sessionInfo()
+```
+
+
