@@ -438,14 +438,30 @@ RMSE = function(data_truth, data_pred) {
 
 if (!exists("mcall_lm_mod")) {
   call_lm_mod = function(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, fold) {
-    # replace lm by cv.glmnet(alpha=0, )
-    m = lm(formula(paste0(y_key,"~0+",paste0(tmp_probes, collapse="+"))), data=sub_df[tmp_idx_train,])
-    train_pred = predict(m, sub_df[tmp_idx_train,], type="response")
-    train_truth = sub_df[tmp_idx_train, y_key]
+
+
+    # # replace lm by cv.glmnet(alpha=0, )
+    # m = lm(formula(paste0(y_key,"~0+",paste0(tmp_probes, collapse="+"))), data=sub_df[tmp_idx_train,])
+    # train_pred = predict(m, sub_df[tmp_idx_train,], type="response")
+    # train_truth = sub_df[tmp_idx_train, y_key]
+    # train_err = RMSE(train_truth, train_pred)
+    # test_pred = predict(m, sub_df[tmp_idx_test,], type="response")
+    # test_truth = sub_df[tmp_idx_test, y_key]
+    # test_err = RMSE(test_truth, test_pred)
+
+    tmp_Xtrain = as.matrix(sub_df[tmp_idx_train, tmp_probes])
+    tmp_Ytrain = sub_df[tmp_idx_train, y_key]
+    tmp_Xtest = as.matrix(sub_df[tmp_idx_test, tmp_probes])
+    tmp_Ytest = sub_df[tmp_idx_test, y_key]
+    m = glmnet::cv.glmnet(x=tmp_Xtrain, y=tmp_Ytrain, alpha=0, type.measure="mse", standardize=TRUE)
+
+    train_pred = predict(m, tmp_Xtrain, type="response")
+    train_truth = tmp_Ytrain
     train_err = RMSE(train_truth, train_pred)
-    test_pred = predict(m, sub_df[tmp_idx_test,], type="response")
-    test_truth = sub_df[tmp_idx_test, y_key]
+    test_pred = predict(m, tmp_Xtest, type="response")
+    test_truth = tmp_Ytest
     test_err = RMSE(test_truth, test_pred)
+
     # print(paste0("nb_probes:", length(tmp_probes), ", train_err: ", signif(train_err, 3), ", test_err: ", signif(test_err, 3)))
     ret = data.frame(
       occurence=occ, 
