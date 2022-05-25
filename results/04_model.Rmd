@@ -716,6 +716,8 @@ horvath_model = build_model_from_probes(horvath_probes, sub_df, y_key, name="Hor
 
 models = list(best_model_cvaglmnet, best_model_bs, hannum_model, horvath_model)
 
+saveRDS(list(best_model_cvaglmnet, best_model_bs), paste0("models_", gse, ".rds"))
+
 
 
 covariates
