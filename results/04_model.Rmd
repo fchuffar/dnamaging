@@ -479,16 +479,21 @@ sub_df = df[idx_train, c(robust_probes,y_key)]
 pb_occ_tab = sort(table(unlist(bs_probes))) # probe occurence
 
 
-iterator = sort(unique(pb_occ_tab[pb_occ_tab>=n_boot/2]))
+iterator = unique(sort(pb_occ_tab[pb_occ_tab>=n_boot/2]))
 if (length(iterator) == 1 ) {
   iterator = sort(unique(pb_occ_tab))
   sub_df = df[idx_train, c(names(pb_occ_tab),y_key)] 
 }
+# Check if many probes for highest occurence
+if (sum(pb_occ_tab>=iterator[length(iterator)]) == 1) {
+  iterator = iterator[-length(iterator)]
+}
+
 stats = epimedtools::monitored_apply(mod=1, t(t(iterator)), 1, function(occ) {
-  # print(occ)
+  print(occ)
   tmp_probes = names(pb_occ_tab)[pb_occ_tab>=occ]
   stats = lapply(1:length(folds), function(fold) {
-    # print(fold)
+    print(fold)
     tmp_idx_train = folds[[fold]]$idx_train
     tmp_idx_test = folds[[fold]]$idx_test
     ret = mcall_lm_mod(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, fold)
