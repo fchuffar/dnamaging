@@ -289,7 +289,7 @@ plot(Ytest , predTe, xlab="Chronological Age", ylab="Predicted Age", main=paste0
 
 
 best_model_cvaglmnet = m
-best_model_cvaglmnet_probes = best_model_cvaglmnet$coeff$probes
+best_model_cvaglmnet_probes = as.character(best_model_cvaglmnet$coeff$probes)
 
 
 
