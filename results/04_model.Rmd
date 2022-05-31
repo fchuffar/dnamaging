@@ -187,11 +187,8 @@ best_model_cvaglmnet_params
 
 ## Elastic net regularization
 
-Elastic net regularization is a method consisting in mix Lasso and Ridge regression methods. We have the metaparameter lambda for Ridge and Lasso regression model (regularization parameter) and the meta parameter alpha corresponding in the proportion of Lasso and Ridge (principe of Elastic net regression).
-
-Meta-parameters are fixed using cross validation.
-
-Cross validation is a process consisting in cutting the train set in k folds. We learn our model on k-1 folds and validate it on the last fold, and we make that k times to validate the model on each folds. We can after make the mean mse to take the best parameters.
+At the first time, we use elastic net method to build our first model. To use this method, we need 2 parameters $\alpha$ (lasso and ridge regression rate) and $\lambda$ (penalization parameter for penalized regression). We decide to use cross validation to first find the best $\lambda$ for each $\alpha$ we have. On the left you have the mean of cross validation RMSE depending on $\lambda$ and $\alpha$ and on the right you have the mean of cross validation probes taken for the model depending on $\alpha$ and $\lambda$. Here, the different $\alpha$ are chosen with the function cva.glmnet. As we can see, the RMSE really differ depending on what $\lambda$ we take for each $\alpha$. But we also see that RMSE from the best $\lambda$ for each $\alpha$ doesn't differ much depending on $\alpha$. Every RMSE from best $\lambda$ for each $\alpha$ are in the RMSE interval (mean $\pm$ sd) of the best $\alpha$,$\lambda$ couple (here 0.216,1.72). So we verify after in the right plot the number of probes for our best couple to see if we have a good number of probes to avoid overfitting. So we can select our best $\alpha$,$\lambda$ couple to build our model with an elastic net regression. 
+For information, Elastic net regularization is a method consisting in mix Lasso and Ridge regression methods. We have the metaparameter lambda for Ridge and Lasso regression model (regularization parameter) and the meta parameter alpha corresponding in the proportion of Lasso and Ridge (principe of Elastic net regression). Cross validation is a process consisting in cutting the train set in k folds. We learn our model on k-1 folds and validate it on the last fold, and we make that k times to validate the model on each folds. We can after make the mean mse to take the best parameters.
 
 
 
@@ -518,9 +515,11 @@ head(stats)
 
 ## Bootstrap
 
-Bootstrap is a method consisting in sample a new train set based on the original train set. We repete the method a big number of times, more we repete it, more the results are robusts. 
-To create the new train set, we sample 2/3 of sample on original train set without replace and 1/3 with replace. That create a new train set used to make our model.
-We repete this method n_boot times and, at the end, we select for our final model only the markers shows on more than a certain pourcentage on bootstraps models. That create a final model more robusts than if we just make one model on our original train set, so this method increases robustness of results.
+We build a second model to improve the results compare to the first elastic net model. We find a big overfitting so we decided to build a bootstrap model to avoid the overfitting. At the end of the 500 bootstraps, we have the occurence of each probes appearing in the 500 bootstrapped models. When we have all the occurence, we have to find the perfect occurence to choose all the probes appearing more than this occurence to build our new model. 
+To find this occurence, we plot cross validation results for each occurence of probes. We see that, at the beginning, validation RMSE decreases a lot, like nested train RMSE. But at a moment, we "have" an elbow and validation RMSE stagnate when the nested train RMSE keep decreases, which increases the overfitting. So we choose the occurence at the end of the "elbow" to minimize the validation RMSE while avoiding overfitting. This method is called "Elbow method" and is widely used in this kind of situation.
+For information, Bootstrap is a method consisting in sample a bootstrap train set based on the original train set. We repete the method a big number of times, more we repete it, more the results are robusts. To create the bootstrapped train set, we sample 2/3 of sample on original train set without replace and 1/3 with replace. That create a bootstrapped train set used to make our model.
+We repete this method 500 times and, at the end, we select for our final model only the markers shows on more than a certain percentage on bootstraps models. That create a final model more robusts than if we just make one model on our original train set, so this method increases robustness of results.
+
 
 ```{r plot_cv_each_bs, echo=FALSE, eval=TRUE}
 # # 3. plot
@@ -593,7 +592,9 @@ plot(predTe, Ytest , xlab="Predicted Age", ylab="Chronological Age", main = past
 
 # Model Evaluation
 
+In this figure, we can see the results for each methods. At the end, we have four models, the ElasticNet model, the bootstrap model, the Hannum model (Hannum clock) and the Horvath model (Horvath Clock). For the litterature models (Hannum and Horvath), we take probes from their clocks and learning on our dataset with a linear regression. That gives us 2 litterature models usable for our datasets. So, for each model, we have three plots. The first is the predicted age depending on the chronological age for the train set. To see if we have overfitting, we compare this graph with the second graph which plot the predicted age depending on the chronological age for the test set. This second graph shows us the efficiency of our model. For the last graph, we build the AMAR on the test set depending on cofactors to see if cofactors have an impact on AMAR, so in DNAm. The AMAR (Apparent Methylomic Aging Rate) [Hannum,2013] is the factor between predicted age (methylomic age) and chronological age. This measure can show us the impact of cofactors in DNAm. For each model of this dataset except for Horvath, we have an significative different of AMAR between men and women. We use the same dataset as Hannum is 2013 to compare and verify our results. We obtains the same conclusion as him, men and women have significant different AMAR in the GSE40279 dataset. 
 
+We want to see if we can obtain the same results in a different platform. So we transform the 450k dataset using in Hannum paper in a 27k dataset. And we can see in this figure that we always obtain for our 2 self made models a significant difference in AMAR, that we not see in Hannum model, because we have only 7 probes in a 27k platform compare to 71 in a 450k, so this model don't have enough probes to work. That shows us that our Elasticnet and Bootstrap model are reusable in other platforms and dataset condition of relearn models in new datasets. 
 
 ```{r amar plotting, fig.width=12, fig.height=9, echo=FALSE}
 

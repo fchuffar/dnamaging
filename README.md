@@ -9,14 +9,14 @@ A set of scripts and vignettes allowing to build and evaluate an epigenetic cloc
 
 ``` 
 glmnet
-
+RColorBrewer
+WriteXLS
 ```
 
 
 ## Bioconductor
     
 ```
-RColorBrewer
 beeswarm
 impute
 methylclock
