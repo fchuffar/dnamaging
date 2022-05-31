@@ -1,0 +1,126 @@
+---
+title: "Build Illumina methylation study"
+author: "Florent Chuffart"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+
+```{r echo=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide")
+source("common.R")
+```
+
+```{r params}
+gse = "cancair"
+source("params_default.R")
+```
+
+
+# Purpose
+
+This vignette 
+
+- build
+- check
+- save 
+
+methylation study for `r gse`.
+
+```{r, echo=FALSE, eval=TRUE}
+# Build
+print(paste0("#####", gse))
+s1 = mreadRDS("~/projects/cancair/results/ewascombpr/vignettes/study_cecile_meth_full.rds")
+s2 = mreadRDS("~/projects/cancair/results/ewascombpr/vignettes/study_sepages_meth_full.rds")
+
+idx_probes = intersect(rownames(s1$data), rownames(s2$data))
+length(idx_probes)
+
+d = cbind(s1$data[idx_probes,], s2$data[idx_probes,])
+pf = s1$platform[idx_probes, ]
+
+
+s1$exp_grp$age = s1$exp_grp$ageref
+s2$exp_grp$age = round(s2$exp_grp$mo_age)
+
+s1$exp_grp$cohort = "CECILE"
+s2$exp_grp$cohort = "SEPAGES"
+
+exp_grp = rbind(s1$exp_grp[,c("age", "cohort")], s2$exp_grp[,c("age", "cohort")])
+
+
+
+s = epimedtools::create_study()
+s$data = d
+s$exp_grp = exp_grp
+s$platform = pf
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Check
+dim(s$data)
+dim(s$exp_grp)
+s$data = s$data[,!colnames(s$data)%in%sample_blacklist]
+s$exp_grp = s$exp_grp[!rownames(s$exp_grp)%in%sample_blacklist,]
+dim(s$data)
+dim(s$exp_grp)
+if (sum(!rownames(s$exp_grp) %in% colnames(s$data)) !=0 ) {stop(paste0("problem exp_grp names ", gse))}
+s$exp_grp = s$exp_grp[colnames(s$data),]
+if (sum(rownames(s$exp_grp) != colnames(s$data)) !=0 ) {stop(paste0("problem exp_grp names ", gse))}
+
+dim(s$platform)
+dim(s$data)
+if (sum(!rownames(s$data) %in% rownames(s$platform)) !=0 ) {warning(paste0("problem pf names ", gse))}
+s$platform = s$platform[intersect(rownames(s$data), rownames(s$platform)),]
+s$data = s$data[rownames(s$platform),]
+if (sum(rownames(s$data) != rownames(s$platform)) !=0 ) {stop(paste0("problem pf names ", gse))}
+
+# covariates
+for (cov in covariates) {
+  if (is.character(s$exp_grp[[cov]])) {
+    print(cov)
+    s$exp_grp[[cov]] = as.factor(s$exp_grp[[cov]])
+  }
+}
+```
+
+
+```{r results="verbatim"}
+# Save
+s_filename = paste0("study_", gse, ".rds")
+print(paste0("Writing ", s_filename, "..."))
+s$save(s_filename)
+
+df = cbind(s$exp_grp, t(s$data[,rownames(s$exp_grp)]))
+df_filename = paste0("df_", gse, ".rds")
+dim(df)
+print(paste0("Writing ", df_filename, "..."))
+saveRDS(df, df_filename)
+```
+
+```
+print(gse)
+# rmarkdown::render("01_rebuild27k_study_generic.Rmd", output_file=paste0("01_rebuild27k_study_", gse, ".html"))
+```
+
+# Session Information
+
+```{r, results="verbatim"}
+sessionInfo()
+```
+

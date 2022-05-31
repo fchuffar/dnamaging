@@ -475,19 +475,26 @@ if (!exists("mcall_lm_mod")) {
 }
 
 
-sub_df = df[idx_train, c(robust_probes,y_key)] 
 pb_occ_tab = sort(table(unlist(bs_probes))) # probe occurence
 
+barplot(table(pb_occ_tab), las=2)
 
 iterator = unique(sort(pb_occ_tab[pb_occ_tab>=n_boot/2]))
+iterator = unique(sort(pb_occ_tab[pb_occ_tab>=n_boot/2]))
+
+# Patchs
 if (length(iterator) == 1 ) {
-  iterator = sort(unique(pb_occ_tab))
-  sub_df = df[idx_train, c(names(pb_occ_tab),y_key)] 
+  iterator = unique(sort(pb_occ_tab))
 }
 # Check if many probes for highest occurence
 if (sum(pb_occ_tab>=iterator[length(iterator)]) == 1) {
   iterator = iterator[-length(iterator)]
 }
+
+
+tmp_probes = names(pb_occ_tab)[pb_occ_tab>=min(iterator)]
+sub_df = df[idx_train, c(tmp_probes, y_key)] 
+
 
 stats = epimedtools::monitored_apply(mod=1, t(t(iterator)), 1, function(occ) {
   print(occ)
@@ -534,10 +541,10 @@ idx = floor(ncol(bar$stats)*.5)
 # idx = rev(which(bar$stats[3,] < tmp_lev))[1]
 abline(v=idx, col=2, lty=1)
 best_params = bar$names[idx]
-text(idx-1, min(foo$stats[3,]), best_params, col=2, srt=90, pos=3)
 occ_optim = as.numeric(strsplit(best_params, " ")[[1]][1])
 best_model_bs_probes = names(pb_occ_tab[pb_occ_tab>occ_optim])
 par(mar=c(5.1, 4.1, 4.1, 2.1))
+legend("topleft", best_params, col=2, lty=1)
 ```
 
 
@@ -698,7 +705,7 @@ plot_model_eval = function(m, df, covariate) {
   })
   plot(Ytrain, predTr,
     main=paste0(m$name), 
-    sub=paste0("TRAIN (", nrow(m$coeff), " pbs)", " RMSE: ", signif(rmseTr, 3)), 
+    sub=paste0("TRAIN (", nrow(Xtrain), " obs., ", nrow(m$coeff), " pbs, RMSE: ", signif(rmseTr, 3), ")"), 
     xlab="Chronological Age", 
     ylab="Predicted Age", 
     col=as.numeric(df[rownames(predTr),covariate])
@@ -706,7 +713,7 @@ plot_model_eval = function(m, df, covariate) {
   abline(a=0, b=1)                                                                    
   plot(Ytest , predTe, 
     main = paste0(m$name), 
-    sub=paste0("TEST (", nrow(m$coeff), " pbs) RMSE: ", signif(rmseTe, 3)), 
+    sub=paste0("TEST (", nrow(Xtest), " obs., ", nrow(m$coeff), " pbs, RMSE: ", signif(rmseTe, 3), ")"), 
     xlab="Chronological Age", 
     ylab="Predicted Age", 
     col=as.numeric(df[rownames(predTe),covariate])
