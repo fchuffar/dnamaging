@@ -47,8 +47,8 @@ for (gse_new in gses) {
   gse_given = paste0(gse_ref, "g", gse_new)
   rmarkdown::render("01_rebuild_study_generic.Rmd", output_file=paste0("01_rebuild_study_", gse_given, ".html")) # export df_{gse_given}.rds
   n_boot = 500
-  gse = gse_given ; rmarkdown::render("02_stats_desc.Rmd", output_file=paste0("02_stats_desc_", gse, ".html"))    
-  gse = gse_given ; rmarkdown::render("03_preproc.Rmd", output_file=paste0("03_preproc_", gse, ".html"))    
-  gse = gse_given ; rmarkdown::render("04_model.Rmd", output_file=paste0("04_model_", gse, ".html"))
-  gse_m = gse_given ; gse = gse_new ; rmarkdown::render("05_eval.Rmd", output_file=paste0("05_eval_", gse, ".html"))
+  gse = gse_given ; source(paste0("params_",gse_ref)) ; rmarkdown::render("02_stats_desc.Rmd", output_file=paste0("02_stats_desc_", gse, ".html"))    
+  gse = gse_given ; source(paste0("params_",gse_ref)) ; rmarkdown::render("03_preproc.Rmd", output_file=paste0("03_preproc_", gse, ".html"))    
+  gse = gse_given ; source(paste0("params_",gse_ref)) ; rmarkdown::render("04_model.Rmd", output_file=paste0("04_model_", gse, ".html"))
+  gse_m = gse_given ; gse = gse_new ; source(paste0("params_",gse_ref)) ; rmarkdown::render("05_eval.Rmd", output_file=paste0("05_eval_", gse, ".html"))
 }
