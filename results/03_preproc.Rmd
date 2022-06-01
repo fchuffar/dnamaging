@@ -78,6 +78,8 @@ idx_cpg = colnames(df)[markers_start:ncol(df)]
 
 ```{r acp, results="verbatim"}
 padj = 0
+covariate = covariates[1]
+levls = levels(df[,covariate])
 it=1
 while(sum(padj < 0.2) != 0) {
   print(paste0("*******", it))
@@ -91,7 +93,12 @@ while(sum(padj < 0.2) != 0) {
   barplot(p)
   for (i in 1:5) {
     j = i+1
-    plot(pca$x[,i], pca$x[,j], xlab=paste0("PC", i, "(", signif(p[i], 3), "%)"), ylab=paste0("PC", j, "(", signif(p[j], 3), "%)"), pch=16)  
+    plot(pca$x[,i], pca$x[,j], 
+	xlab=paste0("PC", i, "(", signif(p[i], 3), "%)"), 
+	ylab=paste0("PC", j, "(", signif(p[j], 3), "%)"), 
+	col=as.numeric(df[,covariate]),
+	pch=16)  
+    legend(x="topright", legend=levls, col=1:length(levls), lty = 1, title=covariate)
     # scale_factor = min(abs(c(min(c(pca$x[,i], pca$x[,j])), max(c(pca$x[,i], pca$x[,j])))))
     # scale_factor = min(abs(c(max(min(pca$x[,i]), min(pca$x[,j])), min(max(pca$x[,i]), max(pca$x[,j])))))
     # arrows(0,0,pca$rotation[,i]*scale_factor, pca$rotation[,j]*scale_factor, col="grey")
