@@ -98,12 +98,6 @@ idx_samples = rownames(df)
 markers_start = grep("cg",colnames(df))[1]
 idx_clinicals = colnames(df)[1:(markers_start-1)]
 idx_cpg = colnames(df)[markers_start:ncol(df)]
-# services patterns
-if (!exists("mget_df")) {mget_df = memoise::memoise(function(){df})}
-if (!exists("mget_full_cpg_matrix")) {
-  get_full_cpg_matrix = function(idx_smp){as.matrix(mget_df()[idx_smp,idx_cpg])}
-  mget_full_cpg_matrix = memoise::memoise(get_full_cpg_matrix, cache = cachem::cache_mem(max_size = 10*1024 * 1024^2))
-}
 ```
 
 # Parameters 
@@ -126,8 +120,8 @@ if (!exists("n_boot")) n_boot = 500
 ```{r cva.glmnet call, eval=TRUE, echo=TRUE}
 if (!exists("mcvaglmnet")) {
   cvaglmnet = function(idx_train, y_key) {
-    x = mget_full_cpg_matrix(idx_train)
-    y = mget_df()[idx_train, y_key] # service. Design Patterns, Gamma et al. 
+    x = mget_full_cpg_matrix(gse, idx_train, idx_cpg)
+    y = mget_df_preproc(gse)[idx_train, y_key] # service. Design Patterns, Gamma et al. 
     modelcva = glmnetUtils::cva.glmnet(x=x, y=y, type.measure="mse", standardize=TRUE)
     return(modelcva)  
   }
@@ -187,7 +181,7 @@ best_model_cvaglmnet_params
 
 ## Elastic net regularization
 
-At the first time, we use elastic net method to build our first model. To use this method, we need 2 parameters $\alpha$ (lasso and ridge regression rate) and $\lambda$ (penalization parameter for penalized regression). We decide to use cross validation to first find the best $\lambda$ for each $\alpha$ we have. On the left you have the mean of cross validation RMSE depending on $\lambda$ and $\alpha$ and on the right you have the mean of cross validation probes taken for the model depending on $\alpha$ and $\lambda$. Here, the different $\alpha$ are chosen with the function cva.glmnet. As we can see, the RMSE really differ depending on what $\lambda$ we take for each $\alpha$. But we also see that RMSE from the best $\lambda$ for each $\alpha$ doesn't differ much depending on $\alpha$. Every RMSE from best $\lambda$ for each $\alpha$ are in the RMSE interval (mean $\pm$ sd) of the best $\alpha$,$\lambda$ couple (here 0.216,1.72). So we verify after in the right plot the number of probes for our best couple to see if we have a good number of probes to avoid overfitting. So we can select our best $\alpha$,$\lambda$ couple to build our model with an elastic net regression. 
+At the first time, we use elastic net method to build our first model. To use this method, we need 2 parameters $\alpha$ (lasso and ridge regression rate) and $\lambda$ (penalization parameter for penalized regression). We decide to use cross validation to first find the best $\lambda$ for each $\alpha$ we have. On the left you have the mean of cross validation RMSE depending on $\lambda$ and $\alpha$ and on the right you have the mean of cross validation probes taken for the model depending on $\alpha$ and $\lambda$. Here, the different $\alpha$ are chosen with the function cva.glmnet. As we can see, the RMSE really differ depending on what $\lambda$ we take for each $\alpha$. But we also see that RMSE from the best $\lambda$ for each $\alpha$ doesn’t differ much depending on $\alpha$. Every RMSE from best $\lambda$ for each $\alpha$ are in the RMSE interval (mean $\pm$ sd) of the best $\alpha$,$\lambda$ couple (here 0.216,1.72). So we verify after in the right plot the number of probes for our best couple to see if we have a good number of probes to avoid overfitting. So we can select our best $\alpha$,$\lambda$ couple to build our model with an elastic net regression. 
 For information, Elastic net regularization is a method consisting in mix Lasso and Ridge regression methods. We have the metaparameter lambda for Ridge and Lasso regression model (regularization parameter) and the meta parameter alpha corresponding in the proportion of Lasso and Ridge (principe of Elastic net regression). Cross validation is a process consisting in cutting the train set in k folds. We learn our model on k-1 folds and validate it on the last fold, and we make that k times to validate the model on each folds. We can after make the mean mse to take the best parameters.
 
 
@@ -229,10 +223,10 @@ legend(x="topright", legend=tmp_alphas, fill=1:length(tmp_alphas), title="alpha"
 
 ```{r loading train/test sets}
 #Create Train and Test samples
-Xtrain = mget_full_cpg_matrix(idx_train)
-Ytrain = mget_df()[idx_train,y_key]
-Xtest = mget_full_cpg_matrix(idx_test)
-Ytest = mget_df()[idx_test,y_key]
+Xtrain = mget_full_cpg_matrix(gse, idx_train, idx_cpg)
+Ytrain = mget_df_preproc(gse)[idx_train,y_key]
+Xtest = mget_full_cpg_matrix(gse, idx_test, idx_cpg)
+Ytest = mget_df_preproc(gse)[idx_test,y_key]
 ``` 
 
 ```{r plot prediction for best model, echo=FALSE}
@@ -254,8 +248,8 @@ plot(Ytest , predTe, xlab="Chronological Age", ylab="Predicted Age", main=paste0
 # model_factory_glmnet, it produces custom model object based on list by calling glmnet::glmnet function
 if (!exists("mmodel_factory_glmnet")) {
   model_factory_glmnet = function(idx_train, y_key, alpha=alpha, lambda=lambda) {
-    x = mget_full_cpg_matrix(idx_train)
-    y = mget_df()[idx_train,y_key]
+    x = mget_full_cpg_matrix(gse, idx_train, idx_cpg)
+    y = mget_df_preproc(gse)[idx_train,y_key]
     m = glmnet::glmnet(x=x, y=y, alpha=alpha, lambda=lambda, standardize=TRUE) 
     idx = rownames(m$beta)[m$beta@i+1]
     coeff=data.frame(probes=idx, beta=m$beta[idx,])
