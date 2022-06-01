@@ -45,10 +45,10 @@ gses = c(
 )
 for (gse_eval in gses) {
   rm(list = ls()[-which(ls()%in%c("gse", "gses", "gse_eval"))])
+  n_boot = 500
   gse_train = "GSE40279"
   gse_given = paste0(gse_train, "given", gse_eval)
   rmarkdown::render("01_rebuild_study_generic.Rmd", output_file=paste0("01_rebuild_study_", gse_given, ".html")) # export df_{gse_given}.rds
-  n_boot = 500
   gse = gse_given ; rmarkdown::render("02_stats_desc.Rmd", output_file=paste0("02_stats_desc_", gse, ".html"))    
   gse = gse_given ; rmarkdown::render("03_preproc.Rmd", output_file=paste0("03_preproc_", gse, ".html"))    
   gse = gse_given ; rmarkdown::render("04_model.Rmd", output_file=paste0("04_model_", gse, ".html"))
