@@ -1,6 +1,9 @@
 if (!exists("gse")) gse = "GSE41037"
-if (!exists("y_key")) y_key = "age"
-if (!exists("covariates")) covariates = c("gender")
-if (!exists("sample_blacklist")) sample_blacklist = c("GSM1007327")
-if (!exists("nb_train")) nb_train = 482
-if (file.exists(paste0("params_", gse, ".R"))) source(paste0("params_", gse, ".R")) 
+y_key = "age"
+covariates = c("gender")
+sample_blacklist = c("GSM1007327")
+nb_train = 482
+custom_params_filename = paste0("params_", strsplit(gse, "given")[[1]][1], ".R")
+custom_params_filename
+if (file.exists(custom_params_filename)) source(custom_params_filename)
+  
