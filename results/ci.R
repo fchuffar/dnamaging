@@ -42,7 +42,7 @@ gses = c(
   NULL
 )
 for (gse_new in gses) {
-  rm(list = ls()[-which(ls()%in%c("gse", "gses"))])
+  rm(list = ls()[-which(ls()%in%c("gse", "gses", "gse_new"))])
   gse_ref = "GSE40279"
   gse_given = paste0(gse_ref, "g", gse_new)
   rmarkdown::render("01_rebuild_study_generic.Rmd", output_file=paste0("01_rebuild_study_", gse_given, ".html")) # export df_{gse_given}.rds

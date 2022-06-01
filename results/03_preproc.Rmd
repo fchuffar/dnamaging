@@ -73,6 +73,9 @@ idx_cpg = colnames(df)[markers_start:ncol(df)]
 
 **TODO Fabien**, adding description of what you are doing
 
+**TODO Fabien**, adding colors according to the first covaraiate
+
+
 ```{r acp, results="verbatim"}
 padj = 0
 it=1
