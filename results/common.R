@@ -1,5 +1,4 @@
 if (!exists("mreadRDS")) { mreadRDS = memoise::memoise(readRDS, cache=cachem::cache_mem(max_size = 10*1024 * 1024^2)) }
-# if (!exists("mget_coefHannum")) mget_coefHannum = memoise::memoise(methylclockData::get_coefHannum)
 
 # services patterns
 if (!exists("mget_df_preproc")) {
@@ -15,30 +14,102 @@ if (!exists("mget_full_cpg_matrix")) {
 
 
 
-plot_model_eval = function(m, df, covariate) {
+
+
+
+plot_model_eval = function(m, df, covariate, Xtrain, Xtest, Ytrain, Ytest) {
   df[,covariate] = as.factor(df[,covariate])
-  # Imputing missing probes (litterature_models)
-  tmp_Xtrain = Xtrain[,rownames(m$coeff)[rownames(m$coeff) %in% colnames(Xtrain)]] #Keep only common CpG between coeffs and Xtrain
-  tmp_Xtest = Xtest[,rownames(m$coeff)[rownames(m$coeff) %in% colnames(Xtest)]] #Keep only common CpG between coeffs and Xtrain
-  idx_missing_probes = rownames(m$coeff)[!(rownames(m$coeff) %in% colnames(Xtrain))]
-  if (length(idx_missing_probes) != 0) {
-    foo = m$coeff[idx_missing_probes,"mean"]
-    names(foo) = idx_missing_probes
-    tmp_Xtrain = cbind(tmp_Xtrain,do.call("rbind",replicate(nrow(tmp_Xtrain),foo,simplify=FALSE)))
-    tmp_Xtest = cbind(tmp_Xtest,do.call("rbind",replicate(nrow(tmp_Xtest),foo,simplify=FALSE)))
-  }
-  tmp_Xtrain = tmp_Xtrain[,rownames(m$coeff)]
-  tmp_Xtest = tmp_Xtest[,rownames(m$coeff)]
+  # Dealing with missing probes (litterature_models)
+  idx_notmissing_probes = rownames(m$coeff)[(rownames(m$coeff) %in% colnames(Xtrain))]
+  tmp_Xtrain = Xtrain[,idx_notmissing_probes] # Keep only common CpG between coeffs and Xtrain
+  tmp_Xtest  = Xtest [,idx_notmissing_probes] # Keep only common CpG between coeffs and Xtrain
+  m$coeff = m$coeff[idx_notmissing_probes,]
+
   # prediction
   predTr = tmp_Xtrain %*% as.matrix(m$coeff$beta) + m$Intercept
-  rmseTr = sqrt(mean((Ytrain - predTr)^2))
   predTe = tmp_Xtest %*% as.matrix(m$coeff$beta) + m$Intercept
-  rmseTe = sqrt(mean((Ytest - predTe)^2))
-  # AMRA
-  AMAR_Te = predTe/Ytest
+
+  # regression residuals
+  m0Tr = lm(Ytrain~predTr)
+  rmseTr = sqrt(mean((m0Tr$residuals)^2))
+  m0Te = lm(Ytest~predTe, data.frame(Ytest=Ytest, predTe=predTe))
+  rmseTe = sqrt(mean((m0Te$residuals)^2))
+
+
+  plot(predTr, Ytrain, 
+    main=paste0(m$name), 
+    sub=paste0("TRAIN (", nrow(Xtrain), " obs., ", nrow(m$coeff), " pbs, RMSE: ", signif(rmseTr, 3), ")"), 
+    xlab="Predicted Age", 
+    ylab="Chronological Age", 
+    col=as.numeric(df[rownames(predTr), covariate])
+  )
+  abline(m0Tr)                                                                    
+  abline(a=0, b=1, col="grey", lty=2)
+  plot(predTe, Ytest, 
+    main = paste0(m$name), 
+    sub=paste0("TEST (", nrow(Xtest), " obs., ", nrow(m$coeff), " pbs, RMSE: ", signif(rmseTe, 3), ")"), 
+    xlab="Predicted Age", 
+    ylab="Chronological Age", 
+    col=as.numeric(df[rownames(predTe),covariate])
+  )
+  abline(m0Te)                                                                    
+  abline(a=0, b=1, col="grey", lty=2)
+
+
+
+  # RegRes
+  RegRes_Te = m0Te$residuals
+  RegRes_Te = cbind.data.frame(RegRes_Te, df[names(RegRes_Te),covariate])
+  colnames(RegRes_Te) = c("RegRes", covariate)
+  pval = kruskal.test(RegRes_Te[,1]~RegRes_Te[,2])$p.value
+  # anova(lm(RegRes_Te[,1]~RegRes_Te[,2], data=RegRes_Te))[1,5]
+  # density
+  den = density(RegRes_Te[, "RegRes"], na.rm=TRUE)
+  den_bw = den$bw*1.5
+  levls = levels(df[,covariate])
+  density = lapply(levls, function(lev){
+    if (sum(RegRes_Te[,covariate] %in% lev) > 1) {
+      den = density(bw=den_bw, RegRes_Te[RegRes_Te[,covariate] %in% lev, "RegRes"])
+      return(den)
+    } # Patch density
+  })
+  plot(0, 0, col=0, ylab="", 
+    xlab=paste0("K-W pval=", signif(pval ,3)),
+    xlim = c(-1,1)*3*rmseTe, 
+    ylim = c(0, max(unlist(lapply(density, function(d){max(d$y)})))), 
+    main = paste0("RegRes"))
+  sub="ANOVA"
+  for (j in c(1:length(levls))){
+  	lines(density[[j]], col=j)
+  }
+  legend(x="topright", legend=levls, col=1:length(levls), lty = 1, title=covariate)           
+
+
+
+
+
+
+
+  #~Ytest_mod = (Ytest - m0$coefficients[[1]])/m0$coefficients[[2]]
+  predTe_mod = m0Te$coefficients[[2]]*predTe + m0Te$coefficients[[1]]
+  m1Te = lm(Ytest~predTe_mod, data.frame(Ytest=Ytest, predTe_mod=predTe_mod))
+  rmseTe_mod = sqrt(mean((m1Te$residuals)^2))
+
+  plot(predTe_mod, Ytest, 
+    main = paste0(m$name), 
+    sub=paste0("TEST (", nrow(Xtest), " obs., ", nrow(m$coeff), " pbs, RMSE: ", signif(rmseTe_mod, 3), ")"), 
+    xlab="Predicted Age", 
+    ylab="Chronological Age", 
+    col=as.numeric(df[rownames(predTe),covariate])
+  )
+  abline(m1Te)                                                                    
+  abline(m0Te, col="grey", lty=2)
+
+  # AMAR
+  AMAR_Te = predTe_mod/Ytest
   AMAR_Te = cbind.data.frame(AMAR_Te,df[rownames(AMAR_Te),covariate])
   colnames(AMAR_Te) = c("AMAR", covariate)
-  pval = anova(lm(AMAR_Te[,1]~AMAR_Te[,2], data=AMAR_Te))[1,5]
+  pval = kruskal.test(AMAR_Te[,1]~AMAR_Te[,2])$p.value
   # density
   den = density(AMAR_Te[, "AMAR"], na.rm=TRUE)
   den_bw = den$bw
@@ -50,24 +121,8 @@ plot_model_eval = function(m, df, covariate) {
       return(den)
     } # Patch density
   })
-  plot(Ytrain, predTr,
-    main=paste0(m$name), 
-    sub=paste0("TRAIN (", nrow(m$coeff), " pbs)", " RMSE: ", signif(rmseTr, 3)), 
-    xlab="Chronological Age", 
-    ylab="Predicted Age", 
-    col=as.numeric(df[rownames(predTr),covariate])
-    )
-  abline(a=0, b=1)                                                                    
-  plot(Ytest , predTe, 
-    main = paste0(m$name), 
-    sub=paste0("TEST (", nrow(m$coeff), " pbs) RMSE: ", signif(rmseTe, 3)), 
-    xlab="Chronological Age", 
-    ylab="Predicted Age", 
-    col=as.numeric(df[rownames(predTe),covariate])
-  )
-  abline(a=0, b=1)
   plot(0,0, 
-    xlab=paste0("ANOVA pval=", signif(pval ,3)),
+    xlab=paste0("K-W pval=", signif(pval ,3)),
     xlim = c(0.5, 1.5), 
     ylim = c(0, max(unlist(lapply(density, function(d){max(d$y)})))), 
     main = paste0("AMAR"))

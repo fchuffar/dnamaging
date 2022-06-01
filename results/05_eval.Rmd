@@ -1,5 +1,5 @@
 ---
-title: "Plotting models"
+title: "Analyse new dataset"
 author: "Fabien Jossaud, Florent Chuffart"
 date: "`r Sys.Date()`"
 output: 
@@ -17,135 +17,55 @@ start_time = Sys.time()
 source("common.R")
 ```
 
-```{r params_default, echo=FALSE}
+```{r params_default}
 source("params_default.R")
 ```
 
-```{r plot model eval}
-plot_model_eval = function(m, df, covariate, Xtrain, Xtest, Ytrain, Ytest) {
-  df[,covariate] = as.factor(df[,covariate])
-  # Imputing missing probes (litterature_models)
-  tmp_Xtrain = Xtrain[,rownames(m$coeff)[rownames(m$coeff) %in% colnames(Xtrain)]] #Keep only common CpG between coeffs and Xtrain
-  tmp_Xtest = Xtest[,rownames(m$coeff)[rownames(m$coeff) %in% colnames(Xtest)]] #Keep only common CpG between coeffs and Xtrain
-  idx_notmissing_probes = rownames(m$coeff)[(rownames(m$coeff) %in% colnames(Xtrain))]
-  m$coeff = m$coeff[idx_notmissing_probes,]
-  #idx_missing_probes = rownames(m$coeff)[!(rownames(m$coeff) %in% colnames(Xtrain))]
-  # if (length(idx_missing_probes) != 0) {
-  #   foo = m$coeff[idx_missing_probes,"mean"]
-  #   names(foo) = idx_missing_probes
-  #   tmp_Xtrain = cbind(tmp_Xtrain,do.call("rbind",replicate(nrow(tmp_Xtrain),foo,simplify=FALSE)))
-  #   tmp_Xtest = cbind(tmp_Xtest,do.call("rbind",replicate(nrow(tmp_Xtest),foo,simplify=FALSE)))
-  # }
-  # tmp_Xtrain = tmp_Xtrain[,rownames(m$coeff)]
-  # tmp_Xtest = tmp_Xtest[,rownames(m$coeff)]
-  # # prediction
-  predTr = tmp_Xtrain %*% as.matrix(m$coeff$beta) + m$Intercept
- 
-  predTe = tmp_Xtest %*% as.matrix(m$coeff$beta) + m$Intercept
-  
-  # # AMAR
-  # AMAR_Te = predTe/Ytest
-  # AMAR_Te = cbind.data.frame(AMAR_Te,df[rownames(AMAR_Te),covariate])
-  # colnames(AMAR_Te) = c("AMAR", covariate)
-  # pval = anova(lm(AMAR_Te[,1]~AMAR_Te[,2], data=AMAR_Te))[1,5]
-  
-  # regression residuals
-  m0 = lm(Ytest~predTe)
-  res = m0$residuals
-  res = cbind.data.frame(res,df[names(res),covariate])
-  colnames(res) = c("residuals", covariate)
-  pval = anova(lm(res[,1]~res[,2], data=res))[1,5]
-  
-  rmseTr = sqrt(mean((m0$residuals)^2))
-  rmseTe = rmseTr
-  # density
-  den = density(res[, "residuals"], na.rm=TRUE)
-  den_bw = den$bw
-  #den_bw = .1
-  levls = levels(df[,covariate])
-  density = lapply(levls, function(lev){
-    if (sum(res[,covariate] %in% lev) > 1) {
-      den = density(bw=den_bw, res[res[,covariate] %in% lev, "residuals"])
-      return(den)
-    } # Patch density
-  })
-  plot(predTr, Ytrain,
-       main=paste0(m$name), 
-       sub=paste0("TRAIN (", nrow(m$coeff), " pbs)", " RMSE: ", signif(rmseTr, 3)), 
-       xlab="Predicted Age", 
-       ylab="Chronological Age", 
-       col=as.numeric(df[rownames(predTr),covariate])
-  )
-  abline(a=0, b=1, lty=3)
-  abline(m0, col="red")
-  
-  #~Ytest_mod = (Ytest - m0$coefficients[[1]])/m0$coefficients[[2]]
-  predTe_mod = m0$coefficients[[2]]*predTe + m0$coefficients[[1]]
-  m1 = lm(Ytest~predTe_mod)
-  rmseTe_mod = sqrt(mean((m1$residuals)^2))
-  plot(predTe_mod, Ytest, 
-       main = paste0(m$name), 
-       sub=paste0("TEST (", nrow(m$coeff), " pbs) RMSE: ", signif(rmseTe_mod, 3)), 
-       xlab="Predicted Age", 
-       ylab="Chronological Age",  
-       col=as.numeric(df[rownames(predTe),covariate])
-  )
-  abline(m1, col="red")
-  abline(m0, lty=3)
-  
-  plot(0,0, col=0,
-       xlab=paste0("ANOVA pval=", signif(pval ,3)),
-       xlim = c(-1,1)*(rmseTe_mod*3), 
-       ylim = c(0, max(unlist(lapply(density, function(d){max(d$y)})))), 
-       main = paste0("residuals"))
-  sub="ANOVA"
-  for (j in c(1:length(levls))){
-    lines(density[[j]], col=j)
-  }
-  legend(x="topright", legend=levls, col=1:length(levls), lty = 1, title=covariate)           
-}
-```
 
-
-
-```{r call data}
+```{r building_indexes}
 df = mreadRDS(paste0("df_preproc_",gse,".rds"))
 idx_samples = rownames(df)
 markers_start = grep("cg",colnames(df))[1]
 idx_clinicals = colnames(df)[1:(markers_start-1)]
 idx_cpg = colnames(df)[markers_start:ncol(df)]
+```
 
+
+
+```{r parameters}
+idx_train = idx_test = rownames(df)
+``` 
+
+```{r loading train/test sets}
+#Create Train and Test samples
+Xtrain = mget_full_cpg_matrix(gse, idx_train, idx_cpg)
+Ytrain = mget_df_preproc(gse)[idx_train,y_key]
+Xtest = mget_full_cpg_matrix(gse, idx_test, idx_cpg)
+Ytest = mget_df_preproc(gse)[idx_test,y_key]
+``` 
+
+
+```{r loading models}
 models = mreadRDS(paste0("models_", gse_m, ".rds"))
 litterature_models = mreadRDS("litterature_models.rds")
 litterature_models = list(litterature_models$hannum_model_mc,litterature_models$horvath_model_mc)
 models = c(models,litterature_models)
-
-
 ```
 
-```{r train/test}
-set.seed(1)
-idx_test = rownames(df)
+# Model Evaluation
 
-Xtest = mget_full_cpg_matrix(gse, idx_test, idx_cpg)
-Ytest = mget_df_preproc(gse)[idx_test,y_key]
-names(Ytest) = idx_test
-```
-
-```{r plotting, fig.width=12, fig.height=9, echo=FALSE}
-#Modify plot_model_eval :
-#Remove train when using on 05 (add a parameter Train = FALSE or TRUE and put if each time we use train).
-#No working... Maybe make lm to substract b and divide by a ?
-covariates
-df$qAge = cut(df[,y_key], quantile(df[,y_key]), include.lowest=TRUE)
-if (!"qAge" %in% covariates) covariates = c(covariates, "qAge") 
+```{r model evaluation, fig.width=12, fig.height=15, echo=FALSE, results="hide"}
 for (covariate in covariates) {
-  layout(matrix(1:12,3), respect=TRUE)
+  layout(matrix(1:20, 5), respect=TRUE)  
   for (m in models) {
-    plot_model_eval(m, df, covariate, Xtrain=Xtest, Xtest=Xtest, Ytrain=Ytest, Ytest=Ytest)
+    # layout(matrix(1:5, 1), respect=TRUE)
+    plot_model_eval(m, df, covariate, Xtrain=Xtrain, Xtest=Xtest, Ytrain=Ytrain, Ytest=Ytest)
   }
 }
-``` 
+```
+
+
+
 
 # Session Information
 

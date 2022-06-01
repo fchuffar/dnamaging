@@ -586,195 +586,47 @@ plot(predTe, Ytest , xlab="Predicted Age", ylab="Chronological Age", main = past
 
 # Model Evaluation
 
-In this figure, we can see the results for each methods. At the end, we have four models, the ElasticNet model, the bootstrap model, the Hannum model (Hannum clock) and the Horvath model (Horvath Clock). For the litterature models (Hannum and Horvath), we take probes from their clocks and learning on our dataset with a linear regression. That gives us 2 litterature models usable for our datasets. So, for each model, we have three plots. The first is the predicted age depending on the chronological age for the train set. To see if we have overfitting, we compare this graph with the second graph which plot the predicted age depending on the chronological age for the test set. This second graph shows us the efficiency of our model. For the last graph, we build the AMAR on the test set depending on cofactors to see if cofactors have an impact on AMAR, so in DNAm. The AMAR (Apparent Methylomic Aging Rate) [Hannum,2013] is the factor between predicted age (methylomic age) and chronological age. This measure can show us the impact of cofactors in DNAm. For each model of this dataset except for Horvath, we have an significative different of AMAR between men and women. We use the same dataset as Hannum is 2013 to compare and verify our results. We obtains the same conclusion as him, men and women have significant different AMAR in the GSE40279 dataset. 
-
-We want to see if we can obtain the same results in a different platform. So we transform the 450k dataset using in Hannum paper in a 27k dataset. And we can see in this figure that we always obtain for our 2 self made models a significant difference in AMAR, that we not see in Hannum model, because we have only 7 probes in a 27k platform compare to 71 in a 450k, so this model don't have enough probes to work. That shows us that our Elasticnet and Bootstrap model are reusable in other platforms and dataset condition of relearn models in new datasets. 
-
-```{r amar plotting, fig.width=12, fig.height=9, echo=FALSE}
 
 
-# for (covariate in covariates) {
-#   df[,covariate] = as.factor(df[,covariate])
-#   levls = levels(df[,covariate])
-#   tmp_col = RColorBrewer::brewer.pal(n=max(3,length(levls)), name = "Set1")
-#   for (m in models) {
-#
-#     # Imputing missing probes (litterature_models)
-#     tmp_Xtrain = Xtrain[,rownames(m$coeff)[rownames(m$coeff) %in% colnames(Xtrain)]] #Keep only common CpG between coeffs and Xtrain
-#     tmp_Xtest = Xtest[,rownames(m$coeff)[rownames(m$coeff) %in% colnames(Xtest)]] #Keep only common CpG between coeffs and Xtrain
-#
-#     idx_missing_probes = rownames(m$coeff)[!(rownames(m$coeff) %in% colnames(Xtrain))]
-#     if (length(idx_missing_probes) != 0) {
-#       foo = m$coeff[idx_missing_probes,"mean"]
-#       names(foo) = idx_missing_probes
-#       tmp_Xtrain = cbind(tmp_Xtrain,do.call("rbind",replicate(nrow(tmp_Xtrain),foo,simplify=FALSE)))
-#       tmp_Xtest = cbind(tmp_Xtest,do.call("rbind",replicate(nrow(tmp_Xtest),foo,simplify=FALSE)))
-#     }
-#
-#     tmp_Xtrain = tmp_Xtrain[,rownames(m$coeff)]
-#     tmp_Xtest = tmp_Xtest[,rownames(m$coeff)]
-#
-#     predTr = tmp_Xtrain %*% as.matrix(m$coeff$beta) + m$Intercept
-#     rmseTr = sqrt(mean((Ytrain - predTr)^2))
-#     predTe = tmp_Xtest %*% as.matrix(m$coeff$beta) + m$Intercept
-#     rmseTe = sqrt(mean((Ytest - predTe)^2))
-#     AMAR_Te = predTe/Ytest
-#     AMAR_Te = cbind.data.frame(AMAR_Te,df[rownames(AMAR_Te),covariate])
-#
-#     colnames(AMAR_Te) = c("AMAR", covariate)
-#
-#     pval = anova(lm(AMAR_Te[,1]~AMAR_Te[,2], data=AMAR_Te))[1,5]
-#
-#     den = density(AMAR_Te[, "AMAR"], na.rm=TRUE)
-#     den_bw = den$bw
-#     den_bw = .06
-#     density = lapply(levls, function(lev){
-#       if (sum(AMAR_Te[,covariate] %in% lev) > 1) {
-#         den = density(bw=den_bw, AMAR_Te[AMAR_Te[,covariate] %in% lev, "AMAR"])
-#         return(den)
-#       } # Patch density
-#     })
-#
-#     plot(Ytrain, predTr,
-#       main=paste0(m$name),
-#       sub=paste0("TRAIN (", nrow(m$coeff), " pbs)", " RMSE: ", signif(rmseTr, 3)),
-#       xlab="Chronological Age",
-#       ylab="Predicted Age"
-#       )
-#     abline(a=0, b=1)
-#
-#     plot(Ytest , predTe,
-#       main = paste0(m$name),
-#       sub=paste0("TEST (", nrow(m$coeff), " pbs) RMSE: ", signif(rmseTe, 3)),
-#       xlab="Chronological Age",
-#       ylab="Predicted Age"
-#     )
-#     abline(a=0, b=1)
-#
-#
-#     plot(0,0, xlim = c(0.5, 1.5), #min(unlist(lapply(density, function(d){min(d$x)}))),max(unlist(lapply(density, function(d){max(d$x)})))),
-#       ylim = c(0, max(unlist(lapply(density, function(d){max(d$y)})))),
-#     main = paste0("AMAR pval=", signif(pval ,3)))
-#     sub="ANOVA"
-#     for (j in c(1:length(levls))){
-#       lines(density[[j]],col = tmp_col[j])
-#     }
-#     legend(x="topright", legend=levls, col=tmp_col, lty = 1, title=covariate)
-#   }
-# }
 
-plot_model_eval = function(m, df, covariate) {
-  df[,covariate] = as.factor(df[,covariate])
-  # Imputing missing probes (litterature_models)
-  tmp_Xtrain = Xtrain[,rownames(m$coeff)[rownames(m$coeff) %in% colnames(Xtrain)]] #Keep only common CpG between coeffs and Xtrain
-  tmp_Xtest = Xtest[,rownames(m$coeff)[rownames(m$coeff) %in% colnames(Xtest)]] #Keep only common CpG between coeffs and Xtrain
-  idx_missing_probes = rownames(m$coeff)[!(rownames(m$coeff) %in% colnames(Xtrain))]
-  if (length(idx_missing_probes) != 0) {
-    foo = m$coeff[idx_missing_probes,"mean"]
-    names(foo) = idx_missing_probes
-    tmp_Xtrain = cbind(tmp_Xtrain,do.call("rbind",replicate(nrow(tmp_Xtrain),foo,simplify=FALSE)))
-    tmp_Xtest = cbind(tmp_Xtest,do.call("rbind",replicate(nrow(tmp_Xtest),foo,simplify=FALSE)))
-  }
-  tmp_Xtrain = tmp_Xtrain[,rownames(m$coeff)]
-  tmp_Xtest = tmp_Xtest[,rownames(m$coeff)]
-  # prediction
-  predTr = tmp_Xtrain %*% as.matrix(m$coeff$beta) + m$Intercept
-  rmseTr = sqrt(mean((Ytrain - predTr)^2))
-  predTe = tmp_Xtest %*% as.matrix(m$coeff$beta) + m$Intercept
-  rmseTe = sqrt(mean((Ytest - predTe)^2))
-  # AMRA
-  AMAR_Te = predTe/Ytest
-  AMAR_Te = cbind.data.frame(AMAR_Te,df[rownames(AMAR_Te),covariate])
-  colnames(AMAR_Te) = c("AMAR", covariate)
-  pval = anova(lm(AMAR_Te[,1]~AMAR_Te[,2], data=AMAR_Te))[1,5]
-  # density
-  den = density(AMAR_Te[, "AMAR"], na.rm=TRUE)
-  den_bw = den$bw
-  den_bw = .06
-  levls = levels(df[,covariate])
-  density = lapply(levls, function(lev){
-    if (sum(AMAR_Te[,covariate] %in% lev) > 1) {
-      den = density(bw=den_bw, AMAR_Te[AMAR_Te[,covariate] %in% lev, "AMAR"])
-      return(den)
-    } # Patch density
-  })
-  plot(Ytrain, predTr,
-    main=paste0(m$name), 
-    sub=paste0("TRAIN (", nrow(Xtrain), " obs., ", nrow(m$coeff), " pbs, RMSE: ", signif(rmseTr, 3), ")"), 
-    xlab="Chronological Age", 
-    ylab="Predicted Age", 
-    col=as.numeric(df[rownames(predTr),covariate])
-    )
-  abline(a=0, b=1)                                                                    
-  plot(Ytest , predTe, 
-    main = paste0(m$name), 
-    sub=paste0("TEST (", nrow(Xtest), " obs., ", nrow(m$coeff), " pbs, RMSE: ", signif(rmseTe, 3), ")"), 
-    xlab="Chronological Age", 
-    ylab="Predicted Age", 
-    col=as.numeric(df[rownames(predTe),covariate])
-  )
-  abline(a=0, b=1)
-  plot(0,0, 
-    xlab=paste0("ANOVA pval=", signif(pval ,3)),
-    xlim = c(0.5, 1.5), 
-    ylim = c(0, max(unlist(lapply(density, function(d){max(d$y)})))), 
-    main = paste0("AMAR"))
-  sub="ANOVA"
-  for (j in c(1:length(levls))){
-  	lines(density[[j]], col=j)
-  }
-  legend(x="topright", legend=levls, col=1:length(levls), lty = 1, title=covariate)           
-}
-
-
+```{r import/export models, echo=FALSE, results="hide"}
 litterature_models = readRDS("litterature_models.rds")
-
-hannum_probes = intersect(colnames(df), litterature_models$hannum_model_mc$coeff$probes)
-sub_df = df[idx_train, c(hannum_probes,y_key)]
-hannum_model = build_model_from_probes(hannum_probes, sub_df, y_key, name="Hannum")
-
-horvath_probes = intersect(colnames(df), litterature_models$horvath_model_mc$coeff$probes)
-sub_df = df[idx_train, c(horvath_probes,y_key)]
-horvath_model = build_model_from_probes(horvath_probes, sub_df, y_key, name="Horvath")
-
-models = list(best_model_cvaglmnet, best_model_bs, hannum_model, horvath_model)
-
-saveRDS(list(best_model_cvaglmnet, best_model_bs), paste0("models_", gse, ".rds"))
-
-
-
-covariates
-df$qAge = cut(df[,y_key], quantile(df[,y_key]), include.lowest=TRUE)
-if (!"qAge" %in% covariates) covariates = c(covariates, "qAge") 
-for (covariate in covariates) {
-  layout(matrix(1:12,3), respect=TRUE)
-  for (m in models) {
-    plot_model_eval(m, df, covariate)
-  }
-}
-
-```
-
-```{r fig.width=9, fig.height=3, echo=FALSE}
 models = list(
   best_model_cvaglmnet, 
   best_model_bs, 
-  hannum_model, 
   litterature_models$hannum_model_mc, 
-  horvath_model, 
   litterature_models$horvath_model_mc
 )
+saveRDS(list(best_model_cvaglmnet, best_model_bs), paste0("models_", gse, ".rds"))
+```
 
 
+```{r model evaluation, fig.width=12, fig.height=15, echo=FALSE, results="hide"}
+# df$qAge = cut(df[,y_key], quantile(df[,y_key]), include.lowest=TRUE)
+# if (!"qAge" %in% covariates) covariates = c(covariates, "qAge")
 for (covariate in covariates) {
+  layout(matrix(1:20, 5), respect=TRUE)  
   for (m in models) {
-    layout(matrix(1:3, 1), respect=TRUE)
-    plot_model_eval(m, df, covariate)
+    # layout(matrix(1:5, 1), respect=TRUE)
+    plot_model_eval(m, df, covariate, Xtrain=Xtrain, Xtest=Xtest, Ytrain=Ytrain, Ytest=Ytest)
   }
 }
-
-
 ```
+
+
+
+
+
+
+
+
+In this figure, we can see the results for each methods. At the end, we have four models, the ElasticNet model, the Bootstrap model, the Hannum model (Hannum clock) and the Horvath model (Horvath Clock). For the litterature models (Hannum and Horvath), we take probes from their clocks and learning on our dataset with a linear regression. That gives us 2 litterature models usable for our datasets. So, for each model, we have three plots. The first is the predicted age depending on the chronological age for the train set. To see if we have overfitting, we compare this graph with the second graph which plot the predicted age depending on the chronological age for the test set. This second graph shows us the efficiency of our model. For the last graph, we build the AMAR on the test set depending on cofactors to see if cofactors have an impact on AMAR, so in DNAm. The AMAR (Apparent Methylomic Aging Rate) [Hannum,2013] is the factor between predicted age (methylomic age) and chronological age. This measure can show us the impact of cofactors in DNAm. For each model of this dataset except for Horvath, we have an significative different of AMAR between men and women. We use the same dataset as Hannum is 2013 to compare and verify our results. We obtains the same conclusion as him, men and women have significant different AMAR in the GSE40279 dataset. 
+
+We want to see if we can obtain the same results in a different platform. So we transform the 450k dataset using in Hannum paper in a 27k dataset. And we can see in this figure that we always obtain for our 2 self made models a significant difference in AMAR, that we not see in Hannum model, because we have only 7 probes in a 27k platform compare to 71 in a 450k, so this model don’t have enough probes to work. That shows us that our Elasticnet and Bootstrap model are reusable in other platforms and dataset condition of relearn models in new datasets. 
+
+
+
+
 
 
 
