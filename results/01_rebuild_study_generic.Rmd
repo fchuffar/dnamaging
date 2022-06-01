@@ -1,0 +1,71 @@
+---
+title: "Re-build Illumina methylation study with only 27k probes"
+author: "Florent Chuffart"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+
+```{r echo=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide")
+source("common.R")
+```
+
+```{r params}
+source("params_default.R")
+```
+
+
+```{r loading_data}
+df_filename_model = paste0("df_", gse_ref, ".rds")
+df_model = mreadRDS(df_filename_model)
+
+df_filename_eval = paste0("df_", gse_new, ".rds")
+df_eval = mreadRDS(df_filename_eval)
+```
+
+
+```{r building_indexes}
+idx_samples = rownames(df_model)
+
+markers_start_model = grep("cg",colnames(df_model))[1]
+idx_clinicals_model = colnames(df_model)[1:(markers_start_model-1)]
+idx_cpg_model = colnames(df_model)[markers_start_model:ncol(df_model)]
+
+markers_start_eval = grep("cg",colnames(df_eval))[1]
+idx_clinicals_eval = colnames(df_eval)[1:(markers_start_eval-1)]
+idx_cpg_eval = colnames(df_eval)[markers_start_eval:ncol(df_eval)]
+```
+
+```{r create df}
+idx_probes = intersect(idx_cpg_eval,idx_cpg_model)
+df = df_model[idx_samples,c(idx_clinicals_model,idx_probes)]
+saveRDS(df,paste0("df_",gse_ref,"g",gse_new,".rds"))
+```
+
+
+
+
+```{r, echo=FALSE, eval=TRUE}
+library(IlluminaHumanMethylation27kanno.ilmn12.hg19)
+pf27k = data.frame(getAnnotation(IlluminaHumanMethylation27kanno.ilmn12.hg19))
+
+probes27k = intersect(idx_cpg, rownames(pf27k))
+
+df = df[,c(idx_clinicals, probes27k)]
+df_filename = paste0("df_27k", gse, ".rds")
+print(paste0("Writing ", df_filename, "..."))
+saveRDS(df, df_filename)
+dim(df)
+```
+
+# Session Information
+
+```{r, results="verbatim"}
+sessionInfo()
+```
