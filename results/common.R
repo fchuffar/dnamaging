@@ -1,5 +1,20 @@
 if (!exists("mreadRDS")) { mreadRDS = memoise::memoise(readRDS, cache=cachem::cache_mem(max_size = 10*1024 * 1024^2)) }
 # if (!exists("mget_coefHannum")) mget_coefHannum = memoise::memoise(methylclockData::get_coefHannum)
+
+# services patterns
+if (!exists("mget_df_preproc")) {
+  mget_df_preproc = memoise::memoise(function(gse){
+    df = readRDS(paste0("df_preproc_",gse,".rds"))
+    return(df)
+  })
+}
+if (!exists("mget_full_cpg_matrix")) {
+  get_full_cpg_matrix = function(gse, idx_smp, idx_cpg){as.matrix(mget_df_preproc(gse)[idx_smp, idx_cpg])}
+  mget_full_cpg_matrix = memoise::memoise(get_full_cpg_matrix, cache = cachem::cache_mem(max_size = 10*1024 * 1024^2))
+}
+
+
+
 plot_model_eval = function(m, df, covariate) {
   df[,covariate] = as.factor(df[,covariate])
   # Imputing missing probes (litterature_models)

@@ -120,11 +120,6 @@ litterature_models = mreadRDS("litterature_models.rds")
 litterature_models = list(litterature_models$hannum_model_mc,litterature_models$horvath_model_mc)
 models = c(models,litterature_models)
 
-if (!exists("mget_df")) {mget_df = memoise::memoise(function(){df})}
-if (!exists("mget_full_cpg_matrix")) {
-  get_full_cpg_matrix = function(idx_smp){as.matrix(mget_df()[idx_smp,idx_cpg])}
-  mget_full_cpg_matrix = memoise::memoise(get_full_cpg_matrix, cache = cachem::cache_mem(max_size = 10*1024 * 1024^2))
-}
 
 ```
 
@@ -132,8 +127,8 @@ if (!exists("mget_full_cpg_matrix")) {
 set.seed(1)
 idx_test = rownames(df)
 
-Xtest = mget_full_cpg_matrix(idx_test)
-Ytest = mget_df()[idx_test,y_key]
+Xtest = mget_full_cpg_matrix(gse, idx_test, idx_cpg)
+Ytest = mget_df_preproc(gse)[idx_test,y_key]
 names(Ytest) = idx_test
 ```
 
