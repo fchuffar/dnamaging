@@ -46,7 +46,7 @@ rownames(coeff) = idx
 # coeff$mean = apply(df[idx_train,rownames(coeff)], 2, mean)
 head(coeff)
 hannum_model_mc = list(Intercept=0, coeff=coeff)
-hannum_model_mc$name = paste0("hannum_model_mc")
+hannum_model_mc$name = paste0("Hannum 2013")
 litterature_models[["hannum_model_mc"]] = hannum_model_mc
 
 # tmp_m = lm(formula(paste0(y_key,"~0+",paste0(hannum_probes,collapse="+"))),data=df[idx_train,]) #lm model with probes previously find with bootstrap
@@ -71,7 +71,7 @@ rownames(coeff) = idx
 # coeff$mean = horvath_median
 head(coeff)
 horvath_model_mc = list(Intercept=horvath_intercept, coeff=coeff)
-horvath_model_mc$name = paste0("horvath_model_mc")
+horvath_model_mc$name = paste0("Horvath 2013")
 litterature_models[["horvath_model_mc"]] = horvath_model_mc
 
 # tmp_m = lm(formula(paste0(y_key,"~0+",paste0(horvath_probes,collapse="+"))),data=df[idx_train,]) #lm model with probes previously find with bootstrap
