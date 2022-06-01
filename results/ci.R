@@ -15,7 +15,6 @@ for (gse in gses) {
   rmarkdown::render("03_preproc.Rmd", output_file=paste0("03_preproc_", gse, ".html"))    
   rmarkdown::render("04_model.Rmd", output_file=paste0("04_model_", gse, ".html"))
   gse_m = gse ; rmarkdown::render("05_eval.Rmd", output_file=paste0("05_eval_", gse, ".html"))
-  # rmarkdown::render("06_amar.Rmd", output_file=paste0("06_amar_", gse, ".html"))
 }
 
 

@@ -1,0 +1,88 @@
+---
+title: "Build litterature models"
+author: "Fabien Jossaud, Florent Chuffart"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+```{r echo=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=TRUE, results="verbatim")
+start_time = Sys.time()
+source("common.R")
+if (!exists("mget_coefHannum")) mget_coefHannum = memoise::memoise(methylclockData::get_coefHannum)
+if (!exists("mget_coefHorvath")) mget_coefHorvath = memoise::memoise(methylclockData::get_coefHorvath)
+```
+
+```{r call data}
+# source("params_GSE40279.R")
+# df = mreadRDS("df_preproc_GSE40279.rds")
+#
+# idx_samples = rownames(df)
+# markers_start = grep("cg",colnames(df))[1]
+# idx_clinicals = colnames(df)[1:(markers_start-1)]
+# idx_cpg = colnames(df)[markers_start:ncol(df)]
+#
+# nb_train = 482
+# set.seed(1)
+# idx_train = sample(rownames(df), nb_train)
+# idx_test = setdiff(rownames(df), idx_train)
+```
+
+```{r build coeff}
+litterature_models = list()
+
+foo = mget_coefHannum() # Get Hannum probes
+hannum_coeffs = foo$CoefficientTraining
+hannum_probes = foo$CpGmarker
+# Build Hannum model with methylclock coeffs 
+idx = hannum_probes
+coeff = data.frame(probes=idx, beta=hannum_coeffs)
+rownames(coeff) = idx
+# coeff$mean = apply(df[idx_train,rownames(coeff)], 2, mean)
+head(coeff)
+hannum_model_mc = list(Intercept=0, coeff=coeff)
+hannum_model_mc$name = paste0("hannum_model_mc")
+litterature_models[["hannum_model_mc"]] = hannum_model_mc
+
+# tmp_m = lm(formula(paste0(y_key,"~0+",paste0(hannum_probes,collapse="+"))),data=df[idx_train,]) #lm model with probes previously find with bootstrap
+# idx = hannum_probes
+# coeff = data.frame(probes=idx, beta=tmp_m$coefficients[idx])
+# rownames(coeff) = idx
+# coeff$mean = apply(df[idx_train,rownames(coeff)], 2, mean)
+# head(coeff)
+# hannum_model_dflm = list(Intercept=0, coeff=coeff)
+# hannum_model_dflm$name = "hannum_model_dflm"
+# litterature_models[["hannum_model_dflm"]] = hannum_model_dflm
+
+foo = mget_coefHorvath() # Get Hannum probes
+horvath_coeffs = foo$CoefficientTraining[-1]
+horvath_probes = foo$CpGmarker[-1]
+# horvath_median = foo$medianByCpG[-1]
+horvath_intercept = foo$CoefficientTraining[1]
+# Build Hannum model with methylclock coeffs 
+idx = horvath_probes
+coeff = data.frame(probes=idx, beta=horvath_coeffs)
+rownames(coeff) = idx
+# coeff$mean = horvath_median
+head(coeff)
+horvath_model_mc = list(Intercept=horvath_intercept, coeff=coeff)
+horvath_model_mc$name = paste0("horvath_model_mc")
+litterature_models[["horvath_model_mc"]] = horvath_model_mc
+
+# tmp_m = lm(formula(paste0(y_key,"~0+",paste0(horvath_probes,collapse="+"))),data=df[idx_train,]) #lm model with probes previously find with bootstrap
+# idx = horvath_probes
+# coeff = data.frame(probes=idx, beta=tmp_m$coefficients[idx])
+# rownames(coeff) = idx
+# coeff$mean = apply(df[idx_train,rownames(coeff)], 2, mean)
+# head(coeff)
+# horvath_model_dflm = list(Intercept=0, coeff=coeff)
+# horvath_model_dflm$name = "horvath_model_dflm"
+# litterature_models[["horvath_model_dflm"]] = horvath_model_dflm
+
+saveRDS(litterature_models, file="litterature_models.rds")
+```
