@@ -1,9 +1,13 @@
+start_ci = Sys.time()
 # Only train
 gses = c( 
   "GSE41037", # 27k Genome wide DNA methylation profiling of whole blood in schizophrenia patients and healthy subjects.
   "27kGSE40279", # Hannum 2013 27k version
   "GSE40279", # 450k Hannum 2013
-  "cancair",
+  "GSE20067",
+  "27kLima",
+  "Lima",
+  #"cancair",
   NULL
 )
 for (gse in gses) {
@@ -55,3 +59,5 @@ for (gse_eval in gses) {
   gse = gse_eval ; rmarkdown::render("03_preproc.Rmd", output_file=paste0("03_preproc_", gse, ".html"))    
   gse_m = gse_given ; gse = gse_eval ; rmarkdown::render("05_eval.Rmd", output_file=paste0("05_eval_", gse, "_", gse_m, ".html"))
 }
+exec_time_ci = Sys.time() - start_ci
+print(paste0("Execution time for CI: ", exec_time_ci))
