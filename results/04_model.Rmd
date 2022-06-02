@@ -254,7 +254,6 @@ if (!exists("mmodel_factory_glmnet")) {
     idx = rownames(m$beta)[m$beta@i+1]
     coeff=data.frame(probes=idx, beta=m$beta[idx,])
     rownames(coeff) = idx
-    coeff$mean = apply(x[,rownames(coeff)], 2, mean)
     ret = list(Intercept=m$a0, coeff=coeff)
     ret$name = paste0("cvaglmnet (a=", signif(alpha,3), ", l=", signif(lambda,3), ")")
     # ret$glmmod = m
@@ -521,21 +520,21 @@ stats$labs = factor(paste0(stats$occurence, "  (", stats$nb_probes, " probes)"))
 layout(1,respect = TRUE)
 par(mar=c(10, 4.1, 4.1, 2.1))
 foo = boxplot(train_err~labs, data=stats, border=1, las=2, ylab="RMSE", main="Cross Validation for occurence min", xlab="")
-bar = boxplot( test_err~labs, data=stats, border=2, las=2, ylab="RMSE", main="Cross Validation", add=TRUE, xlab="probes occurence")
-legend("bottomright", col=1:2, c("train", "test"), pch=1)
-idx = floor(ncol(bar$stats)*.5)
-# idx = 2
-# for(lty in 3:1) {
-#   tmp_lev = mean(bar$stats[3,1:floor(idx/2)])
-#   idx = which(foo$stats[3,] - tmp_lev>0)[1]
-#   abline(h=tmp_lev, col=2, lty=lty)
-#   abline(v=idx, col=1, lty=lty)
-# }
-# idx = rev(which(bar$stats[3,] < tmp_lev))[1]
+bar = boxplot( test_err~labs, data=stats, border=adjustcolor(2, alpha.f=.5), col=adjustcolor("grey", alpha.f=.1), las=2, ylab="RMSE", main="Cross Validation", add=TRUE, xlab="probes occurence")
+legend("bottomright", col=1:2, c("Nested train", "Validation"), pch=1)
+
+if (!is.null(occ_optim)) {
+  idx = which(occ_optim==as.numeric(do.call(rbind,strsplit(bar$names, " "))[,1]))
+  best_params = bar$names[idx]
+} else {
+  idx = floor(ncol(bar$stats)*1)
+  best_params = bar$names[idx]
+  occ_optim = as.numeric(strsplit(best_params, " ")[[1]][1])  
+}
+
 abline(v=idx, col=2, lty=1)
-best_params = bar$names[idx]
-occ_optim = as.numeric(strsplit(best_params, " ")[[1]][1])
-best_model_bs_probes = names(pb_occ_tab[pb_occ_tab>occ_optim])
+
+best_model_bs_probes = names(pb_occ_tab[pb_occ_tab>=occ_optim])
 par(mar=c(5.1, 4.1, 4.1, 2.1))
 legend("topleft", best_params, col=2, lty=1)
 ```
@@ -562,8 +561,35 @@ best_model_bs_probes
 
 
 ```{r best_model_bs}
-sub_df = df[idx_train,c(probes,y_key)] 
-best_model_bs = build_model_from_probes(best_model_bs_probes, sub_df, y_key, name="Bootstraped model")
+sub_df = df[idx_train,c(best_model_bs_probes,y_key)] 
+# best_model_bs = build_model_from_probes(best_model_bs_probes, sub_df, y_key, name="Bootstrapped model")
+
+# tmp_Xtrain = as.matrix(sub_df[tmp_idx_train, tmp_probes])
+# tmp_Ytrain = sub_df[tmp_idx_train, y_key]
+# tmp_Xtest = as.matrix(sub_df[tmp_idx_test, tmp_probes])
+# tmp_Ytest = sub_df[tmp_idx_test, y_key]
+# m = glmnet::cv.glmnet(x=tmp_Xtrain, y=tmp_Ytrain, alpha=0, type.measure="mse", standardize=TRUE)
+
+tmp_Xtrain = as.matrix(sub_df[idx_train, best_model_bs_probes])
+tmp_Ytrain = sub_df[idx_train, y_key]
+m = glmnet::cv.glmnet(x=tmp_Xtrain, y=tmp_Ytrain, alpha=0, type.measure="mse", standardize=TRUE)
+tmp_alpha = 0
+tmp_lambda = m$lambda.min
+# tmp_lambda = m$lambda.1se
+
+
+# tmp_alpha = best_model_cvaglmnet_params$alpha
+# tmp_lambda = best_model_cvaglmnet_params$lambda
+x = tmp_Xtrain
+y = tmp_Ytrain
+m = glmnet::glmnet(x=x, y=y, alpha=tmp_alpha, lambda=tmp_lambda, standardize=TRUE)
+idx = rownames(m$beta)[m$beta@i+1]
+coeff=data.frame(probes=idx, beta=m$beta[idx,])
+rownames(coeff) = idx
+ret = list(Intercept=m$a0, coeff=coeff)
+ret$name = "Bootstrapped model"
+
+best_model_bs = ret
 ```
 
 
@@ -644,7 +670,7 @@ Discussion, a **core of probes** are always selected by bootstrap.
 
 ## Probe annotations
 
-```{r}
+```{r probe annotation}
 library(IlluminaHumanMethylation450kanno.ilmn12.hg19)
 pf450k = data.frame(getAnnotation(IlluminaHumanMethylation450kanno.ilmn12.hg19))
 probes_annot = pf450k[models[[2]]$coeff$probes,]
