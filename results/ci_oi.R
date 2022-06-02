@@ -1,5 +1,5 @@
 gse_eval = "Lima"
-gse_train = "GSE41037"
+gse_train = "GSE40279"
 gse_given = paste0(gse_train, "given", gse_eval)
 rmarkdown::render("01_rebuild_study_generic.Rmd", output_file=paste0("01_rebuild_study_", gse_given, ".html")) # export df_{gse_given}.rds
 gse = gse_given ; rmarkdown::render("02_stats_desc.Rmd", output_file=paste0("02_stats_desc_", gse, ".html"))    
