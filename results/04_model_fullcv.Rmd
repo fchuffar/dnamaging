@@ -1,0 +1,298 @@
+---
+title: "Build prediction model"
+author: "Fabien Jossaud, Florent Chuffart"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+```{r echo=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=TRUE, results="verbatim")
+start_time = Sys.time()
+source("common.R")
+```
+
+```{r params_default, echo=FALSE}
+source("params_default.R")
+n_boot = 50
+occ_optim = 50
+```
+
+```{r building_indexes, echo=FALSE}
+df = mreadRDS(paste0("df_preproc_",gse,".rds"))
+idx_samples = rownames(df)
+markers_start = grep("cg",colnames(df))[1]
+idx_clinicals = colnames(df)[1:(markers_start-1)]
+idx_cpg = colnames(df)[markers_start:ncol(df)]
+```
+
+# Parameters 
+
+```{r parameters}
+set.seed(1)
+idx_train = sample(rownames(df), nb_train)
+idx_test = setdiff(rownames(df), idx_train)
+# alphas for cva.glmnet
+if(!exists("alphas")) alphas = c(.1, .2, .3, .5, .8, 1)
+# boostrap 
+if (!exists("n_boot")) n_boot = 500
+``` 
+
+
+
+```{r cva.glmnet call, eval=TRUE, echo=TRUE}
+if (!exists("mcvaglmnet")) {
+  cvaglmnet = function(idx_train, y_key) {
+    x = mget_full_cpg_matrix(gse, idx_train, idx_cpg)
+    y = mget_df_preproc(gse)[idx_train, y_key] # service. Design Patterns, Gamma et al. 
+    modelcva = glmnetUtils::cva.glmnet(x=x, y=y, type.measure="mse", standardize=TRUE,  alpha = c(0.125))
+    return(modelcva)  
+  }
+  # Use parallel::makeCluster is not compatible with memoisation.
+  # cl.cva = parallel::makeCluster(nb_cores,  type="FORK")
+  # modelcva = glmnetUtils::cva.glmnet(x=x, y=y, type.measure="mse", standardize=TRUE, outerParallel=cl.cva)
+  # parallel::stopCluster(cl.cva)
+  mcvaglmnet = memoise::memoise(cvaglmnet)
+} # Memoise for cvaglmnet
+
+modelcva = mcvaglmnet(idx_train=idx_train, y_key=y_key)
+
+cvarecaps = data.frame(
+  lambda   = unlist(lapply(modelcva$modlist, "[[", "lambda")), 
+  cvm      = unlist(lapply(modelcva$modlist, "[[", "cvm")   ), 
+  cvsd     = unlist(lapply(modelcva$modlist, "[[", "cvsd")   ), 
+  cvup     = unlist(lapply(modelcva$modlist, "[[", "cvup")  ),
+  cvlo     = unlist(lapply(modelcva$modlist, "[[", "cvlo")  ),
+  nbprobes = unlist(lapply(modelcva$modlist, "[[", "nzero") ),
+  alpha    = rep(modelcva$alpha, sapply(lapply(modelcva$modlist, "[[", "lambda"), length)),
+  nfolds   = modelcva$nfolds
+)
+cvarecaps$rmse = sqrt(cvarecaps$cvm)
+cvarecaps$rmseup = sqrt(cvarecaps$cvup)
+cvarecaps$rmselo = sqrt(cvarecaps$cvlo)
+cvrecaps = cvarecaps  
+
+head(cvrecaps)
+dim(cvrecaps)
+```
+
+```{r best_model_cvaglmnet_params}
+tmp_alphas = sort(unique(cvrecaps$alpha))
+tmp_alphas = unlist(sapply(tmp_alphas, function(alpha) { 
+  cvrecap = cvrecaps[cvrecaps$alpha==alpha,]
+  if (cvrecap[cvrecap$rmse==min(cvrecap$rmse),]$nbprobes<=.66*length(idx_train)) {
+    alpha
+  } else {
+    NULL
+  }
+}))
+
+if (!is.null(tmp_alphas)) {
+  cvrecaps = cvrecaps[cvrecaps$alpha%in%tmp_alphas,] 
+} 
+
+best_model_cvaglmnet_params = cvrecaps[cvrecaps$cvm==min(cvrecaps$cvm),][1,]
+best_model_cvaglmnet_params
+```
+
+```{r loading train/test sets}
+#Create Train and Test samples
+Xtrain = mget_full_cpg_matrix(gse, idx_train, idx_cpg)
+Ytrain = mget_df_preproc(gse)[idx_train,y_key]
+Xtest = mget_full_cpg_matrix(gse, idx_test, idx_cpg)
+Ytest = mget_df_preproc(gse)[idx_test,y_key]
+``` 
+
+
+
+
+
+
+```{r instanciate best_model_cvaglmnet}
+m = mmodel_factory_glmnet(idx_train=idx_train, y_key=y_key, alpha=best_model_cvaglmnet_params$alpha, lambda=best_model_cvaglmnet_params$lambda, gse=gse, idx_cpg=idx_cpg) 
+best_model_cvaglmnet = m
+best_model_cvaglmnet_probes = as.character(best_model_cvaglmnet$coeff$probes)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r bootstrap}
+bs_func = function(i, idx_train, best_model_cvaglmnet_params) { #epimedtools to see evolution of running 
+  # Bootstrap sample creation
+  # print(i)
+  set.seed(i)
+  idx_bstrain = c(
+    sample(idx_train, ceiling(2/3 * length(idx_train)), replace=FALSE),
+    sample(idx_train, floor(  1/3 * length(idx_train)), replace=TRUE)
+  )
+  # Create model with best meta params and bootstrap sample
+  # print(best_model_cvaglmnet_params)
+  alpha = best_model_cvaglmnet_params$alpha
+  lambda = best_model_cvaglmnet_params$lambda
+  models_bs = mmodel_factory_glmnet(idx_bstrain, y_key, alpha=alpha, lambda=lambda, gse=gse, idx_cpg=idx_cpg) 
+  # For each bootstrap, capture all probes use in the model 
+  probes = rownames(models_bs$coeff)
+  return(probes)
+}
+
+# USE_PARAPPLY = FALSE
+#
+# if (USE_PARAPPLY) {
+#   print("bootstrap using parallel::parApply...")
+#   if (!exists("cl_bs")) {
+#     cl_bs = parallel::makeCluster(parallel::detectCores(),  type="PSOCK")
+#     # parallel::stopCluster(cl_bs)
+#   }
+#   bs = parallel::parApply(cl_bs, t(t(1:n_boot)), 1, bs_func, idx_train=idx_train, best_model_cvaglmnet_params=best_model_cvaglmnet_params)
+# } else {
+#   print("bootstrap using epimedtools::monitored_apply")
+#   bs_probes = epimedtools::monitored_apply(mod=1, t(t(1:n_boot)), 1, bs_func, idx_train=idx_train, best_model_cvaglmnet_params=best_model_cvaglmnet_params)
+# }
+#
+# length(bs_probes)
+```
+
+```{r cv_bs, results="hide"}
+#  1. folds
+n_folds = 6
+n_seeds = 1
+fold_size = floor(length(idx_train) / n_folds)
+
+folds = lapply(1:n_seeds, function(seed) {
+  tmp_folds = list()
+  set.seed(seed)
+  idx_train_remaining = idx_train
+  for (i in 1:n_folds) {
+    foo = sample(idx_train_remaining, fold_size)
+    tmp_folds[[i]] = list(idx_train=setdiff(idx_train, foo), idx_test=foo)
+    idx_train_remaining = setdiff(idx_train, unlist(lapply(tmp_folds, "[[", "idx_test")))
+  }
+  tmp_folds
+})
+folds = unlist(folds, recursive=FALSE)
+
+# 2. eval
+RMSE = function(data_truth, data_pred) {
+    # Root Mean Square Error
+    return(sqrt(mean((data_truth - data_pred)^2)))
+}
+
+
+
+
+stats = lapply(1:length(folds), function(fold) {
+  print(fold)
+  tmp_idx_train = folds[[fold]]$idx_train
+  tmp_idx_test = folds[[fold]]$idx_test
+  
+  
+  
+  USE_PARAPPLY = FALSE
+
+  if (USE_PARAPPLY) {
+    print("bootstrap using parallel::parApply...")
+    if (!exists("cl_bs")) {
+      cl_bs = parallel::makeCluster(parallel::detectCores(),  type="PSOCK")    
+      # parallel::stopCluster(cl_bs)
+    }
+    bs = parallel::parApply(cl_bs, t(t(1:n_boot)), 1, bs_func, idx_train=tmp_idx_train, best_model_cvaglmnet_params=best_model_cvaglmnet_params)
+  } else {
+    print("bootstrap using epimedtools::monitored_apply")
+    bs_probes = epimedtools::monitored_apply(mod=1, t(t(1:n_boot)), 1, bs_func, idx_train=tmp_idx_train, best_model_cvaglmnet_params=best_model_cvaglmnet_params)   
+  }
+
+
+  pb_occ_tab = sort(table(unlist(bs_probes))) # probe occurence
+  iterator = unique(sort(pb_occ_tab[pb_occ_tab>=n_boot/2]))
+  tmp_probes = names(pb_occ_tab)[pb_occ_tab>=min(iterator)]
+  sub_df = df[idx_train, c(tmp_probes, y_key)] 
+    
+  stats = epimedtools::monitored_apply(mod=1, t(t(iterator)), 1, function(occ, pb_occ_tab, tmp_idx_train, tmp_idx_test, y_key, tmp_probes, fold, sub_df) {
+    print(occ)
+    tmp_probes = names(pb_occ_tab)[pb_occ_tab>=occ]
+    ret = mcall_glmnet_mod(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, fold, sub_df)
+    return(ret)
+  }, pb_occ_tab=pb_occ_tab, tmp_idx_train=tmp_idx_train, tmp_idx_test=tmp_idx_test, y_key=y_key, tmp_probes=tmp_probes, fold=fold, sub_df=sub_df)
+  stats = do.call(rbind, stats)
+  stats
+})
+stats = do.call(rbind, stats)
+head(stats)
+dim(stats)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r plot_cv_each_bs, echo=FALSE, eval=TRUE}
+# # 3. plot
+# stats$labs = paste0(stats$occurence, "  (", stats$nb_probes, " probes)")
+# stats$labs = factor(paste0(stats$occurence, "  (", stats$nb_probes, " probes)"), levels=unique(stats$labs[order(stats$occurence)]))
+stats$labs = paste0(stats$occurence, " (", sapply(stats$occurence, function(o) floor(mean(stats[stats$occurence==o,]$nb_probes))), " probes)")
+stats$labs = factor(paste0(stats$occurence, " (", sapply(stats$occurence, function(o) floor(mean(stats[stats$occurence==o,]$nb_probes))), " probes)"), levels=unique(stats$labs[order(stats$occurence)]))
+# stats$labs = paste0(stats$nb_probes, " (", stats$nb_probes, " probes)")
+# stats$labs = factor(paste0(stats$nb_probes, " (", stats$nb_probes, " probes)"),levels=unique(stats$labs[order(stats$nb_probes)]))
+layout(1,respect = TRUE)
+par(mar=c(10, 4.1, 4.1, 2.1))
+foo = boxplot(train_err~labs, data=stats, border=1, las=2, ylab="RMSE", main="Cross Validation for occurence min", xlab="", ylim=c(0, max(stats$test_err)))
+bar = boxplot( test_err~labs, data=stats, border=adjustcolor(2, alpha.f=.5), col=adjustcolor("grey", alpha.f=.1), las=2, ylab="RMSE", main="Cross Validation", add=TRUE, xlab="probes occurence")
+legend("bottomright", col=1:2, c("Nested train", "Validation"), pch=1)
+```
+
+
+
+
+# Session Information
+
+```{r, results="verbatim"}
+end_time = Sys.time()
+print(paste0("Execution time for vignette : ", end_time - start_time))
+sessionInfo()
+```

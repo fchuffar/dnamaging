@@ -244,28 +244,10 @@ plot(Ytest , predTe, xlab="Chronological Age", ylab="Predicted Age", main=paste0
 
 
 
-```{r glmnet::glmnet memoisation, echo=FALSE}
-# model_factory_glmnet, it produces custom model object based on list by calling glmnet::glmnet function
-if (!exists("mmodel_factory_glmnet")) {
-  model_factory_glmnet = function(idx_train, y_key, alpha=alpha, lambda=lambda) {
-    x = mget_full_cpg_matrix(gse, idx_train, idx_cpg)
-    y = mget_df_preproc(gse)[idx_train,y_key]
-    m = glmnet::glmnet(x=x, y=y, alpha=alpha, lambda=lambda, standardize=TRUE) 
-    idx = rownames(m$beta)[m$beta@i+1]
-    coeff=data.frame(probes=idx, beta=m$beta[idx,])
-    rownames(coeff) = idx
-    ret = list(Intercept=m$a0, coeff=coeff)
-    ret$name = paste0("cvaglmnet (a=", signif(alpha,3), ", l=", signif(lambda,3), ")")
-    # ret$glmmod = m
-    return(ret)
-  }
-  mmodel_factory_glmnet = memoise::memoise(model_factory_glmnet, cache = cachem::cache_mem(max_size = 10*1024 * 1024^2))
-}
-```
 
 
 ```{r instanciate best_model_cvaglmnet}
-m = mmodel_factory_glmnet(idx_train=idx_train, y_key=y_key, alpha=best_model_cvaglmnet_params$alpha, lambda=best_model_cvaglmnet_params$lambda) 
+m = mmodel_factory_glmnet(idx_train=idx_train, y_key=y_key, alpha=best_model_cvaglmnet_params$alpha, lambda=best_model_cvaglmnet_params$lambda, gse=gse, idx_cpg=idx_cpg) 
 
 # build model
 predTr = Xtrain[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
@@ -359,7 +341,7 @@ bs_func = function(i, idx_train, best_model_cvaglmnet_params) { #epimedtools to 
   # print(best_model_cvaglmnet_params)
   alpha = best_model_cvaglmnet_params$alpha
   lambda = best_model_cvaglmnet_params$lambda
-  models_bs = mmodel_factory_glmnet(idx_bstrain, y_key, alpha=alpha, lambda=lambda) 
+  models_bs = mmodel_factory_glmnet(idx_bstrain, y_key, alpha=alpha, lambda=lambda, gse=gse, idx_cpg=idx_cpg) 
   # For each bootstrap, capture all probes use in the model 
   probes = rownames(models_bs$coeff)
   return(probes)
@@ -426,44 +408,6 @@ RMSE = function(data_truth, data_pred) {
     return(sqrt(mean((data_truth - data_pred)^2)))
 }
 
-if (!exists("mcall_lm_mod")) {
-  call_lm_mod = function(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, fold) {
-
-
-    # # replace lm by cv.glmnet(alpha=0, )
-    # m = lm(formula(paste0(y_key,"~0+",paste0(tmp_probes, collapse="+"))), data=sub_df[tmp_idx_train,])
-    # train_pred = predict(m, sub_df[tmp_idx_train,], type="response")
-    # train_truth = sub_df[tmp_idx_train, y_key]
-    # train_err = RMSE(train_truth, train_pred)
-    # test_pred = predict(m, sub_df[tmp_idx_test,], type="response")
-    # test_truth = sub_df[tmp_idx_test, y_key]
-    # test_err = RMSE(test_truth, test_pred)
-
-    tmp_Xtrain = as.matrix(sub_df[tmp_idx_train, tmp_probes])
-    tmp_Ytrain = sub_df[tmp_idx_train, y_key]
-    tmp_Xtest = as.matrix(sub_df[tmp_idx_test, tmp_probes])
-    tmp_Ytest = sub_df[tmp_idx_test, y_key]
-    m = glmnet::cv.glmnet(x=tmp_Xtrain, y=tmp_Ytrain, alpha=0, type.measure="mse", standardize=TRUE)
-
-    train_pred = predict(m, tmp_Xtrain, type="response")
-    train_truth = tmp_Ytrain
-    train_err = RMSE(train_truth, train_pred)
-    test_pred = predict(m, tmp_Xtest, type="response")
-    test_truth = tmp_Ytest
-    test_err = RMSE(test_truth, test_pred)
-
-    # print(paste0("nb_probes:", length(tmp_probes), ", train_err: ", signif(train_err, 3), ", test_err: ", signif(test_err, 3)))
-    ret = data.frame(
-      occurence=occ, 
-      nb_probes=length(tmp_probes), 
-      train_err=train_err, 
-      test_err=test_err,
-      fold=fold
-    )
-  }
-  mcall_lm_mod = memoise::memoise(call_lm_mod)
-}
-
 
 pb_occ_tab = sort(table(unlist(bs_probes))) # probe occurence
 
@@ -493,7 +437,7 @@ stats = epimedtools::monitored_apply(mod=1, t(t(iterator)), 1, function(occ) {
     print(fold)
     tmp_idx_train = folds[[fold]]$idx_train
     tmp_idx_test = folds[[fold]]$idx_test
-    ret = mcall_lm_mod(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, fold)
+    ret = mcall_glmnet_mod(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, fold)
     return(ret)
   })
   stats = do.call(rbind, stats)

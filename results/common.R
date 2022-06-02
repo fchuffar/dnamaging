@@ -14,6 +14,52 @@ if (!exists("mget_full_cpg_matrix")) {
 
 
 
+# model_factory_glmnet, it produces custom model object based on list by calling glmnet::glmnet function
+if (!exists("mmodel_factory_glmnet")) {
+  model_factory_glmnet = function(idx_train, y_key, alpha, lambda, gse, idx_cpg) {
+    x = mget_full_cpg_matrix(gse, idx_train, idx_cpg)
+    y = mget_df_preproc(gse)[idx_train,y_key]
+    m = glmnet::glmnet(x=x, y=y, alpha=alpha, lambda=lambda, standardize=TRUE) 
+    idx = rownames(m$beta)[m$beta@i+1]
+    coeff=data.frame(probes=idx, beta=m$beta[idx,])
+    rownames(coeff) = idx
+    ret = list(Intercept=m$a0, coeff=coeff)
+    ret$name = paste0("cvaglmnet (a=", signif(alpha,3), ", l=", signif(lambda,3), ")")
+    # ret$glmmod = m
+    return(ret)
+  }
+  mmodel_factory_glmnet = memoise::memoise(model_factory_glmnet, cache = cachem::cache_mem(max_size = 10*1024 * 1024^2))
+}
+
+
+if (!exists("mcall_glmnet_mod")) {
+  call_glmnet_mod = function(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, fold, sub_df) {
+
+    tmp_Xtrain = as.matrix(sub_df[tmp_idx_train, tmp_probes])
+    tmp_Ytrain = sub_df[tmp_idx_train, y_key]
+    tmp_Xtest = as.matrix(sub_df[tmp_idx_test, tmp_probes])
+    tmp_Ytest = sub_df[tmp_idx_test, y_key]
+    m = glmnet::cv.glmnet(x=tmp_Xtrain, y=tmp_Ytrain, alpha=0, type.measure="mse", standardize=TRUE)
+
+    train_pred = predict(m, tmp_Xtrain, type="response")
+    train_truth = tmp_Ytrain
+    train_err = RMSE(train_truth, train_pred)
+    test_pred = predict(m, tmp_Xtest, type="response")
+    test_truth = tmp_Ytest
+    test_err = RMSE(test_truth, test_pred)
+
+    # print(paste0("nb_probes:", length(tmp_probes), ", train_err: ", signif(train_err, 3), ", test_err: ", signif(test_err, 3)))
+    ret = data.frame(
+      occurence=occ, 
+      nb_probes=length(tmp_probes), 
+      train_err=train_err, 
+      test_err=test_err,
+      fold=fold
+    )
+  }
+  mcall_glmnet_mod = memoise::memoise(call_glmnet_mod)
+}
+
 
 
 
