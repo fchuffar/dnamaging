@@ -517,6 +517,8 @@ We repete this method 500 times and, at the end, we select for our final model o
 ```{r plot_cv_each_bs, echo=FALSE, eval=TRUE}
 # # 3. plot
 stats$labs = factor(paste0(stats$occurence, "  (", stats$nb_probes, " probes)"))
+levels(stats$labs) = unique(stats$labs[order(stats$occurence)])
+
 layout(1,respect = TRUE)
 par(mar=c(10, 4.1, 4.1, 2.1))
 foo = boxplot(train_err~labs, data=stats, border=1, las=2, ylab="RMSE", main="Cross Validation for occurence min", xlab="")

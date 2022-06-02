@@ -1,2 +1,2 @@
 y_key = "Age"
-covariates = c("cmslimapuno")
+covariates = c("citynocms", "citycms")
