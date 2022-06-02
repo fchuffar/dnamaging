@@ -1,4 +1,4 @@
-rm(list = ls())
+# rm(list = ls())
 gse_eval = "GSE20067" # 27k Genome wide DNA methylation profiling of diabetic nephropathy in type 1 diabetes mellitus
 gse_train = "GSE41037"
 gse_given = paste0(gse_train, "given", gse_eval)
