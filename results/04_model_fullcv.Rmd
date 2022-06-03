@@ -293,6 +293,17 @@ lines(sapply(sort(unique(stats$occurence)), function(o) mean(stats[stats$occuren
 plot(sort(unique(stats$occurence)), sapply(sort(unique(stats$occurence)), function(o) mean(stats[stats$occurence==o,]$test_err)), lwd=3, col=2)
 
 
+w_size = 10
+stats$foccurence = ceiling(stats$occurence/w_size)*w_size
+
+x = sort(unique(stats$foccurence))
+y = sapply(sort(unique(stats$foccurence)), function(o) mean(stats[stats$foccurence==o,]$test_err))
+y1se = sapply(sort(unique(stats$foccurence)), function(o) sd(stats[stats$foccurence==o,]$test_err) / sqrt(length(stats[stats$foccurence==o,]$test_err)))
+plot(x, y, lwd=3, col=2)
+lines(x, y+y1se, lwd=3, col=2)
+lines(x, y-y1se, lwd=3, col=2)
+
+
 ```
 
 

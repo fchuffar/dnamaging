@@ -61,7 +61,7 @@ if (s_tmp$platform_name=="GPL8490") {
   pfepic = data.frame(getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b4.hg19))
   s$platform = pfepic  
 } else {
-  stop(paste0("platform problem ", gse, " ", s_tmp$platform_namE)
+  stop(paste0("platform problem ", gse, " ", s_tmp$platform_namE))
 }
 
 # Check
