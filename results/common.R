@@ -33,13 +33,13 @@ if (!exists("mmodel_factory_glmnet")) {
 
 
 if (!exists("mcall_glmnet_mod")) {
-  call_glmnet_mod = function(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, fold, sub_df) {
+  call_glmnet_mod = function(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, fold, sub_df, alpha=0) {
 
     tmp_Xtrain = as.matrix(sub_df[tmp_idx_train, tmp_probes])
     tmp_Ytrain = sub_df[tmp_idx_train, y_key]
     tmp_Xtest = as.matrix(sub_df[tmp_idx_test, tmp_probes])
     tmp_Ytest = sub_df[tmp_idx_test, y_key]
-    m = glmnet::cv.glmnet(x=tmp_Xtrain, y=tmp_Ytrain, alpha=0, type.measure="mse", standardize=TRUE)
+    m = glmnet::cv.glmnet(x=tmp_Xtrain, y=tmp_Ytrain, alpha=alpha, type.measure="mse", standardize=TRUE)
 
     train_pred = predict(m, tmp_Xtrain, type="response")
     train_truth = tmp_Ytrain

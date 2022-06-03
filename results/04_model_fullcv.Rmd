@@ -18,7 +18,7 @@ source("common.R")
 
 ```{r params_default, echo=FALSE}
 source("params_default.R")
-n_boot = 50
+n_boot = 500
 occ_optim = 50
 ```
 
@@ -49,7 +49,7 @@ if (!exists("mcvaglmnet")) {
   cvaglmnet = function(idx_train, y_key) {
     x = mget_full_cpg_matrix(gse, idx_train, idx_cpg)
     y = mget_df_preproc(gse)[idx_train, y_key] # service. Design Patterns, Gamma et al. 
-    modelcva = glmnetUtils::cva.glmnet(x=x, y=y, type.measure="mse", standardize=TRUE,  alpha = c(0.125))
+    modelcva = glmnetUtils::cva.glmnet(x=x, y=y, type.measure="mse", standardize=TRUE,  alpha = 0.2)
     return(modelcva)  
   }
   # Use parallel::makeCluster is not compatible with memoisation.
@@ -191,8 +191,8 @@ bs_func = function(i, idx_train, best_model_cvaglmnet_params) { #epimedtools to 
 
 ```{r cv_bs, results="hide"}
 #  1. folds
-n_folds = 6
-n_seeds = 1
+n_folds = 3
+n_seeds = 6
 fold_size = floor(length(idx_train) / n_folds)
 
 folds = lapply(1:n_seeds, function(seed) {
@@ -240,7 +240,7 @@ stats = lapply(1:length(folds), function(fold) {
 
 
   pb_occ_tab = sort(table(unlist(bs_probes))) # probe occurence
-  iterator = unique(sort(pb_occ_tab[pb_occ_tab>=n_boot/2]))
+  iterator = unique(sort(pb_occ_tab[pb_occ_tab>=n_boot/6]))
   tmp_probes = names(pb_occ_tab)[pb_occ_tab>=min(iterator)]
   sub_df = df[idx_train, c(tmp_probes, y_key)] 
     
@@ -284,6 +284,15 @@ par(mar=c(10, 4.1, 4.1, 2.1))
 foo = boxplot(train_err~labs, data=stats, border=1, las=2, ylab="RMSE", main="Cross Validation for occurence min", xlab="", ylim=c(0, max(stats$test_err)))
 bar = boxplot( test_err~labs, data=stats, border=adjustcolor(2, alpha.f=.5), col=adjustcolor("grey", alpha.f=.1), las=2, ylab="RMSE", main="Cross Validation", add=TRUE, xlab="probes occurence")
 legend("bottomright", col=1:2, c("Nested train", "Validation"), pch=1)
+
+
+
+lines(sapply(sort(unique(stats$occurence)), function(o) mean(stats[stats$occurence==o,]$train_err)), lwd=3)
+lines(sapply(sort(unique(stats$occurence)), function(o) mean(stats[stats$occurence==o,]$test_err)), lwd=3, col=2)
+
+plot(sort(unique(stats$occurence)), sapply(sort(unique(stats$occurence)), function(o) mean(stats[stats$occurence==o,]$test_err)), lwd=3, col=2)
+
+
 ```
 
 
