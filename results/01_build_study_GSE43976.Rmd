@@ -43,13 +43,17 @@ e = s_tmp$get_exp_grp()
 dim(e)
 head(e)
 
-e$tobacco = e$smoking
+e$tobacco = e$"smoking_evernever:ch1"
 e$tobacco = as.factor(e$tobacco)
-levels(e$tobacco) = c("never", "former", "current")
-e$age = as.numeric(e$"age:ch1")
+e$age = as.numeric(e$"age_sampling:ch1")
 e$gender = as.factor(e$"gender:ch1")
 
+e = e[!is.na(e$tobacco),]
 
+table(e$gender, e$tobacco, useNA="ifany")
+
+e[,c("gender","age")]
+d = d[,rownames(e)]
 # data
 s = epimedtools::create_study()
 s$data = d
