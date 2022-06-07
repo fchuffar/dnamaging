@@ -17,6 +17,7 @@ source("common.R")
 ```
 
 ```{r params}
+gse = "GSE106648"
 source("params_default.R")
 ```
 
@@ -36,15 +37,21 @@ methylation study for `r gse`.
 print(paste0("#####", gse))
 s_tmp = epimedtools::create_study()
 s_tmp$gse = gse
-foo = s_tmp$get_data(dest_dir="~/projects/datashare")
-dim(foo)
-s = epimedtools::create_study()
+d = s_tmp$get_data(dest_dir="~/projects/datashare")
+dim(d)
+e = s_tmp$get_exp_grp()
+dim(e)
+  
+e$gender = as.factor(e$"gender:ch1")
+e$age = as.numeric(e$"age:ch1")
+e$tobacco = e$smoking
+e$tobacco = as.factor(e$tobacco)
+
+
 # data
-s$data = foo
-# exp_grp from epimed_DB
-url = paste0("http://epimed.univ-grenoble-alpes.fr/database/parameters/",gse)
-df1 = read.csv2(url, header=TRUE, sep=";", stringsAsFactors=FALSE, dec=".", na.strings="", row.names=1)
-s$exp_grp = df1
+s = epimedtools::create_study()
+s$data = d
+s$exp_grp = e
 if (s_tmp$platform_name=="GPL8490") {
   print("27k")
   library(IlluminaHumanMethylation27kanno.ilmn12.hg19)
