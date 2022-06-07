@@ -1,0 +1,119 @@
+---
+title: "Build Illumina methylation study"
+author: "Florent Chuffart"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+
+```{r echo=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide")
+source("common.R")
+```
+
+```{r params}
+gse = "GSE50660"
+source("params_default.R")
+```
+
+
+# Purpose
+
+This vignette 
+
+- build
+- check
+- save 
+
+methylation study for `r gse`.
+
+```{r, echo=FALSE, eval=TRUE}
+# Build
+print(paste0("#####", gse))
+s_tmp = epimedtools::create_study()
+s_tmp$gse = gse
+d = s_tmp$get_data(dest_dir="~/projects/datashare")
+dim(d)
+e = s_tmp$get_exp_grp()
+dim(e)
+head(e)
+
+e$tobacco = e$smoking
+e$tobacco = as.factor(e$tobacco)
+levels(e$tobacco) = c("never", "former", "current")
+e$age = as.numeric(e$"age:ch1")
+e$gender = as.factor(e$"gender:ch1")
+
+
+# data
+s = epimedtools::create_study()
+s$data = d
+s$exp_grp = e
+if (s_tmp$platform_name=="GPL8490") {
+  print("27k")
+  library(IlluminaHumanMethylation27kanno.ilmn12.hg19)
+  pf27k = data.frame(getAnnotation(IlluminaHumanMethylation27kanno.ilmn12.hg19))
+  s$platform = pf27k
+} else if (s_tmp$platform_name=="GPL13534") {
+  print("450k")
+  library(IlluminaHumanMethylation450kanno.ilmn12.hg19)
+  pf450k = data.frame(getAnnotation(IlluminaHumanMethylation450kanno.ilmn12.hg19))
+  s$platform = pf450k  
+} else if (s_tmp$platform_name=="GPL23976") {
+  print("epic")
+  library(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)  
+  pfepic = data.frame(getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b4.hg19))
+  s$platform = pfepic  
+} else {
+  stop(paste0("platform problem ", gse, " ", s_tmp$platform_namE))
+}
+
+# Check
+dim(s$data)
+dim(s$exp_grp)
+s$data = s$data[,!colnames(s$data)%in%sample_blacklist]
+s$exp_grp = s$exp_grp[!rownames(s$exp_grp)%in%sample_blacklist,]
+dim(s$data)
+dim(s$exp_grp)
+if (sum(!rownames(s$exp_grp) %in% colnames(s$data)) !=0 ) {stop(paste0("problem exp_grp names ", gse))}
+s$exp_grp = s$exp_grp[colnames(s$data),]
+if (sum(rownames(s$exp_grp) != colnames(s$data)) !=0 ) {stop(paste0("problem exp_grp names ", gse))}
+
+dim(s$platform)
+dim(s$data)
+if (sum(!rownames(s$data) %in% rownames(s$platform)) !=0 ) {warning(paste0("problem pf names ", gse))}
+s$platform = s$platform[intersect(rownames(s$data), rownames(s$platform)),]
+s$data = s$data[rownames(s$platform),]
+if (sum(rownames(s$data) != rownames(s$platform)) !=0 ) {stop(paste0("problem pf names ", gse))}
+
+# covariates
+for (cov in covariates) {
+  if (is.character(s$exp_grp[[cov]])) {
+    s$exp_grp[[cov]] = as.factor(s$exp_grp[[cov]])
+  }
+}
+
+```{r results="verbatim"}
+# Save
+s_filename = paste0("study_", gse, ".rds")
+print(paste0("Writing ", s_filename, "..."))
+s$save(s_filename)
+df = cbind(s$exp_grp, t(s$data[,rownames(s$exp_grp)]))
+
+df_filename = paste0("df_", gse, ".rds")
+print(paste0("Writing ", df_filename, "..."))
+saveRDS(df, df_filename)
+dim(df)
+```
+
+# Session Information
+
+```{r, results="verbatim"}
+sessionInfo()
+```
+

@@ -23,6 +23,7 @@ occ_optim = 50
 ```
 
 ```{r building_indexes, echo=FALSE}
+print("Loading data...")
 df = mreadRDS(paste0("df_preproc_",gse,".rds"))
 idx_samples = rownames(df)
 markers_start = grep("cg",colnames(df))[1]
@@ -46,7 +47,7 @@ if (!exists("n_boot")) n_boot = 500
 
 ```{r cva.glmnet call, eval=TRUE, echo=TRUE}
 if (!exists("mcvaglmnet")) {
-  cvaglmnet = function(idx_train, y_key) {
+  cvaglmnet = function(idx_train, y_key, gse, idx_cpg) {
     x = mget_full_cpg_matrix(gse, idx_train, idx_cpg)
     y = mget_df_preproc(gse)[idx_train, y_key] # service. Design Patterns, Gamma et al. 
     modelcva = glmnetUtils::cva.glmnet(x=x, y=y, type.measure="mse", standardize=TRUE,  alpha = 0.2)
@@ -59,6 +60,8 @@ if (!exists("mcvaglmnet")) {
   mcvaglmnet = memoise::memoise(cvaglmnet)
 } # Memoise for cvaglmnet
 
+print("Building modelcva...")
+# modelcva = mcvaglmnet(idx_train=idx_train, y_key=y_key, gse=gse, idx_cpg=idx_cpg)
 modelcva = mcvaglmnet(idx_train=idx_train, y_key=y_key)
 
 cvarecaps = data.frame(
@@ -192,7 +195,7 @@ bs_func = function(i, idx_train, best_model_cvaglmnet_params) { #epimedtools to 
 ```{r cv_bs, results="hide"}
 #  1. folds
 n_folds = 3
-n_seeds = 6
+n_seeds = 2
 fold_size = floor(length(idx_train) / n_folds)
 
 folds = lapply(1:n_seeds, function(seed) {
