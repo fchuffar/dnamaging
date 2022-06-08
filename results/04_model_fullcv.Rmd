@@ -46,23 +46,8 @@ if (!exists("n_boot")) n_boot = 500
 
 
 ```{r cva.glmnet call, eval=TRUE, echo=TRUE}
-if (!exists("mcvaglmnet")) {
-  cvaglmnet = function(idx_train, y_key, gse, idx_cpg) {
-    x = mget_full_cpg_matrix(gse, idx_train, idx_cpg)
-    y = mget_df_preproc(gse)[idx_train, y_key] # service. Design Patterns, Gamma et al. 
-    modelcva = glmnetUtils::cva.glmnet(x=x, y=y, type.measure="mse", standardize=TRUE,  alpha = 0.2)
-    return(modelcva)  
-  }
-  # Use parallel::makeCluster is not compatible with memoisation.
-  # cl.cva = parallel::makeCluster(nb_cores,  type="FORK")
-  # modelcva = glmnetUtils::cva.glmnet(x=x, y=y, type.measure="mse", standardize=TRUE, outerParallel=cl.cva)
-  # parallel::stopCluster(cl.cva)
-  mcvaglmnet = memoise::memoise(cvaglmnet)
-} # Memoise for cvaglmnet
-
 print("Building modelcva...")
-# modelcva = mcvaglmnet(idx_train=idx_train, y_key=y_key, gse=gse, idx_cpg=idx_cpg)
-modelcva = mcvaglmnet(idx_train=idx_train, y_key=y_key)
+modelcva = mcvaglmnet(idx_train=idx_train, y_key=y_key, gse=gse, idx_cpg=idx_cpg)
 
 cvarecaps = data.frame(
   lambda   = unlist(lapply(modelcva$modlist, "[[", "lambda")), 
@@ -243,14 +228,21 @@ stats = lapply(1:length(folds), function(fold) {
 
 
   pb_occ_tab = sort(table(unlist(bs_probes))) # probe occurence
-  iterator = unique(sort(pb_occ_tab[pb_occ_tab>=n_boot/6]))
+  # print(pb_occ_tab)  
+  # barplot(table(pb_occ_tab))
+  # barplot(cumsum(rev(table(pb_occ_tab))), las=2,
+  #   xlab="cumulated occurence",
+  #   main=paste0("Cumulated probes occurence distribution")
+  # ) # barplot of occurence of each probes across bootstraps
+  # iterator = unique(sort(pb_occ_tab[pb_occ_tab>=n_boot/10]))
+  iterator = unique(sort(pb_occ_tab))
   tmp_probes = names(pb_occ_tab)[pb_occ_tab>=min(iterator)]
   sub_df = df[idx_train, c(tmp_probes, y_key)] 
     
   stats = epimedtools::monitored_apply(mod=1, t(t(iterator)), 1, function(occ, pb_occ_tab, tmp_idx_train, tmp_idx_test, y_key, tmp_probes, fold, sub_df) {
     print(occ)
     tmp_probes = names(pb_occ_tab)[pb_occ_tab>=occ]
-    ret = mcall_glmnet_mod(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, fold, sub_df)
+    ret = mcall_glmnet_mod(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, fold, sub_df, alpha=best_model_cvaglmnet_params$alpha)
     return(ret)
   }, pb_occ_tab=pb_occ_tab, tmp_idx_train=tmp_idx_train, tmp_idx_test=tmp_idx_test, y_key=y_key, tmp_probes=tmp_probes, fold=fold, sub_df=sub_df)
   stats = do.call(rbind, stats)
@@ -282,7 +274,7 @@ stats$labs = paste0(stats$occurence, " (", sapply(stats$occurence, function(o) f
 stats$labs = factor(paste0(stats$occurence, " (", sapply(stats$occurence, function(o) floor(mean(stats[stats$occurence==o,]$nb_probes))), " probes)"), levels=unique(stats$labs[order(stats$occurence)]))
 # stats$labs = paste0(stats$nb_probes, " (", stats$nb_probes, " probes)")
 # stats$labs = factor(paste0(stats$nb_probes, " (", stats$nb_probes, " probes)"),levels=unique(stats$labs[order(stats$nb_probes)]))
-layout(1,respect = TRUE)
+layout(matrix(1:2,1), respect=TRUE)
 par(mar=c(10, 4.1, 4.1, 2.1))
 foo = boxplot(train_err~labs, data=stats, border=1, las=2, ylab="RMSE", main="Cross Validation for occurence min", xlab="", ylim=c(0, max(stats$test_err)))
 bar = boxplot( test_err~labs, data=stats, border=adjustcolor(2, alpha.f=.5), col=adjustcolor("grey", alpha.f=.1), las=2, ylab="RMSE", main="Cross Validation", add=TRUE, xlab="probes occurence")
@@ -293,7 +285,6 @@ legend("bottomright", col=1:2, c("Nested train", "Validation"), pch=1)
 lines(sapply(sort(unique(stats$occurence)), function(o) mean(stats[stats$occurence==o,]$train_err)), lwd=3)
 lines(sapply(sort(unique(stats$occurence)), function(o) mean(stats[stats$occurence==o,]$test_err)), lwd=3, col=2)
 
-plot(sort(unique(stats$occurence)), sapply(sort(unique(stats$occurence)), function(o) mean(stats[stats$occurence==o,]$test_err)), lwd=3, col=2)
 
 
 w_size = 10
@@ -302,7 +293,7 @@ stats$foccurence = ceiling(stats$occurence/w_size)*w_size
 x = sort(unique(stats$foccurence))
 y = sapply(sort(unique(stats$foccurence)), function(o) mean(stats[stats$foccurence==o,]$test_err))
 y1se = sapply(sort(unique(stats$foccurence)), function(o) sd(stats[stats$foccurence==o,]$test_err) / sqrt(length(stats[stats$foccurence==o,]$test_err)))
-plot(x, y, lwd=3, col=2)
+plot(x, y, lwd=3, col=2, main=gse)
 lines(x, y+y1se, lwd=3, col=2)
 lines(x, y-y1se, lwd=3, col=2)
 

@@ -60,6 +60,19 @@ if (!exists("mcall_glmnet_mod")) {
   mcall_glmnet_mod = memoise::memoise(call_glmnet_mod)
 }
 
+if (!exists("mcvaglmnet")) {
+  cvaglmnet = function(idx_train, y_key, gse, idx_cpg) {
+    x = mget_full_cpg_matrix(gse, idx_train, idx_cpg)
+    y = mget_df_preproc(gse)[idx_train, y_key] # service. Design Patterns, Gamma et al. 
+    modelcva = glmnetUtils::cva.glmnet(x=x, y=y, type.measure="mse", standardize=TRUE,  alpha=0.2)
+    return(modelcva)  
+  }
+  # Use parallel::makeCluster is not compatible with memoisation.
+  # cl.cva = parallel::makeCluster(nb_cores,  type="FORK")
+  # modelcva = glmnetUtils::cva.glmnet(x=x, y=y, type.measure="mse", standardize=TRUE, outerParallel=cl.cva)
+  # parallel::stopCluster(cl.cva)
+  mcvaglmnet = memoise::memoise(cvaglmnet)
+} # Memoise for cvaglmnet
 
 
 

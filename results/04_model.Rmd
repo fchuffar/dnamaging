@@ -118,21 +118,8 @@ if (!exists("n_boot")) n_boot = 500
 
 
 ```{r cva.glmnet call, eval=TRUE, echo=TRUE}
-if (!exists("mcvaglmnet")) {
-  cvaglmnet = function(idx_train, y_key) {
-    x = mget_full_cpg_matrix(gse, idx_train, idx_cpg)
-    y = mget_df_preproc(gse)[idx_train, y_key] # service. Design Patterns, Gamma et al. 
-    modelcva = glmnetUtils::cva.glmnet(x=x, y=y, type.measure="mse", standardize=TRUE)
-    return(modelcva)  
-  }
-  # Use parallel::makeCluster is not compatible with memoisation.
-  # cl.cva = parallel::makeCluster(nb_cores,  type="FORK")
-  # modelcva = glmnetUtils::cva.glmnet(x=x, y=y, type.measure="mse", standardize=TRUE, outerParallel=cl.cva)
-  # parallel::stopCluster(cl.cva)
-  mcvaglmnet = memoise::memoise(cvaglmnet)
-} # Memoise for cvaglmnet
-
-modelcva = mcvaglmnet(idx_train=idx_train, y_key=y_key)
+print("Building modelcva...")
+modelcva = mcvaglmnet(idx_train=idx_train, y_key=y_key, gse=gse, idx_cpg=idx_cpg)
 
 cvarecaps = data.frame(
   lambda   = unlist(lapply(modelcva$modlist, "[[", "lambda")), 

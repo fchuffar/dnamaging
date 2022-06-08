@@ -46,10 +46,11 @@ Ytest = mget_df_preproc(gse)[idx_test,y_key]
 
 
 ```{r loading models}
-models = mreadRDS(paste0("models_", gse_m, ".rds"))
 litterature_models = mreadRDS("litterature_models.rds")
-litterature_models = list(litterature_models$hannum_model_mc,litterature_models$horvath_model_mc)
-models = c(models,litterature_models)
+models = list(litterature_models$hannum_model_mc, litterature_models$horvath_model_mc)
+if (!is.null(gse_m)) {
+  models = c(mreadRDS(paste0("models_", gse_m, ".rds")), models)  
+}
 ```
 
 # Model Evaluation
