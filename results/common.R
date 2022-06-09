@@ -8,7 +8,28 @@ if (!exists("mget_df_preproc")) {
   })
 }
 if (!exists("mget_full_cpg_matrix")) {
-  get_full_cpg_matrix = function(gse, idx_smp, idx_cpg){as.matrix(mget_df_preproc(gse)[idx_smp, idx_cpg])}
+  get_full_cpg_matrix = function(gse, idx_smp=NULL, idx_cpg=NULL){
+    df = mget_df_preproc(gse)
+    if (is.null(idx_smp) & is.null(idx_cpg)) {
+      # print("is.null(idx_smp) & is.null(idx_cpg)")
+      markers_start = grep("^cg",colnames(df))[1]
+      tmp_idx_cpg = colnames(df)[markers_start:ncol(df)]
+      ret = as.matrix(df[, tmp_idx_cpg])      
+    } else {
+      if (is.null(idx_cpg)) {
+        # here idx_smp is not null
+        # print("is.null(idx_cpg)")
+        ret = mget_full_cpg_matrix(gse)
+        ret = ret[idx_smp,]
+      } else {
+        # here idx_smp could be null
+        # print("!is.null(idx_cpg)")
+        ret = mget_full_cpg_matrix(gse, idx_smp)
+        ret = ret[, idx_cpg]
+      }      
+    }
+    return(ret)
+  }
   mget_full_cpg_matrix = memoise::memoise(get_full_cpg_matrix, cache = cachem::cache_mem(max_size = 10*1024 * 1024^2))
 }
 
@@ -16,12 +37,12 @@ if (!exists("mget_full_cpg_matrix")) {
 
 # model_factory_glmnet, it produces custom model object based on list by calling glmnet::glmnet function
 if (!exists("mmodel_factory_glmnet")) {
-  model_factory_glmnet = function(idx_train, y_key, alpha, lambda, gse, idx_cpg) {
+  model_factory_glmnet = function(idx_train, y_key, alpha, lambda, gse, idx_cpg=NULL) {
     x = mget_full_cpg_matrix(gse, idx_train, idx_cpg)
     y = mget_df_preproc(gse)[idx_train,y_key]
-    m = glmnet::glmnet(x=x, y=y, alpha=alpha, lambda=lambda, standardize=TRUE) 
+    m = glmnet::glmnet(x=x, y=y, alpha=alpha, lambda=lambda, standardize=TRUE)
     idx = rownames(m$beta)[m$beta@i+1]
-    coeff=data.frame(probes=idx, beta=m$beta[idx,])
+    coeff = data.frame(probes=idx, beta=m$beta[idx,])
     rownames(coeff) = idx
     ret = list(Intercept=m$a0, coeff=coeff)
     ret$name = paste0("cvaglmnet (a=", signif(alpha,3), ", l=", signif(lambda,3), ")")
@@ -29,17 +50,24 @@ if (!exists("mmodel_factory_glmnet")) {
     return(ret)
   }
   mmodel_factory_glmnet = memoise::memoise(model_factory_glmnet, cache = cachem::cache_mem(max_size = 10*1024 * 1024^2))
+  # source(knitr::purl("04_model_fullcv.Rmd"))
 }
 
 
 if (!exists("mcall_glmnet_mod")) {
-  call_glmnet_mod = function(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, fold, sub_df, alpha=0) {
+  call_glmnet_mod = function(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, fold, sub_df, alpha=0, lambda=NULL) {
 
     tmp_Xtrain = as.matrix(sub_df[tmp_idx_train, tmp_probes])
     tmp_Ytrain = sub_df[tmp_idx_train, y_key]
     tmp_Xtest = as.matrix(sub_df[tmp_idx_test, tmp_probes])
     tmp_Ytest = sub_df[tmp_idx_test, y_key]
-    m = glmnet::cv.glmnet(x=tmp_Xtrain, y=tmp_Ytrain, alpha=alpha, type.measure="mse", standardize=TRUE)
+    if (is.null(lambda)) {
+      print("glmnet::cv.glmnet")
+      m = glmnet::cv.glmnet(x=tmp_Xtrain, y=tmp_Ytrain, alpha=alpha, type.measure="mse", standardize=TRUE)      
+    } else {
+      print("glmnet::glmnet")
+      m = glmnet::glmnet(x=tmp_Xtrain, y=tmp_Ytrain, alpha=alpha, lambda=lambda, type.measure="mse", standardize=TRUE) 
+    }
 
     train_pred = predict(m, tmp_Xtrain, type="response")
     train_truth = tmp_Ytrain
@@ -61,10 +89,10 @@ if (!exists("mcall_glmnet_mod")) {
 }
 
 if (!exists("mcvaglmnet")) {
-  cvaglmnet = function(idx_train, y_key, gse, idx_cpg) {
+  cvaglmnet = function(idx_train, y_key, gse, idx_cpg=NULL, alpha=seq(0, 1, len = 11)^3) {
     x = mget_full_cpg_matrix(gse, idx_train, idx_cpg)
     y = mget_df_preproc(gse)[idx_train, y_key] # service. Design Patterns, Gamma et al. 
-    modelcva = glmnetUtils::cva.glmnet(x=x, y=y, type.measure="mse", standardize=TRUE,  alpha=0.2)
+    modelcva = glmnetUtils::cva.glmnet(x=x, y=y, type.measure="mse", standardize=TRUE,  alpha=alpha)
     return(modelcva)  
   }
   # Use parallel::makeCluster is not compatible with memoisation.

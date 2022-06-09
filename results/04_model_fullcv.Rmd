@@ -18,7 +18,7 @@ source("common.R")
 
 ```{r params_default, echo=FALSE}
 source("params_default.R")
-n_boot = 500
+n_boot = 100
 occ_optim = 50
 ```
 
@@ -26,9 +26,9 @@ occ_optim = 50
 print("Loading data...")
 df = mreadRDS(paste0("df_preproc_",gse,".rds"))
 idx_samples = rownames(df)
-markers_start = grep("cg",colnames(df))[1]
-idx_clinicals = colnames(df)[1:(markers_start-1)]
+markers_start = grep("^cg",colnames(df))[1]
 idx_cpg = colnames(df)[markers_start:ncol(df)]
+idx_clinicals = colnames(df)[1:(markers_start-1)]
 ```
 
 # Parameters 
@@ -47,7 +47,7 @@ if (!exists("n_boot")) n_boot = 500
 
 ```{r cva.glmnet call, eval=TRUE, echo=TRUE}
 print("Building modelcva...")
-modelcva = mcvaglmnet(idx_train=idx_train, y_key=y_key, gse=gse, idx_cpg=idx_cpg)
+modelcva = mcvaglmnet(idx_train=idx_train, y_key=y_key, gse=gse, idx_cpg=idx_cpg, alpha=.2)
 
 cvarecaps = data.frame(
   lambda   = unlist(lapply(modelcva$modlist, "[[", "lambda")), 
@@ -154,33 +154,18 @@ bs_func = function(i, idx_train, best_model_cvaglmnet_params) { #epimedtools to 
   # print(best_model_cvaglmnet_params)
   alpha = best_model_cvaglmnet_params$alpha
   lambda = best_model_cvaglmnet_params$lambda
-  models_bs = mmodel_factory_glmnet(idx_bstrain, y_key, alpha=alpha, lambda=lambda, gse=gse, idx_cpg=idx_cpg) 
+  models_bs = mmodel_factory_glmnet(idx_bstrain, y_key, alpha=alpha, lambda=lambda, gse=gse) 
   # For each bootstrap, capture all probes use in the model 
   probes = rownames(models_bs$coeff)
   return(probes)
 }
 
-# USE_PARAPPLY = FALSE
-#
-# if (USE_PARAPPLY) {
-#   print("bootstrap using parallel::parApply...")
-#   if (!exists("cl_bs")) {
-#     cl_bs = parallel::makeCluster(parallel::detectCores(),  type="PSOCK")
-#     # parallel::stopCluster(cl_bs)
-#   }
-#   bs = parallel::parApply(cl_bs, t(t(1:n_boot)), 1, bs_func, idx_train=idx_train, best_model_cvaglmnet_params=best_model_cvaglmnet_params)
-# } else {
-#   print("bootstrap using epimedtools::monitored_apply")
-#   bs_probes = epimedtools::monitored_apply(mod=1, t(t(1:n_boot)), 1, bs_func, idx_train=idx_train, best_model_cvaglmnet_params=best_model_cvaglmnet_params)
-# }
-#
-# length(bs_probes)
 ```
 
 ```{r cv_bs, results="hide"}
 #  1. folds
 n_folds = 3
-n_seeds = 2
+n_seeds = 1
 fold_size = floor(length(idx_train) / n_folds)
 
 folds = lapply(1:n_seeds, function(seed) {
@@ -242,7 +227,7 @@ stats = lapply(1:length(folds), function(fold) {
   stats = epimedtools::monitored_apply(mod=1, t(t(iterator)), 1, function(occ, pb_occ_tab, tmp_idx_train, tmp_idx_test, y_key, tmp_probes, fold, sub_df) {
     print(occ)
     tmp_probes = names(pb_occ_tab)[pb_occ_tab>=occ]
-    ret = mcall_glmnet_mod(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, fold, sub_df, alpha=best_model_cvaglmnet_params$alpha)
+    ret = mcall_glmnet_mod(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, fold, sub_df, alpha=best_model_cvaglmnet_params$alpha, lambda=best_model_cvaglmnet_params$lambda)
     return(ret)
   }, pb_occ_tab=pb_occ_tab, tmp_idx_train=tmp_idx_train, tmp_idx_test=tmp_idx_test, y_key=y_key, tmp_probes=tmp_probes, fold=fold, sub_df=sub_df)
   stats = do.call(rbind, stats)

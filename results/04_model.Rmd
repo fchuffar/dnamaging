@@ -156,11 +156,12 @@ tmp_alphas = unlist(sapply(tmp_alphas, function(alpha) {
 }))
 
 if (!is.null(tmp_alphas)) {
-  cvrecaps = cvrecaps[cvrecaps$alpha%in%tmp_alphas,] 
-} 
+  sub_cvrecaps = cvrecaps[cvrecaps$alpha%in%tmp_alphas,] 
+} else {
+  sub_cvrecaps = cvrecaps
+}
 
-best_model_cvaglmnet_params = cvrecaps[cvrecaps$cvm==min(cvrecaps$cvm),][1,]
-best_model_cvaglmnet_params
+best_model_cvaglmnet_params = sub_cvrecaps[sub_cvrecaps$cvm==min(sub_cvrecaps$cvm),][1,]
 best_model_cvaglmnet_params
 ```
 
@@ -424,7 +425,7 @@ stats = epimedtools::monitored_apply(mod=1, t(t(iterator)), 1, function(occ) {
     print(fold)
     tmp_idx_train = folds[[fold]]$idx_train
     tmp_idx_test = folds[[fold]]$idx_test
-    ret = mcall_glmnet_mod(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, fold, sub_df)
+    ret = mcall_glmnet_mod(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, fold, sub_df, alpha=best_model_cvaglmnet_params$alpha)
     return(ret)
   })
   stats = do.call(rbind, stats)
@@ -457,10 +458,10 @@ bar = boxplot( test_err~labs, data=stats, border=adjustcolor(2, alpha.f=.5), col
 legend("bottomright", col=1:2, c("Nested train", "Validation"), pch=1)
 
 if (!is.null(occ_optim)) {
-  idx = which(occ_optim==as.numeric(do.call(rbind,strsplit(bar$names, " "))[,1]))
+  idx = which(as.numeric(do.call(rbind,strsplit(bar$names, " ")>=occ_optim)[,1]))
   best_params = bar$names[idx]
 } else {
-  idx = floor(ncol(bar$stats)*1)
+  idx = floor(ncol(bar$stats)*.5)
   best_params = bar$names[idx]
   occ_optim = as.numeric(strsplit(best_params, " ")[[1]][1])  
 }
