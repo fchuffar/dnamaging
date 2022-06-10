@@ -18,7 +18,7 @@ source("common.R")
 
 ```{r params_default, echo=FALSE}
 source("params_default.R")
-n_boot = 100
+n_boot = 500
 occ_optim = 50
 ```
 
@@ -191,7 +191,7 @@ RMSE = function(data_truth, data_pred) {
 
 
 stats = lapply(1:length(folds), function(fold) {
-  print(fold)
+  print(paste0("fold ", fold, "/", length(folds)))
   tmp_idx_train = folds[[fold]]$idx_train
   tmp_idx_test = folds[[fold]]$idx_test
   
@@ -225,7 +225,7 @@ stats = lapply(1:length(folds), function(fold) {
   sub_df = df[idx_train, c(tmp_probes, y_key)] 
     
   stats = epimedtools::monitored_apply(mod=1, t(t(iterator)), 1, function(occ, pb_occ_tab, tmp_idx_train, tmp_idx_test, y_key, tmp_probes, fold, sub_df) {
-    print(occ)
+    # print(occ)
     tmp_probes = names(pb_occ_tab)[pb_occ_tab>=occ]
     ret = mcall_glmnet_mod(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, fold, sub_df, alpha=best_model_cvaglmnet_params$alpha, lambda=best_model_cvaglmnet_params$lambda)
     return(ret)
