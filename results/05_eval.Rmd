@@ -21,6 +21,17 @@ source("common.R")
 source("params_default.R")
 ```
 
+In a conference to promote his article in NRG, Horvath introduces his epigenetic subject with the définition of a clock. 
+For him, a clock is an accurate marker for chronological age. 
+To precise his definition, he gives a definition of accuracy, saying a marker is accurate when you can have a R² > 0.8 for each independant data set including age between 0 and 100 yo.
+So he gives different exemple to confirm his definition, like :
+$$Telomere~size \sim age$$
+$$Protein~expression~level \sim age$$
+$$Gene~expression~level \sim age$$
+$$DNAm \sim age$$
+After giving all this examples of different clocks usable in different reviews, he says that the only model corresponding to his definition of clock and accuracy is his model : $$DNAm \sim age$$
+Useful when it is his model.
+So we decide to use epigenetic clocks to explains the chronological age. 
 
 ```{r building_indexes}
 df = mreadRDS(paste0("df_preproc_",gse,".rds"))
