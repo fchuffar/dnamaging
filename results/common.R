@@ -5,7 +5,7 @@ if (!exists("mget_df_preproc")) {
   mget_df_preproc = memoise::memoise(function(gse){
     df = readRDS(paste0("df_preproc_",gse,".rds"))
     return(df)
-  })
+  }, cache = cachem::cache_mem(max_size = 10*1024 * 1024^2))
 }
 if (!exists("mget_full_cpg_matrix")) {
   get_full_cpg_matrix = function(gse, idx_smp=NULL, idx_cpg=NULL){

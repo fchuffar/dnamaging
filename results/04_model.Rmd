@@ -1,5 +1,5 @@
 ---
-title: "Build prediction model"
+title: "Build predictive model"
 author: "Fabien Jossaud, Florent Chuffart"
 date: "`r Sys.Date()`"
 output: 

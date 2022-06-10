@@ -47,7 +47,7 @@ if (!exists("n_boot")) n_boot = 500
 
 ```{r cva.glmnet call, eval=TRUE, echo=TRUE}
 print("Building modelcva...")
-modelcva = mcvaglmnet(idx_train=idx_train, y_key=y_key, gse=gse, idx_cpg=idx_cpg, alpha=.2)
+modelcva = mcvaglmnet(idx_train=idx_train, y_key=y_key, gse=gse, idx_cpg=idx_cpg, alpha=.216)
 
 cvarecaps = data.frame(
   lambda   = unlist(lapply(modelcva$modlist, "[[", "lambda")), 

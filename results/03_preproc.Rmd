@@ -29,8 +29,9 @@ idx_cpg = colnames(df)[markers_start:ncol(df)]
 
 
 
-
-
+```{r results="verbatim", echo=TRUE}
+gse
+```
 
 # Missing values
 
@@ -120,7 +121,8 @@ print(paste0("#sample removed: ", nrow(df) - length(idx_samples)))
 df = df[idx_samples,]
 ```
 
-```{r extract preprocess df}
+```{r export preprocessed df, results="verbatim", echo=TRUE}
+dim(df)
 saveRDS(df, paste0("df_preproc_",gse,".rds"))
 ```
 # Session Information
