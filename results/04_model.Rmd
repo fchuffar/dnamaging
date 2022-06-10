@@ -414,25 +414,60 @@ if (sum(pb_occ_tab>=iterator[length(iterator)]) == 1) {
 }
 
 
-tmp_probes = names(pb_occ_tab)[pb_occ_tab>=min(iterator)]
-sub_df = df[idx_train, c(tmp_probes, y_key)] 
+# tmp_probes = names(pb_occ_tab)[pb_occ_tab>=min(iterator)]
+# sub_df = df[idx_train, c(tmp_probes, y_key)]
+#
+#
+# stats = epimedtools::monitored_apply(mod=1, t(t(iterator)), 1, function(occ) {
+#   print(occ)
+#   tmp_probes = names(pb_occ_tab)[pb_occ_tab>=occ]
+#   stats = lapply(1:length(folds), function(fold) {
+#     print(fold)
+#     tmp_idx_train = folds[[fold]]$idx_train
+#     tmp_idx_test = folds[[fold]]$idx_test
+#     ret = mcall_glmnet_mod(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, fold, sub_df, alpha=best_model_cvaglmnet_params$alpha, lambda=best_model_cvaglmnet_params$lambda)
+#     return(ret)
+#   })
+#   stats = do.call(rbind, stats)
+#   stats
+# })
+# stats = do.call(rbind, stats)
 
+stats = lapply(1:length(folds), function(fold) {
+  print(paste0("fold ", fold, "/", length(folds)))
+  tmp_idx_train = folds[[fold]]$idx_train
+  tmp_idx_test = folds[[fold]]$idx_test
+  USE_PARAPPLY = FALSE
+  if (USE_PARAPPLY) {
+    print("bootstrap using parallel::parApply...")
+    if (!exists("cl_bs")) {
+      cl_bs = parallel::makeCluster(parallel::detectCores(),  type="PSOCK")    
+      # parallel::stopCluster(cl_bs)
+    }
+    bs = parallel::parApply(cl_bs, t(t(1:n_boot)), 1, bs_func, idx_train=tmp_idx_train, best_model_cvaglmnet_params=best_model_cvaglmnet_params)
+  } else {
+    print("bootstrap using epimedtools::monitored_apply")
+    bs_probes = epimedtools::monitored_apply(mod=1, t(t(1:n_boot)), 1, bs_func, idx_train=tmp_idx_train, best_model_cvaglmnet_params=best_model_cvaglmnet_params)   
+  }
+  pb_occ_tab = sort(table(unlist(bs_probes))) # probe occurence
 
-stats = epimedtools::monitored_apply(mod=1, t(t(iterator)), 1, function(occ) {
-  print(occ)
-  tmp_probes = names(pb_occ_tab)[pb_occ_tab>=occ]
-  stats = lapply(1:length(folds), function(fold) {
-    print(fold)
-    tmp_idx_train = folds[[fold]]$idx_train
-    tmp_idx_test = folds[[fold]]$idx_test
+  iterator = unique(sort(pb_occ_tab))
+  tmp_probes = names(pb_occ_tab)[pb_occ_tab>=min(iterator)]
+  sub_df = df[idx_train, c(tmp_probes, y_key)] 
+    
+  stats = epimedtools::monitored_apply(mod=1, t(t(iterator)), 1, function(occ, pb_occ_tab, tmp_idx_train, tmp_idx_test, y_key, tmp_probes, fold, sub_df) {
+    # print(occ)
+    tmp_probes = names(pb_occ_tab)[pb_occ_tab>=occ]
     ret = mcall_glmnet_mod(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, fold, sub_df, alpha=best_model_cvaglmnet_params$alpha, lambda=best_model_cvaglmnet_params$lambda)
     return(ret)
-  })
+  }, pb_occ_tab=pb_occ_tab, tmp_idx_train=tmp_idx_train, tmp_idx_test=tmp_idx_test, y_key=y_key, tmp_probes=tmp_probes, fold=fold, sub_df=sub_df)
   stats = do.call(rbind, stats)
   stats
 })
 stats = do.call(rbind, stats)
+
 head(stats)
+dim(stats)
 ```
 
 
