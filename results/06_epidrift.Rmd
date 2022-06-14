@@ -1,0 +1,155 @@
+---
+title: "Analyse new dataset"
+author: "Fabien Jossaud, Florent Chuffart"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+ 
+  
+```{r echo=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=TRUE, results="verbatim")
+start_time = Sys.time()
+source("common.R")
+```
+
+```{r params_default}
+source("params_default.R")
+```
+
+```{r call data}
+df = mreadRDS(paste0("df_preproc_",gse,".rds"))
+idx_samples = rownames(df)
+markers_start = grep("cg",colnames(df))[1]
+idx_clinicals = colnames(df)[1:(markers_start-1)]
+idx_cpg = colnames(df)[markers_start:ncol(df)]
+```
+
+```{r entropy matrix}
+ent_df = apply(df[idx_samples,idx_cpg], 1, function(x) { apply(as.matrix(x),2,function(y){ (y*log(y) + (1-y)*log(1-y)) / log(1/2) }) }) 
+rownames(ent_df) = idx_cpg
+ent_df = as.matrix(t(ent_df))
+```
+
+```{r entropy by samples}
+ent_ind = apply(ent_df,1,mean)
+plot(density(ent_df[2,]))
+
+```
+
+```{r entropy~age}
+age = as.matrix(df[,y_key])
+rownames(age) = rownames(df)
+age = age[names(ent_ind),]
+ent_age = data.frame(ent_ind,age)
+ent_age$age_cl = cut(ent_age$age, 4)
+
+plot(ent_age$age,ent_age$ent_ind)
+pval = kruskal.test(ent_age[,1]~ent_age[,3])$p.value
+den = density(ent_age[, "ent_ind"], na.rm=TRUE)
+  den_bw = den$bw
+  #den_bw = .06
+  levls = levels(ent_age[, "age_cl"])
+  density = lapply(levls, function(lev){
+    if (sum(ent_age[,"age_cl"] %in% lev) > 1) {
+      den = density(bw=den_bw, ent_age[ent_age[,"age_cl"] %in% lev, "ent_ind"])
+      return(den)
+    } # Patch density
+  })
+  plot(0,0, 
+    xlab=paste0("K-W pval=", signif(pval ,3)),
+    xlim = c(0, 1), 
+    ylim = c(0, max(unlist(lapply(density, function(d){max(d$y)})))), 
+    main = paste0("entropy"))
+  sub="ANOVA"
+  for (j in c(1:length(levls))){
+  	lines(density[[j]], col=j)
+  }
+  legend(x="topright", legend=levls, col=1:length(levls), lty = 1, title="age")
+```
+
+```{r violin plot age class}
+
+df$age_cl = cut(df[,y_key],4)
+table(df$age_cl, useNA="ifany")
+ind_cl = c()
+cl = unique(factor(df$age_cl))
+for(i in 1:length(cl)){
+	start = Sys.time()
+	print(paste0("--------",cl[i],"----------"))
+	df_cl = df[which(df$age_cl == cl[i]),]
+	tmp_ind = df_cl[sample(1:nrow(df_cl),1),]
+	ind_cl = rbind(ind_cl,cbind(tmp_ind[,idx_cpg],rep(cl[i],length(idx_cpg))))
+	print(paste0("Execution time : ",Sys.time()-start))
+}
+
+
+idx_indiv = sample(rownames(df), 10)
+idx_indiv = idx_indiv[order(df[idx_indiv,y_key])]
+df[idx_indiv,y_key]
+mat = t(as.matrix(df[idx_indiv,idx_cpg]))
+
+
+entropy = function(mf) {
+  (mf*log(mf) + (1-mf)*log(1-mf)) / log(1/2)  
+}
+h_mat = entropy(mat)
+
+foo = lapply(1:ncol(mat), function(i) {
+  data.frame(h=mat[,i], age=df[colnames(mat)[i], y_key])
+})
+
+foo = do.call(rbind, foo)
+dim(foo)
+
+boxplot(h~age, foo)
+beanplot::beanplot(h~age, foo)
+
+```
+
+```{r heatmap}
+
+idx_samples_o = idx_samples[order(df[idx_samples,y_key])]
+mat = t(as.matrix(df[idx_samples_o,idx_cpg]))
+entropy = function(mf) {
+  (mf*log(mf) + (1-mf)*log(1-mf)) / log(1/2)  
+}
+h_mat = entropy(mat)
+
+h_mat_bin <- apply(h_mat,2, function(x) {
+	#x = h_mat[,1]
+	table(factor(as.numeric(cut(x,seq(0,1,length.out = 101),include.lowest = TRUE)),levels=as.character(0:100)))
+})
+
+h_mat_bin = h_mat_bin/sum(h_mat_bin[,1])
+color = colorRampPalette(c("cyan","black","red"))(100)
+image(h_mat_bin,col=color,breaks=seq(min(h_mat_bin),max(h_mat_bin),length.out = 101))
+``` 
+	
+
+Fit linear model (marker ~ covariables (idx_clinicals)) and take only residuals.
+
+```{r linear model cpg, eval = FALSE}
+df[,idx_clinicals] = as.factor(df[,idx_clinicals])
+lm_cpg_res = apply(df[idx_samples,idx_cpg],2, function(x){
+  m = lm(x~age+diseasestatus,data = df)
+  return(m$residuals)
+}) 
+
+```
+
+
+Remove nonnormal marker with Shapiro-Wilk test for each marker (p < 10^-5).
+FDR on normal markers and remove outliers if FDR < 0.4 and repeat until no outliers. 
+
+# Session Information
+
+```{r, results="verbatim"}
+end_time = Sys.time()
+print(paste0("Execution time for vignette : ", end_time - start_time))
+sessionInfo()
+```
