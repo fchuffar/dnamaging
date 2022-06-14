@@ -148,7 +148,7 @@ dim(cvrecaps)
 tmp_alphas = sort(unique(cvrecaps$alpha))
 tmp_alphas = unlist(sapply(tmp_alphas, function(alpha) { 
   cvrecap = cvrecaps[cvrecaps$alpha==alpha,]
-  if (cvrecap[cvrecap$rmse==min(cvrecap$rmse),]$nbprobes<=.66*length(idx_train)) {
+  if (cvrecap[cvrecap$rmse==min(cvrecap$rmse),]$nbprobes<=1*length(idx_train)) {
     alpha
   } else {
     NULL
