@@ -40,3 +40,13 @@ https://github.com/fchuffar/epimedtools
 Functionnal testing is performed by executing vignettes with many parameters values.
 
 [MY-LINK](results/ci.R)
+
+
+
+# Development
+
+```
+devtools::document(); devtools::install(); devtools::check(build_args="--no-build-vignettes")
+```
+
+
