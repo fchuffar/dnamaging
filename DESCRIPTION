@@ -1,0 +1,22 @@
+Package: dnamaging
+Type: Package
+Title: dnamaging: epigenetic clock model evaluating cofactor impact on DNA methylation aging.
+Description: A set of scripts and vignettes allowing to build and evaluate an epigenetic clock models.
+Version: 0.0.0.1
+Date: 2022-06-14
+Authors@R: c(
+    person("Fabien", "Jossaud", ,"fabienjossaud@gmail.com", c("aut","cph")),
+    person("Florent", "Chuffart", ,"florent.chuffart@gmail.com", c("aut", "cre", "cph"))
+    )
+Maintainer: Florent Chuffart <florent.chuffart@gmail.com>
+License: GPL
+Encoding: UTF-8
+LazyData: TRUE
+Imports:
+    memoise
+Depends:
+    methods
+RoxygenNote: 7.1.1
+Suggests: knitr,
+    rmarkdown
+VignetteBuilder: knitr
