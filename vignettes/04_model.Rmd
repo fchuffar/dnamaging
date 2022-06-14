@@ -85,7 +85,7 @@ Hypothèse : etudier la meth au regard de l’age permet de capturer la partie p
 ```{r echo=FALSE}
 knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=TRUE, results="verbatim")
 start_time = Sys.time()
-source("common.R")
+source("../R/functions.R")
 ```
 
 ```{r params_default, echo=FALSE}

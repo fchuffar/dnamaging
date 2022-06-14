@@ -1,4 +1,4 @@
-if (!exists("gse")) gse = "GSE41037"
+if (!exists("gse")) gse = "dnamaging"
 y_key = "age"
 covariates = c("gender")
 sample_blacklist = c("GSM1007327")
