@@ -1,9 +1,30 @@
-# services patterns
+#' Retrieve preprocess df of gse
+#' 
+#' This function retrieve the preprocess df of the GSE to assign df
+#'
+#' @param gse the gse of your data
+#'
+#' @return gse preprocess df 
+#' @export
+#'
+#' @examples gse = "GSE41037" ; get_df_preproc(gse)
 
 get_df_preproc = function(gse){
     df = readRDS(paste0("df_preproc_",gse,".rds"))
     return(df)
 }
+
+
+
+#' Return a matrix without cofactors (only cpg markers)
+#'
+#' This function permite to return a matrix with a selection of samples and cpg markers and remove cofactors
+#' @param gse the gse of your data
+#' @param idx_smp idx of samples from the data that you will keep in the return matrix 
+#' @param idx_cpg idx of cpg from the data that you will keep in the return matrix
+#'
+#' @return matrix 
+#' @export
 
 get_full_cpg_matrix = function(gse, idx_smp=NULL, idx_cpg=NULL){
     df = mget_df_preproc(gse)
@@ -28,7 +49,22 @@ get_full_cpg_matrix = function(gse, idx_smp=NULL, idx_cpg=NULL){
     return(ret)
   }
 
-# model_factory_glmnet, it produces custom model object based on list by calling glmnet::glmnet function
+# model_factory_glmnet, 
+
+#' Return custom model from glmnet::glmnet function
+#'
+#' This function produces custom model object based on list by calling glmnet::glmnet function
+#' 
+#' @param idx_train vector of idx of samples use for the train
+#' @param y_key character correspond to the name of the column of explicative variable
+#' @param alpha numeric alpha parameter use for glmnet::glmnet
+#' @param lambda numeric lambda parameter use for glmnet function
+#' @param gse character gse of your data
+#' @param idx_cpg vector of idx of cpg markers use to make glmnet regression
+#'
+#' @importFrom glmnet glmnet
+#' @return list with intercept and coeff results on the glmnet regression
+#' @export
 
 model_factory_glmnet = function(idx_train, y_key, alpha, lambda, gse, idx_cpg=NULL) {
   x = mget_full_cpg_matrix(gse, idx_train, idx_cpg)
@@ -42,7 +78,26 @@ model_factory_glmnet = function(idx_train, y_key, alpha, lambda, gse, idx_cpg=NU
   # ret$glmmod = m
   return(ret)
 }
-  
+
+
+#' 
+#'
+#' @param tmp_idx_train vector of idx use for the train
+#' @param tmp_idx_test  vector of idx use for the test
+#' @param y_key  character correspond to the name of the column of explicative variable
+#' @param tmp_probes vector of probes
+#' @param occ the occurence of the cross validation
+#' @param fold the fold of the cross validation
+#' @param sub_df df with only markers use for boostrapped models
+#' @param alpha numeric alpha parameter use for glmnet::glmnet
+#' @param lambda numeric lambda parameter use for glmnet function
+#' 
+#' @importFrom glmnet glmnet
+#' @importFrom glmnet cv.glmnet
+#' @importFrom stats predict
+#' 
+#' @export
+
 call_glmnet_mod = function(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, fold, sub_df, alpha=0, lambda=NULL) {
 
   tmp_Xtrain = as.matrix(sub_df[tmp_idx_train, tmp_probes])
@@ -74,6 +129,22 @@ call_glmnet_mod = function(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, 
   )
 }
   
+
+#' models results on CV glmnet 
+#'
+#' This function returns models from cross validation glmnet using glmnetUtils::cva.glmnet
+#' 
+#' @param idx_train vector of idx use for the train
+#' @param y_key character correspond to the name of the column of explicative variable
+#' @param gse character gse of your data
+#' @param idx_cpg vector of idx of cpg markers use to make cva.glmnet regression
+#' @param alpha vector of alphas use for cva.glmnet 
+#' 
+#' @importFrom glmnetUtils cva.glmnet
+#' 
+#' @return Results of cva.glmnet function
+#' @export
+
 cvaglmnet = function(idx_train, y_key, gse, idx_cpg=NULL, alpha=seq(0, 1, len = 11)^3) {
   x = mget_full_cpg_matrix(gse, idx_train, idx_cpg)
   y = mget_df_preproc(gse)[idx_train, y_key] # service. Design Patterns, Gamma et al. 
@@ -85,6 +156,24 @@ cvaglmnet = function(idx_train, y_key, gse, idx_cpg=NULL, alpha=seq(0, 1, len = 
 # modelcva = glmnetUtils::cva.glmnet(x=x, y=y, type.measure="mse", standardize=TRUE, outerParallel=cl.cva)
 # parallel::stopCluster(cl.cva)
 
+
+#' Plotting models results for evalutation
+#'
+#' This function make differents plots to evaluate differents models. We have the regression plot for train and test set to prevent overfitting,
+#' the AMAR plot and the residual plot for each covariable on the test set to see the difference between factors of each covariable.
+#' 
+#' @param m list of models to evaluate
+#' @param df data frame of your data
+#' @param covariate vector of different covariates to evaluate models
+#' @param Xtrain matrix of train set
+#' @param Xtest matrix of test set 
+#' @param Ytrain vector of explicative variable train set
+#' @param Ytest vector of explicative variable test set
+#'
+#' @importFrom stats kruskal.test 
+#' @importFrom stats density
+#' 
+#' @export
 
 plot_model_eval = function(m, df, covariate, Xtrain, Xtest, Ytrain, Ytest) {
   df[,covariate] = as.factor(df[,covariate])
