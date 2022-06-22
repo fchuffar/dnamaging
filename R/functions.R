@@ -1,14 +1,11 @@
-if (!exists("mreadRDS")) { mreadRDS = memoise::memoise(readRDS, cache=cachem::cache_mem(max_size = 10*1024 * 1024^2)) }
-
 # services patterns
-if (!exists("mget_df_preproc")) {
-  mget_df_preproc = memoise::memoise(function(gse){
+
+get_df_preproc = function(gse){
     df = readRDS(paste0("df_preproc_",gse,".rds"))
     return(df)
-  }, cache = cachem::cache_mem(max_size = 10*1024 * 1024^2))
 }
-if (!exists("mget_full_cpg_matrix")) {
-  get_full_cpg_matrix = function(gse, idx_smp=NULL, idx_cpg=NULL){
+
+get_full_cpg_matrix = function(gse, idx_smp=NULL, idx_cpg=NULL){
     df = mget_df_preproc(gse)
     if (is.null(idx_smp) & is.null(idx_cpg)) {
       # print("is.null(idx_smp) & is.null(idx_cpg)")
@@ -30,78 +27,63 @@ if (!exists("mget_full_cpg_matrix")) {
     }
     return(ret)
   }
-  mget_full_cpg_matrix = memoise::memoise(get_full_cpg_matrix, cache = cachem::cache_mem(max_size = 10*1024 * 1024^2))
-}
-
-
 
 # model_factory_glmnet, it produces custom model object based on list by calling glmnet::glmnet function
-if (!exists("mmodel_factory_glmnet")) {
-  model_factory_glmnet = function(idx_train, y_key, alpha, lambda, gse, idx_cpg=NULL) {
-    x = mget_full_cpg_matrix(gse, idx_train, idx_cpg)
-    y = mget_df_preproc(gse)[idx_train,y_key]
-    m = glmnet::glmnet(x=x, y=y, alpha=alpha, lambda=lambda, standardize=TRUE)
-    idx = rownames(m$beta)[m$beta@i+1]
-    coeff = data.frame(probes=idx, beta=m$beta[idx,])
-    rownames(coeff) = idx
-    ret = list(Intercept=m$a0, coeff=coeff)
-    ret$name = paste0("cvaglmnet (a=", signif(alpha,3), ", l=", signif(lambda,3), ")")
-    # ret$glmmod = m
-    return(ret)
-  }
-  mmodel_factory_glmnet = memoise::memoise(model_factory_glmnet, cache = cachem::cache_mem(max_size = 10*1024 * 1024^2))
-  # source(knitr::purl("04_model_fullcv.Rmd"))
+
+model_factory_glmnet = function(idx_train, y_key, alpha, lambda, gse, idx_cpg=NULL) {
+  x = mget_full_cpg_matrix(gse, idx_train, idx_cpg)
+  y = mget_df_preproc(gse)[idx_train,y_key]
+  m = glmnet::glmnet(x=x, y=y, alpha=alpha, lambda=lambda, standardize=TRUE)
+  idx = rownames(m$beta)[m$beta@i+1]
+  coeff = data.frame(probes=idx, beta=m$beta[idx,])
+  rownames(coeff) = idx
+  ret = list(Intercept=m$a0, coeff=coeff)
+  ret$name = paste0("cvaglmnet (a=", signif(alpha,3), ", l=", signif(lambda,3), ")")
+  # ret$glmmod = m
+  return(ret)
 }
+  
+call_glmnet_mod = function(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, fold, sub_df, alpha=0, lambda=NULL) {
 
-
-if (!exists("mcall_glmnet_mod")) {
-  call_glmnet_mod = function(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, fold, sub_df, alpha=0, lambda=NULL) {
-
-    tmp_Xtrain = as.matrix(sub_df[tmp_idx_train, tmp_probes])
-    tmp_Ytrain = sub_df[tmp_idx_train, y_key]
-    tmp_Xtest = as.matrix(sub_df[tmp_idx_test, tmp_probes])
-    tmp_Ytest = sub_df[tmp_idx_test, y_key]
-    if (is.null(lambda)) {
-      print("glmnet::cv.glmnet")
-      m = glmnet::cv.glmnet(x=tmp_Xtrain, y=tmp_Ytrain, alpha=alpha, type.measure="mse", standardize=TRUE)      
-    } else {
-      print("glmnet::glmnet")
-      m = glmnet::glmnet(x=tmp_Xtrain, y=tmp_Ytrain, alpha=alpha, lambda=lambda, type.measure="mse", standardize=TRUE) 
-    }
-
-    train_pred = predict(m, tmp_Xtrain, type="response")
-    train_truth = tmp_Ytrain
-    train_err = RMSE(train_truth, train_pred)
-    test_pred = predict(m, tmp_Xtest, type="response")
-    test_truth = tmp_Ytest
-    test_err = RMSE(test_truth, test_pred)
-
-    # print(paste0("nb_probes:", length(tmp_probes), ", train_err: ", signif(train_err, 3), ", test_err: ", signif(test_err, 3)))
-    ret = data.frame(
-      occurence=occ, 
-      nb_probes=length(tmp_probes), 
-      train_err=train_err, 
-      test_err=test_err,
-      fold=fold
-    )
+  tmp_Xtrain = as.matrix(sub_df[tmp_idx_train, tmp_probes])
+  tmp_Ytrain = sub_df[tmp_idx_train, y_key]
+  tmp_Xtest = as.matrix(sub_df[tmp_idx_test, tmp_probes])
+  tmp_Ytest = sub_df[tmp_idx_test, y_key]
+  if (is.null(lambda)) {
+    print("glmnet::cv.glmnet")
+    m = glmnet::cv.glmnet(x=tmp_Xtrain, y=tmp_Ytrain, alpha=alpha, type.measure="mse", standardize=TRUE)      
+  } else {
+    print("glmnet::glmnet")
+    m = glmnet::glmnet(x=tmp_Xtrain, y=tmp_Ytrain, alpha=alpha, lambda=lambda, type.measure="mse", standardize=TRUE) 
   }
-  mcall_glmnet_mod = memoise::memoise(call_glmnet_mod)
+
+  train_pred = predict(m, tmp_Xtrain, type="response")
+  train_truth = tmp_Ytrain
+  train_err = RMSE(train_truth, train_pred)
+  test_pred = predict(m, tmp_Xtest, type="response")
+  test_truth = tmp_Ytest
+  test_err = RMSE(test_truth, test_pred)
+
+  # print(paste0("nb_probes:", length(tmp_probes), ", train_err: ", signif(train_err, 3), ", test_err: ", signif(test_err, 3)))
+  ret = data.frame(
+    occurence=occ, 
+    nb_probes=length(tmp_probes), 
+    train_err=train_err, 
+    test_err=test_err,
+    fold=fold
+  )
 }
-
-if (!exists("mcvaglmnet")) {
-  cvaglmnet = function(idx_train, y_key, gse, idx_cpg=NULL, alpha=seq(0, 1, len = 11)^3) {
-    x = mget_full_cpg_matrix(gse, idx_train, idx_cpg)
-    y = mget_df_preproc(gse)[idx_train, y_key] # service. Design Patterns, Gamma et al. 
-    modelcva = glmnetUtils::cva.glmnet(x=x, y=y, type.measure="mse", standardize=TRUE,  alpha=alpha)
-    return(modelcva)  
-  }
-  # Use parallel::makeCluster is not compatible with memoisation.
-  # cl.cva = parallel::makeCluster(nb_cores,  type="FORK")
-  # modelcva = glmnetUtils::cva.glmnet(x=x, y=y, type.measure="mse", standardize=TRUE, outerParallel=cl.cva)
-  # parallel::stopCluster(cl.cva)
-  mcvaglmnet = memoise::memoise(cvaglmnet)
-} # Memoise for cvaglmnet
-
+  
+cvaglmnet = function(idx_train, y_key, gse, idx_cpg=NULL, alpha=seq(0, 1, len = 11)^3) {
+  x = mget_full_cpg_matrix(gse, idx_train, idx_cpg)
+  y = mget_df_preproc(gse)[idx_train, y_key] # service. Design Patterns, Gamma et al. 
+  modelcva = glmnetUtils::cva.glmnet(x=x, y=y, type.measure="mse", standardize=TRUE,  alpha=alpha)
+  return(modelcva)  
+}
+# Use parallel::makeCluster is not compatible with memoisation.
+# cl.cva = parallel::makeCluster(nb_cores,  type="FORK")
+# modelcva = glmnetUtils::cva.glmnet(x=x, y=y, type.measure="mse", standardize=TRUE, outerParallel=cl.cva)
+# parallel::stopCluster(cl.cva)
 
 
 plot_model_eval = function(m, df, covariate, Xtrain, Xtest, Ytrain, Ytest) {
@@ -219,3 +201,12 @@ plot_model_eval = function(m, df, covariate, Xtrain, Xtest, Ytrain, Ytest) {
   }
   legend(x="topright", legend=levls, col=1:length(levls), lty = 1, title=covariate)           
 }
+
+
+
+if (!exists("mreadRDS")) {mreadRDS = memoise::memoise(readRDS, cache=cachem::cache_mem(max_size = 10*1024 * 1024^2)) }
+if (!exists("mget_df_preproc")) {mget_df_preproc = memoise::memoise(get_df_preproc, cache = cachem::cache_mem(max_size = 10*1024 * 1024^2))}
+if (!exists("mget_full_cpg_matrix")) {mget_full_cpg_matrix = memoise::memoise(get_full_cpg_matrix, cache = cachem::cache_mem(max_size = 10*1024 * 1024^2))}
+if (!exists("mmodel_factory_glmnet")) {mmodel_factory_glmnet = memoise::memoise(model_factory_glmnet, cache = cachem::cache_mem(max_size = 10*1024 * 1024^2))}
+if (!exists("mcall_glmnet_mod")) {mcall_glmnet_mod = memoise::memoise(call_glmnet_mod)}
+if (!exists("mcvaglmnet")) {mcvaglmnet = memoise::memoise(cvaglmnet)}   # Memoise for cvaglmnet
