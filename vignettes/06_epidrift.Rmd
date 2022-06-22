@@ -14,30 +14,414 @@ output:
 ```{r echo=FALSE}
 knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=TRUE, results="verbatim")
 start_time = Sys.time()
-source("common.R")
+source("../R/functions.R")
 ```
 
 ```{r params_default}
+gse = "GSE40279"
 source("params_default.R")
 ```
 
 ```{r call data}
-df = mreadRDS(paste0("df_preproc_",gse,".rds"))
+df = mreadRDS(paste0("../misc/df_preproc_",gse,".rds"))
 idx_samples = rownames(df)
+idx_samples = idx_samples[order(df[idx_samples,"gender"], df[idx_samples,y_key])]
+df[idx_samples,y_key]
+df[idx_samples,"gender"]
+df = df[idx_samples,]
 markers_start = grep("cg",colnames(df))[1]
 idx_clinicals = colnames(df)[1:(markers_start-1)]
 idx_cpg = colnames(df)[markers_start:ncol(df)]
+dim(df)
+length(idx_clinicals)
+length(idx_cpg)
 ```
+
+
+
+
+
+
+
+```{r}
+entropy = function(mf) {
+  (mf*log(mf) + (1-mf)*log(1-mf)) / log(1/2)  
+}
+
+
+set.seed(1)
+idx_cpg = sort(sample(idx_cpg,3000))
+mat_orig = df[,idx_cpg]
+mat_orig = as.matrix(mat_orig)
+mat_orig = t(mat_orig)
+dim(mat_orig)
+typeof(mat_orig)
+
+
+
+
+
+mat = mat_orig
+lm_res = epimedtools::monitored_apply(t(t(idx_cpg)), 1, function(i){
+  # i = idx_cpg[1]
+  m = lm(mat[i,idx_samples]~df[idx_samples, "age__y_"]*df[idx_samples, "gender"])
+  coef = m$coefficients  
+  s = summary(m)
+  pv = s$coefficients[-1,4]
+  ret = c(coef, pv)
+  return(ret)
+}) 
+colnames(lm_res) = idx_cpg
+lm_res = t(lm_res)
+head(lm_res)
+
+subsub_cpg = rownames(lm_res)[lm_res[,6] > .1 & lm_res[,7] > .1 & lm_res[,5] < .0001 ]
+
+
+layout(matrix(1:2, 1), respect=TRUE)
+plot(lm_res[,2], -log10(lm_res[,5]), col=1+rownames(lm_res)%in%subsub_cpg)
+plot(lm_res[,3], -log10(lm_res[,5]), col=1+rownames(lm_res)%in%subsub_cpg)
+
+layout(matrix(1:2, 1), respect=TRUE)
+plot(lm_res[,3], -log10(lm_res[,6]),          col=1+(rownames(lm_res)%in%subsub_cpg))
+plot(lm_res[,4], -log10(lm_res[,7]), pch=".", col=1+(rownames(lm_res)%in%subsub_cpg))
+
+
+layout(matrix(1:2, 1), respect=TRUE)
+plot(lm_res[,2], lm_res[,4])
+plot(lm_res[,3], lm_res[,4])
+
+
+
+
+
+
+layout(matrix(1:2, 1), respect=TRUE)
+plot(0,0, col=0, xlim=c(0,100), ylim=0:1)
+foo = apply(lm_res[subsub_cpg,], 1, function(colmn){
+  abline(a=colmn[1], b=colmn[2], col=adjustcolor(1, alpha.f=.1))    
+}) 
+
+
+
+
+
+
+
+
+
+subsub_cpg = subsub_cpg[order(lm_res[subsub_cpg,1])]
+
+
+
+
+mat = mat_orig[subsub_cpg,]
+
+den_bw = 0.1 
+den = density(mat, bw=den_bw) 
+plot(den, col="grey")
+for (i in idx_samples[1:100]) {
+  lines(density(mat[,i], bw=den_bw), col=adjustcolor(1, alpha.f=.1))
+}
+for (i in rev(idx_samples)[1:100]) {
+  lines(density(mat[,i], bw=den_bw), col=adjustcolor(2, alpha.f=.1))
+}
+
+
+mat = mat_orig[subsub_cpg,]
+nb_bin = 100
+color = colorRampPalette(c("cyan","black","red"))(nb_bin)
+image(mat, col=color, breaks=seq(0,1, length.out = nb_bin+1))
+
+
+mat = mat_orig[subsub_cpg,]
+plot(density(mat))
+mat = mat - apply(mat, 1, mean)
+plot(density(mat))
+nb_bin = 100
+color = colorRampPalette(c("cyan","black","red"))(nb_bin)
+image(mat, col=color, breaks=c(min(mat), seq(-.2,.2, length.out = nb_bin-1), max(mat)))
+
+
+rndsub_cpg = sample(idx_cpg,300)
+rndsub_cpg = rndsub_cpg[order(lm_res[rndsub_cpg,1])]
+
+mat = mat_orig[rndsub_cpg,]
+plot(density(mat))
+mat = mat - apply(mat, 1, mean)
+plot(density(mat))
+nb_bin = 100
+color = colorRampPalette(c("cyan","black","red"))(nb_bin)
+image(mat, col=color, breaks=c(min(mat), seq(-.2,.2, length.out = nb_bin-1), max(mat)))
+
+
+
+sds = apply(mat_orig, 1, sd)
+means = apply(mat_orig, 1, mean)
+plot(means, sds)
+plot(density(sds))
+sdsub_cpg = names(rev(sort(sds)))[1:300]
+plot(density(sds[sdsub_cpg]))
+sdsub_cpg = sdsub_cpg[order(apply(mat_orig[sdsub_cpg, ], 1, mean))]
+
+
+mat = mat_orig[sdsub_cpg,]
+nb_bin = 100
+color = colorRampPalette(c("cyan","black","red"))(nb_bin)
+image(mat, col=color, breaks=seq(0,1, length.out = nb_bin+1))
+
+mat = mat_orig[sdsub_cpg,]
+# plot(density(mat))
+mat = mat - apply(mat, 1, mean)
+# plot(density(mat))
+nb_bin = 100
+color = colorRampPalette(c("cyan","black","red"))(nb_bin)
+image(mat, col=color, breaks=c(min(mat), seq(-.2,.2, length.out = nb_bin-1), max(mat)))
+
+
+
+
+
+
+nb_bin = 100
+mat_bin <- apply(mat,2, function(x) {
+	#x = mat[,1]
+	table(factor(as.numeric(cut(x,seq(0,1,length.out = nb_bin+1),include.lowest = TRUE)),levels=as.character(0:nb_bin)))
+})
+
+mat_bin = mat_bin/sum(mat_bin[,1])
+color = colorRampPalette(c("cyan","black","red"))(nb_bin)
+image(mat_bin,col=color,breaks=seq(min(mat_bin),max(mat_bin),length.out = nb_bin+1))
+
+
+
+
+
+
+h_mat = entropy(mat)
+sum(is.na(h_mat))
+mat[is.na(h_mat)]
+h_mat[is.na(h_mat)]=0
+sum(is.na(h_mat))
+head(h_mat[,1:10])
+
+den_bw = 0.03 
+den = density(h_mat, bw=den_bw) 
+plot(den, col="grey")
+for (i in idx_samples[1:10]) {
+  lines(density(h_mat[,i], bw=den_bw))
+}
+for (i in rev(idx_samples)[1:10]) {
+  lines(density(h_mat[,i], bw=den_bw), col=2)
+}
+
+
+
+nb_bin = 100
+h_mat_bin <- apply(h_mat,2, function(x) {
+	#x = h_mat[,1]
+	table(factor(as.numeric(cut(x,seq(0,1,length.out = nb_bin+1),include.lowest = TRUE)),levels=as.character(0:nb_bin)))
+})
+
+h_mat_bin = h_mat_bin/sum(h_mat_bin[,1])
+color = colorRampPalette(c("cyan","black","red"))(nb_bin)
+image(h_mat_bin,col=color,breaks=seq(min(h_mat_bin),max(h_mat_bin),length.out = nb_bin+1))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+mat = mat_orig
+res = epimedtools::monitored_apply(t(t(idx_cpg)), 1, function(i){
+  # i = idx_cpg[1]
+  m = lm(mat[i,idx_samples]~df[idx_samples, "age__y_"]+df[idx_samples, "gender"])
+  return(m$residuals)
+}) 
+colnames(res) = idx_cpg
+res = t(res)
+head(res[,1:10])
+
+
+mat = res
+sw_pv = apply(mat, 1, function(x) {
+  shapiro.test(x)$p.value
+})
+layout(matrix(1:2, 1), respect=TRUE)
+plot(density(-log10(sw_pv)))
+abline(v=5)
+sub_cpg = names(sw_pv)[sw_pv>=10^-5]
+sub_cpg
+
+# m = apply(mat, 1, mean)
+# plot(-log10(sw_pv), m)
+
+
+
+
+mat = mat_orig
+lm_res = epimedtools::monitored_apply(t(t(sub_cpg)), 1, function(i){
+  # i = idx_cpg[1]
+  m = lm(mat[i,idx_samples]~df[idx_samples, "age__y_"]+df[idx_samples, "gender"])
+  s = summary(m)
+  pv = anova(m)
+  ret = c(m$coefficients, s$coefficients[2:3,4])
+  return(ret)
+}) 
+colnames(lm_res) = sub_cpg
+subsub_cpg = colnames(lm_res)[p.adjust(lm_res[4,], method="bon")<0.000001]
+
+layout(matrix(1:2, 1), respect=TRUE)
+plot(lm_res[2,], -log10(         lm_res[4,]              ))
+plot(lm_res[2,], -log10(p.adjust(lm_res[4,], method="bon")), col=1+colnames(lm_res)%in%subsub_cpg)
+abline(h=-log10(0.05), col=2)
+
+plot(0,0, col=0, xlim=c(0,100), ylim=0:1)
+
+foo = apply(lm_res[,subsub_cpg], 2, function(colmn){
+  abline(a=colmn[1], b=colmn[2], col=adjustcolor(1, alpha.f=.1))    
+}) 
+
+
+subsub_cpg = subsub_cpg[order(lm_res[,subsub_cpg][1,])]
+
+foo = mat_orig[subsub_cpg,]
+foo = foo - apply(foo, 1, mean) 
+color = colorRampPalette(c("cyan","black","red"))(nb_bin)
+image(foo,col=color,breaks=seq(min(foo),max(foo),length.out = nb_bin+1))
+
+
+
+
+# res = epimedtools::monitored_apply(t(t(idx_cpg)), 1, function(i){
+#   # i = idx_cpg[1]
+#   m = lm(mat[i,idx_samples]~df[idx_samples, "age"]+df[idx_samples, "age"])
+#   return(m$residuals)
+# })
+# res = t(res)
+# rownames(res) = idx_cpg
+head(res[sub_cpg,1:10])
+dim(res)
+res_orig = res[sub_cpg,]
+
+res = res_orig
+range(res)
+
+mat = mat_orig[sub_cpg,]
+dim(mat)
+bar = apply(mat, 1, mean)
+res = res + bar
+range(res)
+
+res = (res-min(res))
+res = res/max(res)
+range(res)
+head(res[,1:10])
+dim(res)
+
+
+
+h_mat = entropy(res)
+sum(is.na(h_mat))
+res[is.na(h_mat)]
+h_mat[is.na(h_mat)]=0
+sum(is.na(h_mat))
+head(h_mat[,1:10])
+
+den_bw = 0.03 
+den = density(h_mat, bw=den_bw) 
+plot(den, col="grey")
+for (i in idx_samples[1:10]) {
+  lines(density(h_mat[,i], bw=den_bw))
+}
+for (i in rev(idx_samples)[1:10]) {
+  lines(density(h_mat[,i], bw=den_bw), col=2)
+}
+
+
+
+nb_bin = 100
+h_mat_bin <- apply(h_mat,2, function(x) {
+	#x = h_mat[,1]
+	table(factor(as.numeric(cut(x,seq(0,1,length.out = nb_bin+1),include.lowest = TRUE)),levels=as.character(0:nb_bin)))
+})
+
+h_mat_bin = h_mat_bin/sum(h_mat_bin[,1])
+color = colorRampPalette(c("cyan","black","red"))(nb_bin)
+image(h_mat_bin,col=color,breaks=seq(min(h_mat_bin),max(h_mat_bin),length.out = nb_bin+1))
+
+
+
+
+
+
+
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ```{r entropy matrix}
 ent_df = apply(df[idx_samples,idx_cpg], 1, function(x) { apply(as.matrix(x),2,function(y){ (y*log(y) + (1-y)*log(1-y)) / log(1/2) }) }) 
 rownames(ent_df) = idx_cpg
 ent_df = as.matrix(t(ent_df))
+head(ent_df[,1:10])
 ```
 
 ```{r entropy by samples}
-ent_ind = apply(ent_df,1,mean)
-plot(density(ent_df[2,]))
+den = density(ent_df) 
+plot(den, col="grey")
+for (i in idx_samples[1:10]) {
+  # ent_ind = apply(ent_df,1,mean)
+  lines(density(ent_df[i,], bw=den$bw))
+}
+for (i in rev(idx_samples)[1:10]) {
+  # ent_ind = apply(ent_df,1,mean)
+  lines(density(ent_df[i,], bw=den$bw), col=2)
+}
 
 ```
 
@@ -112,7 +496,7 @@ beanplot::beanplot(h~age, foo)
 ```
 
 ```{r heatmap}
-
+nb_bin = 100
 idx_samples_o = idx_samples[order(df[idx_samples,y_key])]
 mat = t(as.matrix(df[idx_samples_o,idx_cpg]))
 entropy = function(mf) {
@@ -122,12 +506,12 @@ h_mat = entropy(mat)
 
 h_mat_bin <- apply(h_mat,2, function(x) {
 	#x = h_mat[,1]
-	table(factor(as.numeric(cut(x,seq(0,1,length.out = 101),include.lowest = TRUE)),levels=as.character(0:100)))
+	table(factor(as.numeric(cut(x,seq(0,1,length.out = nb_bin+1),include.lowest = TRUE)),levels=as.character(0:nb_bin)))
 })
 
 h_mat_bin = h_mat_bin/sum(h_mat_bin[,1])
-color = colorRampPalette(c("cyan","black","red"))(100)
-image(h_mat_bin,col=color,breaks=seq(min(h_mat_bin),max(h_mat_bin),length.out = 101))
+color = colorRampPalette(c("cyan","black","red"))(nb_bin)
+image(h_mat_bin,col=color,breaks=seq(min(h_mat_bin),max(h_mat_bin),length.out = nb_bin+1))
 ``` 
 	
 
@@ -145,6 +529,14 @@ lm_cpg_res = apply(df[idx_samples,idx_cpg],2, function(x){
 
 Remove nonnormal marker with Shapiro-Wilk test for each marker (p < 10^-5).
 FDR on normal markers and remove outliers if FDR < 0.4 and repeat until no outliers. 
+
+
+
+
+
+
+
+
 
 # Session Information
 
