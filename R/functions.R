@@ -109,7 +109,7 @@ call_glmnet_mod = function(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, 
     m = glmnet::cv.glmnet(x=tmp_Xtrain, y=tmp_Ytrain, alpha=alpha, type.measure="mse", standardize=TRUE)      
   } else {
     print("glmnet::glmnet")
-    m = glmnet::glmnet(x=tmp_Xtrain, y=tmp_Ytrain, alpha=alpha, lambda=lambda, type.measure="mse", standardize=TRUE) 
+    m = glmnet::glmnet(x=tmp_Xtrain, y=tmp_Ytrain, alpha=alpha, lambda=lambda, standardize=TRUE) 
   }
 
   train_pred = predict(m, tmp_Xtrain, type="response")
