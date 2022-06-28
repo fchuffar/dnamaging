@@ -1,0 +1,4 @@
+vignettes
+misc
+vignettes/*.rds
+data/generate_data.R
