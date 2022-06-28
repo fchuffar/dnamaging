@@ -35,18 +35,22 @@ https://github.com/fchuffar/epimedtools
 
 ```
 
-# Functionnal testing
-
-Functionnal testing is performed by executing vignettes with many parameters values.
-
-[MY-LINK](results/ci.R)
-
-
-
 # Development
 
 ```
 devtools::document(); devtools::install(); devtools::check(build_args="--no-build-vignettes")
 ```
 
+
+# Functionnal testing
+
+Functionnal testing is performed by executing vignettes with many parameters values.
+
+[MY-LINK](vignettes/ci.R)
+
+```
+devtools::document(); devtools::install();
+source("ci_flash.R")
+source("ci_fast.R")
+```
 
