@@ -22,9 +22,12 @@ source("params_default.R")
 
 
 ```{r loading_data}
-# df_filename = paste0("df_", gse, ".rds")
-# df = mreadRDS(df_filename)
-df = dnamaging::df_dnamaging
+if (gse != "dnamaging") {
+  df_filename = paste0("df_", gse, ".rds")
+  df = mreadRDS(df_filename)
+} else {
+  df = dnamaging::df_dnamaging  
+}
 ```
 
 

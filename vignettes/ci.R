@@ -4,10 +4,8 @@ gses = c(
   "GSE41037", # 27k Genome wide DNA methylation profiling of whole blood in schizophrenia patients and healthy subjects.
   "27kGSE40279", # Hannum 2013 27k version
   "GSE40279", # 450k Hannum 2013
-  "GSE20067",
-  "27kLima",
-  "Lima",
-  #"cancair",
+  # "27kLima",
+  # "cancair",
   NULL
 )
 for (gse in gses) {
@@ -26,14 +24,13 @@ for (gse in gses) {
 
 # train on GSE40279 and predict on a new dataset
 gses = c( 
-  # "GSE41037", # 27k Genome wide DNA methylation profiling of whole blood in schizophrenia patients and healthy subjects.
+  "GSE41037", # 27k Genome wide DNA methylation profiling of whole blood in schizophrenia patients and healthy subjects.
   "GSE43976", # smoking status and age
   "GSE106648", # smoking status and age
   "GSE50660", # smoking status and age 
-  "Lima",
+  # "Lima",
   "GSE20067", # 27k Genome wide DNA methylation profiling of diabetic nephropathy in type 1 diabetes mellitus
-  "27kGSE40279", # Hannum 2013 27k version
-  "27kLima",
+  # "27kGSE40279", # Hannum 2013 27k version
   # "GSE41169",
   # "GSE20236",
   # "GSE19711",
