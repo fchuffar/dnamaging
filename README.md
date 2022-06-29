@@ -3,7 +3,7 @@ A set of scripts and vignettes allowing to build and evaluate an epigenetic cloc
 
 
 
-# 5 seconds turorial
+# 180 seconds turorial
 
 ```
 git clone git@github.com:fchuffar/dnamaging.git
