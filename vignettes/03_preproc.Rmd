@@ -13,6 +13,7 @@ output:
 
 ```{r echo=FALSE}
 knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide")
+options(knitr.duplicate.label = "allow")
 source("common.R")
 ```
 
