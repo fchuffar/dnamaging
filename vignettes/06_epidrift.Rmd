@@ -14,7 +14,7 @@ output:
 ```{r echo=FALSE}
 knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=TRUE, results="verbatim")
 start_time = Sys.time()
-source("../R/functions.R")
+source("common.R")
 ```
 
 ```{r params_default}

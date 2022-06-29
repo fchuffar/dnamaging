@@ -13,7 +13,7 @@ output:
 
 ```{r echo=FALSE}
 knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide")
-source("../R/functions.R")
+source("common.R")
 ```
 
 ```{r params}
@@ -67,10 +67,4 @@ for (cov in covariates) {
 }
 ```
 
-
-# Session Information
-
-```{r, results="verbatim"}
-sessionInfo()
-```
 

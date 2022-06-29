@@ -14,7 +14,7 @@ output:
 ```{r echo=FALSE}
 knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=TRUE, results="verbatim")
 start_time = Sys.time()
-source("../R/functions.R")
+source("common.R")
 ```
 
 ```{r params_default}
@@ -72,7 +72,7 @@ for (covariate in covariates) {
   layout(matrix(1:20, 5), respect=TRUE)  
   for (m in models) {
     # layout(matrix(1:5, 1), respect=TRUE)
-    plot_model_eval(m, df, covariate, Xtrain=Xtrain, Xtest=Xtest, Ytrain=Ytrain, Ytest=Ytest)
+    dnamaging::plot_model_eval(m, df, covariate, Xtrain=Xtrain, Xtest=Xtest, Ytrain=Ytrain, Ytest=Ytest)
   }
 }
 ```
