@@ -33,49 +33,66 @@ idx_cpg = colnames(df)[markers_start:ncol(df)]
 gse
 ```
 
-# Missing values
 
-**TODO Fabien**, adding description of what you are doing
+
+## Missing values
+
+**TODO**, adding description, what appends there?
 
 ```{r missing values, results="verbatim"}
-# get_df_rmnaquantile = memoise::memoise(function() {
-  if (sum(is.na(df[,idx_cpg]))>0) {
-    # Looking how much got more than 5% missing values
-    # apply_func = epimedtools::monitored_apply
-    if (! exists("apply_func")) {apply_func = apply}
-    prop_na_row =  apply_func(is.na(df[idx_samples,idx_cpg]), 1, sum) / ncol(df)
-    idx_samples = names(prop_na_row)[prop_na_row<.05]
-    prop_na_col =  apply_func(is.na(df[idx_samples,idx_cpg]), 2, sum) / nrow(df)
-    sum(prop_na_col>=.05)
-    idx_cpg = names(prop_na_col)[prop_na_col<.05]
+if (sum(is.na(df[,idx_cpg]))>0) {
+  # Looking how much got more than 5% missing values
+  # apply_func = epimedtools::monitored_apply
+  if (! exists("apply_func")) {apply_func = apply}
+  prop_na_row =  apply_func(is.na(df[idx_samples,idx_cpg]), 1, sum) / ncol(df)
+  idx_samples = names(prop_na_row)[prop_na_row<.05]
+  prop_na_col =  apply_func(is.na(df[idx_samples,idx_cpg]), 2, sum) / nrow(df)
+  sum(prop_na_col>=.05)
+  idx_cpg = names(prop_na_col)[prop_na_col<.05]
 
-    print(paste0("#samples removed: ", sum(prop_na_row>=.05)))
-    print(paste0("#probes removed: ", sum(prop_na_col>=.05)))
+  print(paste0("#samples removed: ", sum(prop_na_row>=.05)))
+  print(paste0("#probes removed: ", sum(prop_na_col>=.05)))
 
-    df = df[idx_samples, c(idx_clinicals, idx_cpg)]
+  df = df[idx_samples, c(idx_clinicals, idx_cpg)]
 
-    ## KNN - We use the function impute.knn of the package impute to replace remaining missing values with KNN method. 
-    dknn = as.matrix(df[,idx_cpg])
-    dknnf = impute::impute.knn(dknn, k=10, maxp=5000, rng.seed=1)
-    dknn = dknnf$data
-    head(dknn[,1:6])
-    df = cbind(df[idx_samples,idx_clinicals],dknn[idx_samples,idx_cpg])
-  } else {
-    print("# Aucune valeur manquantes") 
-  }
-#   return(df)
-# })
-# df = get_df_rmnaquantile()
+  ## KNN - We use the function impute.knn of the package impute to replace remaining missing values with KNN method. 
+  dknn = as.matrix(df[,idx_cpg])
+  dknnf = impute::impute.knn(dknn, k=10, maxp=5000, rng.seed=1)
+  dknn = dknnf$data
+  head(dknn[,1:6])
+  df = cbind(df[idx_samples,idx_clinicals],dknn[idx_samples,idx_cpg])
+} else {
+  print("# No NA.") 
+}
 ```
 
+```{r filter_sd, fig.height=4.5}
+print("Filtering probes according to sd")
+d = t(as.matrix(df[,idx_cpg]))
+sd_thresh = 0.05
+sds = apply(d, 1, sd)
+sum(is.na(sds))
+sds = sds[!is.na(sds)]
+
+idx_probes_sd = names(sds)[sds > sd_thresh]
+length(idx_probes_sd)
+length(sds)
+
+layout(matrix(1:2,1), respect=TRUE)
+plot(density(sds), main=paste("sd distribution"))
+abline(v=sd_thresh)
+plot(density(d                ), main=paste("Methtylation distribution"), lty=2)
+den = density(d[idx_probes_sd,])
+lines(den$x, den$n / (nrow(d)*ncol(d)) * den$y, col=2, lty=1)
+den = density(d[setdiff(rownames(d),idx_probes_sd),])
+lines(den$x, den$n / (nrow(d)*ncol(d)) * den$y, col=4, lty=1)
+legend("topright", c("all", paste0("sd>", sd_thresh), paste0("sd<=", sd_thresh)), col=c(1,2,4), lty=c(2,1,1))
+```
 
 
 ## Outliers 
 
-**TODO Fabien**, adding description of what you are doing
-
-**TODO Fabien**, adding colors according to the first covaraiate
-
+**TODO**, adding description, what appends there?
 
 ```{r acp, results="verbatim"}
 padj = 0
@@ -84,7 +101,7 @@ df[,covariate] = as.factor(df[,covariate])
 levls = levels(df[,covariate])
 it=1
 while(sum(padj < 0.2) != 0) {
-  print(paste0("******* ", it))
+  print(paste0("******* iteration #", it, "..."))
   it = it+1
   mat = as.matrix(df[idx_samples, idx_cpg])
   pca = prcomp(mat, scale=FALSE)
@@ -98,7 +115,7 @@ while(sum(padj < 0.2) != 0) {
     plot(pca$x[,i], pca$x[,j], 
     	xlab=paste0("PC", i, "(", signif(p[i], 3), "%)"), 
     	ylab=paste0("PC", j, "(", signif(p[j], 3), "%)"), 
-    	col=as.numeric(df[,covariate]),
+    	col=as.numeric(df[idx_samples,covariate]),
     	pch=16)  
     legend(x="topright", legend=levls, col=1:length(levls), lty = 1, title=covariate)
     # scale_factor = min(abs(c(min(c(pca$x[,i], pca$x[,j])), max(c(pca$x[,i], pca$x[,j])))))
@@ -106,6 +123,7 @@ while(sum(padj < 0.2) != 0) {
     # arrows(0,0,pca$rotation[,i]*scale_factor, pca$rotation[,j]*scale_factor, col="grey")
     # text(pca$rotation[,i]*scale_factor, pca$rotation[,j]*scale_factor, rownames(pca$rotation))
   }
+  print(paste0("  removing..."))
   head(pca$x[,1:2])
   mean = mean(pca$x[,1])
   sd = sd(pca$x[,1])
@@ -114,20 +132,59 @@ while(sum(padj < 0.2) != 0) {
   sum(padj <= 0.2)
   range(padj)  
   idx_samples = names(padj)[padj > 0.2]
+  print(paste0("  #sample removed: ", nrow(df) - length(idx_samples)))
+  df = df[idx_samples,]
 }
+print(paste0("end of iterations."))
 
-print(paste0("#sample removed: ", nrow(df) - length(idx_samples)))
-
-df = df[idx_samples,]
 ```
+
+
+
+
+
+
+
+
+
+
+
+```{r filter_sd, fig.height=4.5}
+print("Filtering probes according to sd")
+d = t(as.matrix(df[,idx_cpg]))
+sd_thresh = 0.05
+sds = apply(d, 1, sd)
+sum(is.na(sds))
+sds = sds[!is.na(sds)]
+# plot(density(sds))
+# abline(v=sd_thresh)
+
+
+idx_probes_sd = names(sds)[sds > sd_thresh]
+# idx_probes_sd
+length(idx_probes_sd)
+length(sds)
+
+layout(matrix(1:2,1), respect=TRUE)
+plot(density(sds), main=paste("sd distribution"))
+abline(v=sd_thresh)
+plot(density(d                ), main=paste("Methtylation distribution"), lty=2)
+den = density(d[idx_probes_sd,])
+lines(den$x, den$n / (nrow(d)*ncol(d)) * den$y, col=2, lty=1)
+den = density(d[setdiff(rownames(d),idx_probes_sd),])
+lines(den$x, den$n / (nrow(d)*ncol(d)) * den$y, col=4, lty=1)
+legend("topright", c("all", paste0("sd>", sd_thresh), paste0("sd<=", sd_thresh)), col=c(1,2,4), lty=c(2,1,1))
+```
+
+
+
+
+
+
+
+
 
 ```{r export preprocessed df, results="verbatim", echo=TRUE}
 dim(df)
 saveRDS(df, paste0("df_preproc_",gse,".rds"))
 ```
-# Session Information
-
-```{r, results="verbatim"}
-sessionInfo()
-```
-

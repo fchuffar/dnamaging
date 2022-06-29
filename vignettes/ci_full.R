@@ -1,9 +1,10 @@
 start_ci = Sys.time()
 # Only train
 gses = c( 
-  "GSE41037", # 27k Genome wide DNA methylation profiling of whole blood in schizophrenia patients and healthy subjects.
-  "27kGSE40279", # Hannum 2013 27k version
   "GSE40279", # 450k Hannum 2013
+  "27kGSE40279", # Hannum 2013 27k version
+  "GSE41037", # 27k Genome wide DNA methylation profiling of whole blood in schizophrenia patients and healthy subjects.
+  "GSE50660", # smoking status and age 
   # "27kLima",
   # "cancair",
   NULL
@@ -25,11 +26,11 @@ for (gse in gses) {
 # train on GSE40279 and predict on a new dataset
 gses = c( 
   "GSE41037", # 27k Genome wide DNA methylation profiling of whole blood in schizophrenia patients and healthy subjects.
+  "GSE20067", # 27k Genome wide DNA methylation profiling of diabetic nephropathy in type 1 diabetes mellitus
   "GSE43976", # smoking status and age
   "GSE106648", # smoking status and age
-  "GSE50660", # smoking status and age 
+  "GSE50660", # smoking status and age
   # "Lima",
-  "GSE20067", # 27k Genome wide DNA methylation profiling of diabetic nephropathy in type 1 diabetes mellitus
   # "27kGSE40279", # Hannum 2013 27k version
   # "GSE41169",
   # "GSE20236",
@@ -46,6 +47,7 @@ gses = c(
   # "GSE179759"
   NULL
 )
+
 for (gse_eval in gses) {
   rm(list = ls()[-which(ls()%in%c("gse", "gses", "gse_eval"))])
   n_boot = 500
