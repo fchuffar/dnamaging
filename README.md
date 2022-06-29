@@ -3,7 +3,7 @@ A set of scripts and vignettes allowing to build and evaluate an epigenetic cloc
 
 
 
-# 5 seconds turorial
+# 180 seconds turorial
 
 ```
 git clone git@github.com:fchuffar/dnamaging.git
@@ -19,12 +19,14 @@ under R
 
 ```
 devtools::document(); devtools::install();
-rmarkdown::render("00_full.Rmd")
+rmarkdown::render("00_fullpipeline1.Rmd")
 ```
 
-# Prerequisists
+# Troubleshooting
 
-## CRAN
+## Prerequisists
+
+CRAN
 
 ``` 
 glmnet
@@ -33,7 +35,7 @@ WriteXLS
 ```
 
 
-## Bioconductor
+Bioconductor
     
 ```
 beeswarm
@@ -47,7 +49,7 @@ IlluminaHumanMethylationEPICanno.ilm10b4.hg19
 
 
   
-## Github
+Github
 
 ```
 https://github.com/fchuffar/epimedtools
@@ -61,7 +63,6 @@ devtools::document(); devtools::install(); devtools::check(build_args="--no-buil
 ```
 
 
-# Functionnal testing
 
 Functionnal testing is performed by executing vignettes with many parameters values.
 
