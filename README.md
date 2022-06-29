@@ -3,6 +3,25 @@ A set of scripts and vignettes allowing to build and evaluate an epigenetic cloc
 
 
 
+# 5 seconds turorial
+
+```
+git clone git@github.com:fchuffar/dnamaging.git
+mkdir dnamaging/data/
+cd dnamaging/data/
+wget http://epimed.univ-grenoble-alpes.fr/downloads/dmzfch/dnamaging/data/df_dnamaging.RData
+wget http://epimed.univ-grenoble-alpes.fr/downloads/dmzfch/dnamaging/data/litterature_models.RData
+cd ../vignettes
+R
+```
+
+under R
+
+```
+devtools::document(); devtools::install();
+rmarkdown::render("00_full.Rmd")
+```
+
 # Prerequisists
 
 ## CRAN
