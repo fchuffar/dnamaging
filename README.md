@@ -17,15 +17,11 @@ wget http://epimed.univ-grenoble-alpes.fr/downloads/dmzfch/dnamaging/data/df_dna
 wget http://epimed.univ-grenoble-alpes.fr/downloads/dmzfch/dnamaging/data/litterature_models.RData
 # Launch pipeline with default dataset
 cd ../vignettes
-R
+echo "devtools::install();" | Rscript -
+echo "rmarkdown::render('00_fullpipeline1.Rmd')" | Rscript -
 ```
 
-under R
 
-```
-devtools::document(); devtools::install();
-rmarkdown::render("00_fullpipeline1.Rmd")
-```
 
 # Troubleshooting
 
@@ -63,19 +59,22 @@ https://github.com/fchuffar/epimedtools
 
 # Development
 
+## Build package
+
 ```
 devtools::document(); devtools::install(); devtools::check(build_args="--no-build-vignettes")
 ```
 
 
-
+## Testing
 Functionnal testing is performed by executing vignettes with many parameters values.
 
 [MY-LINK](vignettes/ci.R)
 
 ```
-devtools::document(); devtools::install();
+devtools::install();
 source("ci_flash.R")
 source("ci_fast.R")
+source("ci_full.R")
 ```
 
