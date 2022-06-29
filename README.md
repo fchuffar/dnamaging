@@ -23,8 +23,6 @@ echo "rmarkdown::render('00_fullpipeline1.Rmd')" | Rscript -
 
 
 
-```
-
 # Troubleshooting
 
 ## Prerequisists
