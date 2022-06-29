@@ -558,6 +558,12 @@ saveRDS(list(best_model_cvaglmnet, best_model_bs), paste0("models_", gse, ".rds"
 
 
 ```{r model evaluation, fig.width=12, fig.height=15}
+#Create Train and Test samples
+Xtrain = mget_full_cpg_matrix(gse, idx_train, idx_cpg)
+Xtest =  mget_full_cpg_matrix(gse, idx_test,  idx_cpg)
+Ytrain = mget_df_preproc(gse)[idx_train,y_key]
+Ytest =  mget_df_preproc(gse)[idx_test, y_key]
+
 # df$qAge = cut(df[,y_key], quantile(df[,y_key]), include.lowest=TRUE)
 # if (!"qAge" %in% covariates) covariates = c(covariates, "qAge")
 for (covariate in covariates) {
