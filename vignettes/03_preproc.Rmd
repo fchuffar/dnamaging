@@ -67,7 +67,7 @@ if (sum(is.na(df[,idx_cpg]))>0) {
 }
 ```
 
-```{r filter_sd, fig.height=4.5}
+```{r filter_sd1, fig.height=4.5}
 print("Filtering probes according to sd")
 d = t(as.matrix(df[,idx_cpg]))
 sd_thresh = 0.05
@@ -150,7 +150,7 @@ print(paste0("end of iterations."))
 
 
 
-```{r filter_sd, fig.height=4.5}
+```{r filter_sd2, fig.height=4.5}
 print("Filtering probes according to sd")
 d = t(as.matrix(df[,idx_cpg]))
 sd_thresh = 0.05
