@@ -17,14 +17,12 @@ wget http://epimed.univ-grenoble-alpes.fr/downloads/dmzfch/dnamaging/data/df_dna
 wget http://epimed.univ-grenoble-alpes.fr/downloads/dmzfch/dnamaging/data/litterature_models.RData
 # Launch pipeline with default dataset
 cd ../vignettes
-R
+echo "devtools::install();" | Rscript -
+echo "rmarkdown::render('00_fullpipeline1.Rmd')" | Rscript -
 ```
 
-under R
 
-```
-devtools::document(); devtools::install();
-rmarkdown::render("00_fullpipeline1.Rmd")
+
 ```
 
 # Troubleshooting
