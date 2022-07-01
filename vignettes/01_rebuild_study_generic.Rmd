@@ -17,7 +17,7 @@ source("common.R")
 ```
 
 ```{r loading_data}
-df_filename_model = paste0("df_", gse_train, ".rds")
+df_filename_model = paste0("df_", gse_learn, ".rds")
 df_train = mreadRDS(df_filename_model)
 
 df_filename_eval = paste0("df_", gse_eval, ".rds")
@@ -40,7 +40,7 @@ idx_cpg_eval = colnames(df_eval)[markers_start_eval:ncol(df_eval)]
 ```{r create df}
 idx_probes = intersect(idx_cpg_eval, idx_cpg_model)
 df = df_train[idx_samples,c(idx_clinicals_model,idx_probes)]
-saveRDS(df,paste0("df_",gse_train,"given",gse_eval,".rds"))
+saveRDS(df,paste0("df_",gse_learn,"given",gse_eval,".rds"))
 ```
 
 
