@@ -110,7 +110,7 @@ while(sum(padj < 0.2) != 0) {
   p = v / sum(v) * 100
   layout(matrix(1:6,2), respect=TRUE)
   # layout(matrix(1:2,1), respect=TRUE)
-  barplot(p)
+  barplot(p, ylab="% of variance explained", xlab="components")
   for (i in 1:5) {
     j = i+1
     plot(pca$x[,i], pca$x[,j], 
