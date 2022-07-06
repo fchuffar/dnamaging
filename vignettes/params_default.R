@@ -1,8 +1,8 @@
 if (!exists("gse")) gse = "dnamaging"
+if (!exists("nb_train")) nb_train = 482
 y_key = "age"
 covariates = c("gender")
 sample_blacklist = c("GSM1007327")
-nb_train = 482
 n_boot = 500
 occ_optim = NULL
 
