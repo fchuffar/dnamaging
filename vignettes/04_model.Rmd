@@ -35,7 +35,7 @@ idx_cpg = colnames(df)[markers_start:ncol(df)]
 ```{r parameters, echo=TRUE, results="verbatim"}
 print(nb_train)
 set.seed(1)
-if (!exists(idx_test)) {
+if (!exists("idx_test")) {
   idx_train = sample(rownames(df), nb_train)
   idx_test = setdiff(rownames(df), idx_train)  
 } else { # Sensitivity analysis
