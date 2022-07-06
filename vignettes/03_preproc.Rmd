@@ -67,6 +67,9 @@ if (sum(is.na(df[,idx_cpg]))>0) {
 }
 ```
 
+## sd distribution before filtering
+
+
 ```{r filter_sd1, fig.height=4.5}
 print("Filtering probes according to sd")
 d = t(as.matrix(df[,idx_cpg]))
@@ -146,6 +149,7 @@ print(paste0("end of iterations."))
 
 
 
+## sd distribution after filtering
 
 
 

@@ -38,7 +38,7 @@ set.seed(1)
 if (!exists(idx_test)) {
   idx_train = sample(rownames(df), nb_train)
   idx_test = setdiff(rownames(df), idx_train)  
-} else { # Sensitiuvity analysis
+} else { # Sensitivity analysis
   idx_train = setdiff(rownames(df), idx_test)    
 }
 ```
@@ -415,57 +415,89 @@ dim(stats)
 
 ```{r plot_cv_each_bs, echo=FALSE, eval=TRUE}
 # # 3. plot
-# stats$labs = paste0(stats$occurence, "  (", stats$nb_probes, " probes)")
-# stats$labs = factor(paste0(stats$occurence, "  (", stats$nb_probes, " probes)"), levels=unique(stats$labs[order(stats$occurence)]))
-stats$labs = paste0(stats$occurence, " (", sapply(stats$occurence, function(o) floor(mean(stats[stats$occurence==o,]$nb_probes))), " probes)")
-stats$labs = factor(paste0(stats$occurence, " (", sapply(stats$occurence, function(o) floor(mean(stats[stats$occurence==o,]$nb_probes))), " probes)"), levels=unique(stats$labs[order(stats$occurence)]))
-# stats$labs = paste0(stats$nb_probes, " (", stats$nb_probes, " probes)")
-# stats$labs = factor(paste0(stats$nb_probes, " (", stats$nb_probes, " probes)"),levels=unique(stats$labs[order(stats$nb_probes)]))
-layout(matrix(1:2,1), respect=TRUE)
-par(mar=c(10, 4.1, 4.1, 2.1))
-foo = boxplot(train_err~labs, data=stats, border=1, las=2, ylab="RMSE", main="Cross Validation for occurence min", xlab="", ylim=c(0, max(stats$test_err)))
-bar = boxplot( test_err~labs, data=stats, border=adjustcolor(2, alpha.f=.5), col=adjustcolor("grey", alpha.f=.1), las=2, ylab="RMSE", main="Cross Validation", add=TRUE, xlab="probes occurence")
-legend("bottomright", col=1:2, c("Nested train", "Validation"), pch=1)
+
+# stats$labs = paste0(stats$occurence, " (", sapply(stats$occurence, function(o) floor(mean(stats[stats$occurence==o,]$nb_probes))), " probes)")
+# stats$labs = factor(paste0(stats$occurence, " (", sapply(stats$occurence, function(o) floor(mean(stats[stats$occurence==o,]$nb_probes))), " probes)"), levels=unique(stats$labs[order(stats$occurence)]))
+# # stats$labs = paste0(stats$nb_probes, " (", stats$nb_probes, " probes)")
+# # stats$labs = factor(paste0(stats$nb_probes, " (", stats$nb_probes, " probes)"),levels=unique(stats$labs[order(stats$nb_probes)]))
+# layout(matrix(1:2,1), respect=TRUE)
+# par(mar=c(10, 4.1, 4.1, 2.1))
+# foo = boxplot(train_err~labs, data=stats, border=1, las=2, ylab="RMSE", main="Cross Validation for occurence min", xlab="", ylim=c(0, max(stats$test_err)))
+# bar = boxplot( test_err~labs, data=stats, border=adjustcolor(2, alpha.f=.5), col=adjustcolor("grey", alpha.f=.1), las=2, ylab="RMSE", main="Cross Validation", add=TRUE, xlab="probes occurence")
+# legend("bottomright", col=1:2, c("Nested train", "Validation"), pch=1)
+#
+#
+#
+# lines(sapply(sort(unique(stats$occurence)), function(o) mean(stats[stats$occurence==o,]$train_err)), lwd=3)
+# lines(sapply(sort(unique(stats$occurence)), function(o) mean(stats[stats$occurence==o,]$test_err)), lwd=3, col=2)
+# par(mar=c(5.1, 4.1, 4.1, 2.1))
+#
+#
+#
+# if (!is.null(occ_optim)) {
+#   idx = which(as.numeric(do.call(rbind,strsplit(bar$names, " "))[,1])>=occ_optim)[1]
+#   best_params = bar$names[idx]
+# } else {
+#   idx = floor(ncol(bar$stats)*.5)
+#   best_params = bar$names[idx]
+#   occ_optim = as.numeric(strsplit(best_params, " ")[[1]][1])
+# }
+#
+# abline(v=idx, col=2, lty=1)
+#
+# best_model_bs_probes = names(pb_occ_tab[pb_occ_tab>=occ_optim])
+# par(mar=c(5.1, 4.1, 4.1, 2.1))
+# legend("topleft", best_params, col=2, lty=1)
 
 
 
-lines(sapply(sort(unique(stats$occurence)), function(o) mean(stats[stats$occurence==o,]$train_err)), lwd=3)
-lines(sapply(sort(unique(stats$occurence)), function(o) mean(stats[stats$occurence==o,]$test_err)), lwd=3, col=2)
-par(mar=c(5.1, 4.1, 4.1, 2.1))
-
-
-
-if (!is.null(occ_optim)) {
-  idx = which(as.numeric(do.call(rbind,strsplit(bar$names, " "))[,1])>=occ_optim)[1]
-  best_params = bar$names[idx]
-} else {
-  idx = floor(ncol(bar$stats)*.5)
-  best_params = bar$names[idx]
-  occ_optim = as.numeric(strsplit(best_params, " ")[[1]][1])  
-}
-
-abline(v=idx, col=2, lty=1)
-
-best_model_bs_probes = names(pb_occ_tab[pb_occ_tab>=occ_optim])
-par(mar=c(5.1, 4.1, 4.1, 2.1))
-legend("topleft", best_params, col=2, lty=1)
-
+layout(matrix(1:2,1),respect = TRUE)
 
 w_size = 10
 stats$foccurence = ceiling(stats$occurence/w_size)*w_size
 
 x = sort(unique(stats$foccurence))
 y = sapply(sort(unique(stats$foccurence)), function(o) mean(stats[stats$foccurence==o,]$test_err))
+x_optim = x[which(y==min(y))]
 y1se = sapply(sort(unique(stats$foccurence)), function(o) sd(stats[stats$foccurence==o,]$test_err) / sqrt(length(stats[stats$foccurence==o,]$test_err)))
 ytr = sapply(sort(unique(stats$foccurence)), function(o) mean(stats[stats$foccurence==o,]$train_err))
 ytr1se = sapply(sort(unique(stats$foccurence)), function(o) sd(stats[stats$foccurence==o,]$train_err) / sqrt(length(stats[stats$foccurence==o,]$train_err)))
-plot(x, y, col=2, main=gse, xlab="occurence", ylab="RMSE", ylim=c(0, max(stats$test_err)))
-points(stats$occurence, stats$test_err, col=adjustcolor(2, alpha.f=.1), main=gse, xlab="occurence", ylab="RMSE")
+plot(x, y, col=2, main="Cross validation", xlab="minimal occurence", ylab="RMSE", ylim=c(0, max(stats$test_err)), pch=3)
+abline(v=x_optim, col=2)
+points(x, ytr, col=1, pch=3)
+
 lines(x, y+y1se, col=2)
 lines(x, y-y1se, col=2)
-points(stats$occurence, stats$train_err, col=adjustcolor(1, alpha.f=.1))
 lines(x, ytr+ytr1se, col=1)
 lines(x, ytr-ytr1se, col=1)
+
+points(stats$occurence, stats$test_err, col=adjustcolor(2, alpha.f=.1))
+points(stats$occurence, stats$train_err, col=adjustcolor(1, alpha.f=.1))
+
+best_model_bs_probes = names(pb_occ_tab[pb_occ_tab>=x_optim])
+par(mar=c(5.1, 4.1, 4.1, 2.1))
+legend("bottomright", c("Nested train +/- 1se", "Validation +/- 1se", paste0(x_optim, " occ. over ", n_boot, " bs")), 
+  pch=c(3,3,NA), 
+  col=c(1, 2, 2),
+  lty=c(NA,NA,1), 
+  cex=.7
+)
+
+
+
+
+foo = cumsum(rev(table(pb_occ_tab)))
+plot(as.numeric(names(foo)), foo, las=2, 
+  xlab=paste0("cumulated probes occurence (for ", n_boot, " bootstraps)"), 
+  ylab="nb. probes",
+  main=paste0("Cumulated probes occurence"), 
+  xlim=c(500,1), lty=1
+)
+abline(v=x_optim, col=2)
+abline(h=length(best_model_bs_probes), col=2)
+legend("topleft", paste0(length(best_model_bs_probes), " probes viewed", x_optim, " times"), col=2, lty=1, cex=.7)
+
+
 ```
 
 
