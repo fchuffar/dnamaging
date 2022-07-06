@@ -10,7 +10,7 @@ gses = c(
   NULL
 )
 for (gse in gses) {
-  rm(list = ls()[-which(ls()%in%c("gse", "gses"))])
+  # rm(list = ls()[-which(ls()%in%c("gse", "gses"))])
   rmarkdown::render("00_fullpipeline1.Rmd", output_file=paste0("00_fullpipeline1_", gse, ".html"))
 }
 
@@ -42,7 +42,7 @@ gses = c(
 )
 
 for (gse_eval in gses) {
-  rm(list = ls()[-which(ls()%in%c("gse", "gses", "gse_eval"))])
+  #rm(list = ls()[-which(ls()%in%c("gse", "gses", "gse_eval"))])
   n_boot = 500
   gse_learn = "GSE40279"
   gse_given = paste0(gse_learn, "given", gse_eval)
@@ -64,7 +64,7 @@ gses = c(
   NULL
 )
 for (gse_eval in gses) {
-  rm(list = ls()[-which(ls()%in%c("gse", "gses", "gse_eval"))])
+  # rm(list = ls()[-which(ls()%in%c("gse", "gses", "gse_eval"))])
   gse = gse_eval ; rmarkdown::render("02_statdesc.Rmd", output_file=paste0("02_statdesc_", gse, ".html"))    
   gse = gse_eval ; rmarkdown::render("03_preproc.Rmd", output_file=paste0("03_preproc_", gse, ".html"))    
   gse_m = NULL ; gse = gse_eval ; rmarkdown::render("05_eval.Rmd", output_file=paste0("05_eval_", gse, ".html"))
