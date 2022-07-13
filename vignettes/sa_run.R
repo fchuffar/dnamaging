@@ -1,3 +1,8 @@
+gses = c("GSE50660", "GSE40279", "GSE41037")
+ns = c(100, 200, 300, 350)
+ps = c(100, 200, 300, 500)
+seeds = 1:3
+
 source("common.R")
 
 
@@ -21,7 +26,7 @@ for (gse in c("GSE50660", "GSE40279", "GSE41037")) {
 length(all_probes)
 
 
-for (gse in c("GSE50660", "GSE40279", "GSE41037")) {
+for (gse in gses) {
   print(gse)
   source("params_default.R")
   df_filename = paste0("df_", gse, ".rds")
@@ -31,12 +36,12 @@ for (gse in c("GSE50660", "GSE40279", "GSE41037")) {
   colnames(df)[1:10]
   colnames(df)[which(colnames(df)==y_key)] = "age"
   colnames(df)[1:10]
-  for (n in c(100, 200, 300, 350)) {
+  for (n in ns) {
     set.seed(1)
     idx_train = sample(setdiff(rownames(df), idx_test), n)
     nb_train = n 
-    for (seed in 1:3) {
-      for (p in c(1000, 2000, 3000, 5000)) {
+    for (seed in seeds) {
+      for (p in ps) {
         set.seed(seed)
         idx_probes = sample(all_probes, p)
         ourgse = paste0("gse", gse, "n", n, "seed", seed, "p", p)

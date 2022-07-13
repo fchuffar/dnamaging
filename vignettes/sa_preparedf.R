@@ -1,0 +1,54 @@
+source("common.R")
+
+
+all_probes = NULL
+for (gse in c("GSE50660", "GSE40279", "GSE41037")) {
+  print(gse)
+  source("params_default.R")
+  df_filename = paste0("df_", gse, ".rds")
+  df = mreadRDS(df_filename)
+  idx_samples = rownames(df)
+  markers_start = grep("cg",colnames(df))[1]
+  idx_clinicals = colnames(df)[1:(markers_start-1)]
+  idx_cpg = colnames(df)[markers_start:ncol(df)]
+  if (is.null(all_probes)) {
+    all_probes = idx_cpg
+  } else {
+    all_probes = intersect(all_probes, idx_cpg)
+  }
+}
+
+length(all_probes)
+
+ourgses = c()
+for (gse in c("GSE50660", "GSE40279", "GSE41037")) {
+  print(gse)
+  source("params_default.R")
+  df_filename = paste0("df_", gse, ".rds")
+  df = mreadRDS(df_filename)
+  set.seed(1)
+  idx_test = sample(rownames(df), 100)
+  colnames(df)[1:10]
+  colnames(df)[which(colnames(df)==y_key)] = "age"
+  colnames(df)[1:10]
+  for (n in c(100, 200, 300, 350)) {
+    set.seed(1)
+    idx_train = sample(setdiff(rownames(df), idx_test), n)
+    nb_train = n 
+    for (seed in 1:3) {
+      for (p in c(1000, 2000, 3000, 5000)) {
+        set.seed(seed)
+        idx_probes = sample(all_probes, p)
+        ourgse = paste0("gse", gse, "n", n, "seed", seed, "p", p)
+        ourgses = c(ourgses, ourgse)
+        ourdf_filename = paste0("df_", ourgse, ".rds")
+        our_df = df[c(idx_test, idx_train),c("age", "gender", idx_probes)]           
+        saveRDS(our_df, ourdf_filename)
+      }
+    }
+  }
+}
+
+
+write.table(ourgses, "ourgses.txt", quote=FALSE, col.names=FALSE, row.names=FALSE)
+
