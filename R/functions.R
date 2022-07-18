@@ -205,7 +205,7 @@ plot_model_eval = function(m, df, covariate, Xtrain, Xtest, Ytrain, Ytest) {
   )
   # ADD 
   if(sum(is.na(m0Tr$coefficients)) != 0) {
-  m0Tr$coefficients[2] = 1
+    m0Tr$coefficients[2] = 0
   } 
   abline(m0Tr)                                                                  
   abline(a=0, b=1, col="grey", lty=2)
@@ -218,7 +218,7 @@ plot_model_eval = function(m, df, covariate, Xtrain, Xtest, Ytrain, Ytest) {
   )
   # ADD
   if(sum(is.na(m0Te$coefficients)) != 0) {
-  m0Te$coefficients[2] = 1               
+    m0Te$coefficients[2] = 0               
   }   
   abline(m0Te)                                                  
   abline(a=0, b=1, col="grey", lty=2)
@@ -273,7 +273,7 @@ plot_model_eval = function(m, df, covariate, Xtrain, Xtest, Ytrain, Ytest) {
   )
   # ADD
   if(sum(is.na(m1Te$coefficients)) != 0) {
-  m1Te$coefficients[2] = 1
+    m1Te$coefficients[2] = 0
   } 
   abline(m1Te)                                                                    
   abline(m0Te, col="grey", lty=2)

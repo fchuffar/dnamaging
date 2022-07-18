@@ -51,5 +51,5 @@ for (gse in gses) {
 }
 
 
-write.table(ourgses, "ourgses.txt", quote=FALSE, col.names=FALSE, row.names=FALSE)
+write.table(sample(ourgses), "ourgses.txt", quote=FALSE, col.names=FALSE, row.names=FALSE)
 
