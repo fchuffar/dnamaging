@@ -179,8 +179,10 @@ plot_model_eval = function(m, df, covariate, Xtrain, Xtest, Ytrain, Ytest) {
   df[,covariate] = as.factor(df[,covariate])
   # Dealing with missing probes (litterature_models)
   idx_notmissing_probes = rownames(m$coeff)[(rownames(m$coeff) %in% colnames(Xtrain))]
-  tmp_Xtrain = Xtrain[,idx_notmissing_probes] # Keep only common CpG between coeffs and Xtrain
-  tmp_Xtest  = Xtest [,idx_notmissing_probes] # Keep only common CpG between coeffs and Xtrain
+  tmp_Xtrain = as.matrix(Xtrain[,idx_notmissing_probes]) # Keep only common CpG between coeffs and Xtrain
+  rownames(tmp_Xtrain) = rownames(Xtrain)
+  tmp_Xtest  = as.matrix(Xtest[,idx_notmissing_probes]) # Keep only common CpG between coeffs and Xtrain
+  rownames(tmp_Xtest) = rownames(Xtest)
   m$coeff = m$coeff[idx_notmissing_probes,]
 
   # prediction
@@ -201,7 +203,11 @@ plot_model_eval = function(m, df, covariate, Xtrain, Xtest, Ytrain, Ytest) {
     ylab="Chronological Age", 
     col=as.numeric(df[rownames(predTr), covariate])
   )
-  abline(m0Tr)                                                                    
+  # ADD 
+  if(sum(is.na(m0Tr$coefficients)) != 0) {
+  m0Tr$coefficients[2] = 1
+  } 
+  abline(m0Tr)                                                                  
   abline(a=0, b=1, col="grey", lty=2)
   plot(predTe, Ytest, 
     main = paste0(m$name), 
@@ -210,7 +216,11 @@ plot_model_eval = function(m, df, covariate, Xtrain, Xtest, Ytrain, Ytest) {
     ylab="Chronological Age", 
     col=as.numeric(df[rownames(predTe),covariate])
   )
-  abline(m0Te)                                                                    
+  # ADD
+  if(sum(is.na(m0Te$coefficients)) != 0) {
+  m0Te$coefficients[2] = 1               
+  }   
+  abline(m0Te)                                                  
   abline(a=0, b=1, col="grey", lty=2)
 
 
@@ -219,7 +229,7 @@ plot_model_eval = function(m, df, covariate, Xtrain, Xtest, Ytrain, Ytest) {
   RegRes_Te = m0Te$residuals
   RegRes_Te = cbind.data.frame(RegRes_Te, df[names(RegRes_Te),covariate])
   colnames(RegRes_Te) = c("RegRes", covariate)
-  pval = kruskal.test(RegRes_Te[,1]~RegRes_Te[,2])$p.value
+  pvalR = kruskal.test(RegRes_Te[,1]~RegRes_Te[,2])$p.value
   # anova(lm(RegRes_Te[,1]~RegRes_Te[,2], data=RegRes_Te))[1,5]
   # density
   den = density(RegRes_Te[, "RegRes"], na.rm=TRUE)
@@ -232,7 +242,7 @@ plot_model_eval = function(m, df, covariate, Xtrain, Xtest, Ytrain, Ytest) {
     } # Patch density
   })
   plot(0, 0, col=0, ylab="", 
-    xlab=paste0("K-W pval=", signif(pval ,3)),
+    xlab=paste0("K-W pval=", signif(pvalR ,3)),
     xlim = c(-1,1)*3*rmseTe, 
     ylim = c(0, max(unlist(lapply(density, function(d){max(d$y)})))), 
     main = paste0("RegRes"))
@@ -249,6 +259,7 @@ plot_model_eval = function(m, df, covariate, Xtrain, Xtest, Ytrain, Ytest) {
 
 
   #~Ytest_mod = (Ytest - m0$coefficients[[1]])/m0$coefficients[[2]]
+
   predTe_mod = m0Te$coefficients[[2]]*predTe + m0Te$coefficients[[1]]
   m1Te = lm(Ytest~predTe_mod, data.frame(Ytest=Ytest, predTe_mod=predTe_mod))
   rmseTe_mod = sqrt(mean((m1Te$residuals)^2))
@@ -260,6 +271,10 @@ plot_model_eval = function(m, df, covariate, Xtrain, Xtest, Ytrain, Ytest) {
     ylab="Chronological Age", 
     col=as.numeric(df[rownames(predTe),covariate])
   )
+  # ADD
+  if(sum(is.na(m1Te$coefficients)) != 0) {
+  m1Te$coefficients[2] = 1
+  } 
   abline(m1Te)                                                                    
   abline(m0Te, col="grey", lty=2)
 
@@ -288,5 +303,11 @@ plot_model_eval = function(m, df, covariate, Xtrain, Xtest, Ytrain, Ytest) {
   for (j in c(1:length(levls))){
   	lines(density[[j]], col=j)
   }
-  legend(x="topright", legend=levls, col=1:length(levls), lty = 1, title=covariate)           
+  legend(x="topright", legend=levls, col=1:length(levls), lty = 1, title=covariate)  
+  # ADD
+  info = list(RMSE = rmseTe, 
+              pvalAMAR = pval, 
+              pvalRR = pvalR, 
+              nb_probes_mod = nrow(m$coeff) )
+  return(info)          
 }

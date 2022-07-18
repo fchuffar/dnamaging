@@ -35,11 +35,13 @@ idx_cpg = colnames(df)[markers_start:ncol(df)]
 ```{r parameters, echo=TRUE, results="verbatim"}
 print(nb_train)
 set.seed(1)
-if (!exists("idx_test")) {
+if (!exists("MODESA")) {
   idx_train = sample(rownames(df), nb_train)
   idx_test = setdiff(rownames(df), idx_train)  
 } else { # Sensitivity analysis
-  idx_train = setdiff(rownames(df), idx_test)    
+  idx_test = rownames(mreadRDS(paste0("df_",gse,".rds")))[1:100]
+  idx_test = idx_test[idx_test %in% rownames(df)] 
+  idx_train = setdiff(rownames(df), idx_test)   
 }
 ```
 
@@ -395,10 +397,13 @@ stats = lapply(1:length(folds), function(fold) {
   sub_df = df[idx_train, c(tmp_probes, y_key)] 
     
   stats = epimedtools::monitored_apply(mod=1, t(t(iterator)), 1, function(occ, pb_occ_tab, tmp_idx_train, tmp_idx_test, y_key, tmp_probes, fold, sub_df) {
-    # print(occ)
-    tmp_probes = names(pb_occ_tab)[pb_occ_tab>=occ]
+  # print(occ)
+  tmp_probes = names(pb_occ_tab)[pb_occ_tab>=occ]
+  # ADD
+  if(length(tmp_probes) >= 2){
     ret = mcall_glmnet_mod(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, fold, sub_df, alpha=best_model_cvaglmnet_params$alpha, lambda=best_model_cvaglmnet_params$lambda)
     return(ret)
+  }
   }, pb_occ_tab=pb_occ_tab, tmp_idx_train=tmp_idx_train, tmp_idx_test=tmp_idx_test, y_key=y_key, tmp_probes=tmp_probes, fold=fold, sub_df=sub_df)
   stats = do.call(rbind, stats)
   stats
@@ -459,6 +464,26 @@ stats$foccurence = ceiling(stats$occurence/w_size)*w_size
 x = sort(unique(stats$foccurence))
 y = sapply(sort(unique(stats$foccurence)), function(o) mean(stats[stats$foccurence==o,]$test_err))
 x_optim = x[which(y==min(y))]
+
+
+
+# ADD
+ 
+best_model_bs_probes = names(pb_occ_tab[pb_occ_tab>=x_optim])
+l_probes = length(best_model_bs_probes)
+
+x_tmp = x
+y_tmp = y
+while(l_probes < 2) {
+  x_tmp = x_tmp[-which(x_tmp == x_optim)] 
+  y_tmp = y_tmp[-which(y_tmp == min(y_tmp))]
+  x_optim = x_tmp[which(y_tmp==min(y_tmp))]
+  best_model_bs_probes = names(pb_occ_tab[pb_occ_tab>=x_optim])
+  l_probes = length(best_model_bs_probes)
+}
+
+
+
 y1se = sapply(sort(unique(stats$foccurence)), function(o) sd(stats[stats$foccurence==o,]$test_err) / sqrt(length(stats[stats$foccurence==o,]$test_err)))
 ytr = sapply(sort(unique(stats$foccurence)), function(o) mean(stats[stats$foccurence==o,]$train_err))
 ytr1se = sapply(sort(unique(stats$foccurence)), function(o) sd(stats[stats$foccurence==o,]$train_err) / sqrt(length(stats[stats$foccurence==o,]$train_err)))
@@ -474,7 +499,6 @@ lines(x, ytr-ytr1se, col=1)
 points(stats$occurence, stats$test_err, col=adjustcolor(2, alpha.f=.1))
 points(stats$occurence, stats$train_err, col=adjustcolor(1, alpha.f=.1))
 
-best_model_bs_probes = names(pb_occ_tab[pb_occ_tab>=x_optim])
 par(mar=c(5.1, 4.1, 4.1, 2.1))
 legend("bottomright", c("Nested train +/- 1se", "Validation +/- 1se", paste0(x_optim, " occ. over ", n_boot, " bs")), 
   pch=c(3,3,NA), 
@@ -603,11 +627,15 @@ Ytest =  mget_df_preproc(gse)[idx_test, y_key]
 # df$qAge = cut(df[,y_key], quantile(df[,y_key]), include.lowest=TRUE)
 # if (!"qAge" %in% covariates) covariates = c(covariates, "qAge")
 for (covariate in covariates) {
-  layout(matrix(1:20, 5), respect=TRUE)  
+  layout(matrix(1:20, 5), respect=TRUE)
+  # ADD
+  info_g = list()
   for (m in models) {
     # layout(matrix(1:5, 1), respect=TRUE)
-    dnamaging::plot_model_eval(m, df, covariate, Xtrain=Xtrain, Xtest=Xtest, Ytrain=Ytrain, Ytest=Ytest)
+    info = dnamaging::plot_model_eval(m, df, covariate, Xtrain=Xtrain, Xtest=Xtest, Ytrain=Ytrain, Ytest=Ytest)
+    info_g[[length(info_g)+1]] = info
   }
+  names(info_g) = c("ElasticNet","Bootstrap","Hannum","Horvath") 
 }
 ```
 

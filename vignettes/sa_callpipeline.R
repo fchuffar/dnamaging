@@ -1,28 +1,26 @@
-exec_time = microbenchmark::microbenchmark(rmarkdown::render('00_fullpipeline1.Rmd', output_file=paste0('00_fullpipeline1_', gse, '.Rmd')), times=1, unit="s")$time
-#  ; 
-# be shure taht we get all required indicators
+exec_time = microbenchmark::microbenchmark(rmarkdown::render('00_fullpipeline1.Rmd', output_file=paste0('00_fullpipeline1_', gse, '.Rmd')), times=1, unit='s')$time/(10^9)
 # meaning 
    # - temps d'execution
    # - précision de l'horloge (RMSE sur le test) (mod1, mod2, mod3, mod4)
    # - pval KW sur le genre (mod1, mod2, mod3, mod4)
    # - nombre de sondes de (mod1, mod2, mod3, mod4)
 results = c(
-  exec_time=exec_time ,
-  rmsemod1_test=0     ,
-  rmsemod2_test=0     ,
-  rmsemod3_test=0     ,
-  rmsemod4_test=0     ,
-  pvkwamarmod1_test=0 ,
-  pvkwamarmod2_test=0 ,
-  pvkwamarmod3_test=0 ,
-  pvkwamarmod4_test=0 ,
-  pvkwrrmod1_test=0   ,
-  pvkwrrmod2_test=0   ,
-  pvkwrrmod3_test=0   ,
-  pvkwrrmod4_test=0   ,
-  nbmod1_probes=0     ,
-  nbmod2_probes=0     ,
-  nbmod3_probes=0     ,
-  nbmod4_probes=0 
-)   
-saveRDS(results, "results_", gse, ".rds")
+          exec_time=as.numeric(exec_time) ,
+          rmsemod1_test=info_g$ElasticNet$RMSE,
+          rmsemod2_test=info_g$Bootstrap$RMSE,
+          rmsemod3_test=info_g$Hannum$RMSE,
+          rmsemod4_test=info_g$Horvath$RMSE,
+          pvkwamarmod1_test=info_g$ElasticNet$pvalAMAR ,
+          pvkwamarmod2_test=info_g$Bootstrap$pvalAMAR ,
+          pvkwamarmod3_test=info_g$Hannum$pvalAMAR ,
+          pvkwamarmod4_test=info_g$Horvath$pvalAMAR ,
+          pvkwrrmod1_test=info_g$ElasticNet$pvalRR,
+          pvkwrrmod2_test=info_g$Bootstrap$pvalRR   ,
+          pvkwrrmod3_test=info_g$Hannum$pvalRR   ,
+          pvkwrrmod4_test=info_g$Horvath$pvalRR   ,
+          nbmod1_probes=info_g$ElasticNet$nb_probes_mod     ,
+          nbmod2_probes=info_g$Bootstrap$nb_probes_mod     ,
+          nbmod3_probes=info_g$Hannum$nb_probes_mod     ,
+          nbmod4_probes=info_g$Horvath$nb_probes_mod 
+        )   
+saveRDS(results, paste0("results_", gse, ".rds"))
