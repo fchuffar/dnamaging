@@ -24,6 +24,9 @@ if (!file.exists(results_file)) {
             nbmod2_probes=info_g$Bootstrap$nb_probes_mod     ,
             nbmod3_probes=info_g$Hannum$nb_probes_mod     ,
             nbmod4_probes=info_g$Horvath$nb_probes_mod 
+
           )   
   saveRDS(results, paste0("results_", gse, ".rds"))  
 }
+
+

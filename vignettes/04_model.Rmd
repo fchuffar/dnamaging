@@ -668,7 +668,7 @@ Discussion, a **core of probes** are always selected by bootstrap.
 
 ## Exporting probe annotations
 
-```{r probe annotation}
+```{r probe annotation, eval=FALSE}
 library(IlluminaHumanMethylation450kanno.ilmn12.hg19)
 pf450k = data.frame(getAnnotation(IlluminaHumanMethylation450kanno.ilmn12.hg19))
 probes_annot = pf450k[models[[2]]$coeff$probes,]
@@ -681,9 +681,14 @@ WriteXLS::WriteXLS(probes_annot, probes_annot_filename)
 # candidates[unlist(sapply(models[[2]]$coeff$probes, grep, candidates$probes)),]
 # candidates[unlist(sapply(models[[3]]$coeff$probes, grep, candidates$probes)),]
 # candidates[unlist(sapply(models[[4]]$coeff$probes, grep, candidates$probes)),]
+
+
+
+
+
+# [./`r probes_annot_filename`](`r probes_annot_filename`)
 ```
 
-[./`r probes_annot_filename`](`r probes_annot_filename`)
 
 
 
