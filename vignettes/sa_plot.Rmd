@@ -12,7 +12,7 @@ output:
 
 
 ```{r echo=FALSE}
-knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide")
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=3, eval=TRUE, echo=FALSE, results="hide", show.warnings=FALSE)
 source("common.R")
 source("sa_params.R")
 ```
@@ -20,7 +20,6 @@ source("sa_params.R")
 ```{r}
 for (i in 1:17){
   layout(matrix(1:3, 1), respect=TRUE)
-  gse = "GSE50660"
   for(gse in gses){ 
   results_g = list()  
   for (n in ns) {
@@ -35,13 +34,16 @@ for (i in 1:17){
         }
         results_m=c()
         results_sd=c()
-        results_m=c(results_m,mean(unlist(lapply(results,"[[",i))))
-        results_sd = c(results_sd,sd(unlist(lapply(results,"[[",i))))
-        names_res = c("n","p",names(results[[1]])[i], "lo", "up")
-        results_tmp = c(n,p,results_m,results_m-results_sd,results_m+results_sd)
-        names(results_tmp)= names_res
-        results_g[[length(results_g)+1]] = results_tmp
-          
+        if (length(results) != 0){
+          results_m=c(results_m,mean(unlist(lapply(results,"[[",i))))
+          if(length(results) > 1) {
+            results_sd = c(results_sd,sd(unlist(lapply(results,"[[",i))))
+          }else{ results_sd = c(results_sd,0) }
+          names_res = c("n","p",names(results[[1]])[i], "lo", "up")
+          results_tmp = c(n,p,results_m,results_m-results_sd,results_m+results_sd)
+          names(results_tmp)= names_res
+          results_g[[length(results_g)+1]] = results_tmp
+        }  
       }
   }
   results_g = data.frame(
@@ -52,7 +54,7 @@ for (i in 1:17){
     up  = unlist(lapply(results_g, "[[", 5))
   )
   
-  plot(0, 0, col=0, xlab="p", ylab= names_res[3], main=paste0(names_res[3]," en fonction de n et p pour ",gse), xlim=range(results_g$p), ylim=c(0, max(results_g$up)))
+  plot(0, 0, col=0, xlab="p", ylab= names_res[3], main=paste0(gse), xlim=range(results_g$p), ylim=c(0, max(results_g$up)))
   ns = unique(results_g$n)
   foo = lapply(ns, function(n) { 
     results = results_g[results_g$n==n,]
@@ -60,7 +62,7 @@ for (i in 1:17){
     lines(results$p, results$var, col=tmp_col, lty=1, type = "b")
     arrows(x0=results$p, y0=results$lo, x1=results$p, y1=results$up, code=3, angle=90, length = 0.03, col=tmp_col, lwd=2)
   })
-  legend(x="topleft", legend=ns, fill=1:length(ns), title="n")
+  legend(x="bottomleft", legend=ns, fill=1:length(ns), title="n")
   
   }
 }
