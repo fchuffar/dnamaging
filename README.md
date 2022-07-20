@@ -82,6 +82,8 @@ source("ci_full.R")
 ## Semsituvity analysis
 
 ```
+cd ~/projects/dnamaging/vignettes/
+echo "source('sa_preparedf.R')" | Rscript -
 snakemake --cores 8 -s sa_launchexperiments.py -pn
 
 ```
