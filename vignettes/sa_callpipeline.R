@@ -1,6 +1,6 @@
 results_file = paste0("results_", gse, ".rds")
 if (!file.exists(results_file)) {
-  exec_time = microbenchmark::microbenchmark(rmarkdown::render('00_fullpipeline1.Rmd', output_file=paste0('00_fullpipeline1_', gse, '.html')), times=1, unit='s')$time/(10^9)
+  exec_time = microbenchmark::microbenchmark(rmarkdown::render('../00_fullpipeline1.Rmd', output_file=paste0('00_fullpipeline1_', gse, '.html')), times=1, unit='s')$time/(10^9)
   results = c(
     exec_time         = as.numeric(exec_time)           ,
     rmsemod1_test     = info_g$ElasticNet$RMSE          ,

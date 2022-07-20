@@ -29,13 +29,16 @@ rule sa_callpipeline:
       rmd_script="{prefix}/sa_callpipeline.R",      
       rmd_script_model="{prefix}/04_model.Rmd",      
     output: 
-      rds = "{prefix}/results_{gse}.rds"      ,           
+      rds = "{prefix}/wd_{gse}/results_{gse}.rds"      ,           
+      html = "{prefix}/wd_{gse}/00_fullpipeline1_{gse}.html"      ,           
     threads: 1
     shell:"""
 # export PATH="/summer/epistorage/opt/bin:$PATH"
 # export PATH="/summer/epistorage/miniconda3/bin:$PATH"
 cd {wildcards.prefix}
 
+mkdir -p wd_{wildcards.gse}
+cd wd_{wildcards.gse}
 RCODE="MODESA=TRUE ; gse='{wildcards.gse}' ; source('sa_callpipeline.R')"
 echo $RCODE 
 echo $RCODE | Rscript -
