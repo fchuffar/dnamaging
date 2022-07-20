@@ -82,7 +82,7 @@ source("ci_full.R")
 ## Semsituvity analysis
 
 ```
-snakemake -s sa_launchexperiments.py -pn
+snakemake --cores 8 -s sa_launchexperiments.py -pn
 
 ```
 
