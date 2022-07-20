@@ -84,7 +84,7 @@ source("ci_full.R")
 ```
 cd ~/projects/dnamaging/vignettes/
 echo "source('sa_preparedf.R')" | Rscript -
-snakemake --cores 8 -s sa_launchexperiments.py -pn
+snakemake --cores 8 -s sa_launchexperiments.py  --latency-wait 60 -pn
 
 ```
 
