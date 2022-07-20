@@ -1,5 +1,6 @@
 source("common.R")
 source("sa_params.R")
+options(scipen=999)
 
 
 all_probes = NULL
@@ -19,7 +20,7 @@ for (gse in gses) {
   }
 }
 
-length(all_probes)
+print(paste0(length(all_probes), " common probes."))
 
 ourgses = c()
 for (gse in gses) {
@@ -38,6 +39,7 @@ for (gse in gses) {
     nb_train = n 
     for (seed in seeds) {
       for (p in ps) {
+        print(p)
         set.seed(seed)
         idx_probes = sample(all_probes, p)
         ourgse = paste0("gse", gse, "n", n, "seed", seed, "p", p)
