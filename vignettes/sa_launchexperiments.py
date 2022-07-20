@@ -39,6 +39,7 @@ cd {wildcards.prefix}
 
 mkdir -p wd_{wildcards.gse}
 cd wd_{wildcards.gse}
+ln -s ../df_{wildcards.gse}.rds
 RCODE="MODESA=TRUE ; gse='{wildcards.gse}' ; source('sa_callpipeline.R')"
 echo $RCODE 
 echo $RCODE | Rscript -
