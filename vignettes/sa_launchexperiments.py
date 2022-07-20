@@ -4,7 +4,7 @@ with open("ourgses.txt") as f:
     gses = f.read().splitlines() 
 
 curdir = os.getcwd()
-results = [f"{curdir}/results_{gse}.rds" for gse in gses]
+results = [f"{curdir}/wd_{gse}/results_{gse}.rds" for gse in gses]
 
 
     
