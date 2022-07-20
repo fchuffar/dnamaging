@@ -456,14 +456,13 @@ dim(stats)
 
 
 
-layout(matrix(1:2,1),respect = TRUE)
 
 w_size = 10
 stats$foccurence = ceiling(stats$occurence/w_size)*w_size
 
 x = sort(unique(stats$foccurence))
 y = sapply(sort(unique(stats$foccurence)), function(o) mean(stats[stats$foccurence==o,]$test_err))
-x_optim = x[which(y==min(y))]
+x_optim = x[which(y==min(y))][1]
 
 
 
@@ -487,6 +486,10 @@ while(l_probes < 2) {
 y1se = sapply(sort(unique(stats$foccurence)), function(o) sd(stats[stats$foccurence==o,]$test_err) / sqrt(length(stats[stats$foccurence==o,]$test_err)))
 ytr = sapply(sort(unique(stats$foccurence)), function(o) mean(stats[stats$foccurence==o,]$train_err))
 ytr1se = sapply(sort(unique(stats$foccurence)), function(o) sd(stats[stats$foccurence==o,]$train_err) / sqrt(length(stats[stats$foccurence==o,]$train_err)))
+
+
+
+layout(matrix(1:2,1),respect = TRUE)
 plot(x, y, col=2, main="Cross validation", xlab="minimal occurence", ylab="RMSE", ylim=c(0, max(stats$test_err)), pch=3)
 abline(v=x_optim, col=2)
 points(x, ytr, col=1, pch=3)
