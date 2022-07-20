@@ -37,12 +37,11 @@ rule sa_callpipeline:
 # export PATH="/summer/epistorage/miniconda3/bin:$PATH"
 cd {wildcards.prefix}
 
+rm -Rf wd_{wildcards.gse}
 mkdir -p wd_{wildcards.gse}
 cd wd_{wildcards.gse}
-rm -Rf df_{wildcards.gse}.rds
 ln -s ../df_{wildcards.gse}.rds
-ln -s ../00_fullpipeline1.Rmd
-ln -s ../sa_callpipeline.R
+cp ../*.Rmd ../*.R .
 RCODE="MODESA=TRUE ; gse='{wildcards.gse}' ; source('sa_callpipeline.R')"
 echo $RCODE 
 echo $RCODE | Rscript -
