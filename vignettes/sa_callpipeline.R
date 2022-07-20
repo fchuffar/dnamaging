@@ -1,5 +1,5 @@
 results_file = paste0("results_", gse, ".rds")
-if (!file.exists(results_file)) {
+# if (!file.exists(results_file)) {
   exec_time = microbenchmark::microbenchmark(rmarkdown::render('00_fullpipeline1.Rmd', output_file=paste0('00_fullpipeline1_', gse, '.html')), times=1, unit='s')$time/(10^9)
   results = c(
     exec_time         = as.numeric(exec_time)           ,
@@ -21,6 +21,6 @@ if (!file.exists(results_file)) {
     nbmod4_probes     = info_g$Horvath$nb_probes_mod 
   )   
   saveRDS(results, paste0("results_", gse, ".rds"))  
-}
+# }
 
 
