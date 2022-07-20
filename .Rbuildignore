@@ -1,4 +1,6 @@
 vignettes
 misc
 vignettes/*.rds
+vignettes/*.xlsx
+vignettes/*.html
 data/generate_data.R

@@ -78,3 +78,11 @@ source("ci_fast.R")
 source("ci_full.R")
 ```
 
+
+## Semsituvity analysis
+
+```
+snakemake --cores 8 -s sa_launchexperiments.py -pn
+
+```
+
