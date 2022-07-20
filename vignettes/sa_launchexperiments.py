@@ -42,7 +42,8 @@ cd wd_{wildcards.gse}
 rm -Rf df_{wildcards.gse}.rds
 ln -s ../df_{wildcards.gse}.rds
 ln -s ../00_fullpipeline1.Rmd
-RCODE="MODESA=TRUE ; gse='{wildcards.gse}' ; source('../sa_callpipeline.R')"
+ln -s ../sa_callpipeline.R
+RCODE="MODESA=TRUE ; gse='{wildcards.gse}' ; source('sa_callpipeline.R')"
 echo $RCODE 
 echo $RCODE | Rscript -
 """
