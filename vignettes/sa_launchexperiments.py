@@ -48,5 +48,5 @@ echo $RCODE
 echo $RCODE | Rscript -
 cp results_{wildcards.gse}.rds 00_fullpipeline1_{wildcards.gse}.html {wildcards.prefix}/.
 cd {wildcards.prefix}
-rm -Rf 
+rm -Rf /tmp/wd_{wildcards.gse}
 """
