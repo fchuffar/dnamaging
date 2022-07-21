@@ -12,7 +12,7 @@ output:
 
 
 ```{r echo=FALSE}
-knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=3, eval=TRUE, echo=FALSE, results="hide", show.warnings=FALSE)
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=10, fig.height=5, eval=TRUE, echo=FALSE, results="hide", show.warnings=FALSE)
 source("common.R")
 source("sa_params.R")
 ```
@@ -67,7 +67,7 @@ stats = data.frame(lapply(data.frame(stats, stringsAsFactors=FALSE), unlist), st
 
 
 
-for (i in c(1, 3)){
+for (i in c(1:3, 14, 15, 1:17)){
   layout(matrix(1:length(gses), 1), respect=TRUE)
   for(gse in gses){ 
   
@@ -82,8 +82,8 @@ for (i in c(1, 3)){
     # legend(x="bottomleft", legend=ns, fill=1:length(ns), title="n")
     
     formula = as.formula(paste0(colnames(stats)[i], "~n+p"))
-    boxplot(formula, stats[stats$gse==gse,], col=1:3, las=2, main=gse)
-    legend(x="bottomleft", legend=ns, fill=1:length(ns), title="n")
+    boxplot(formula, stats[stats$gse==gse,], col=1:length(ns), las=2, main=gse)
+    # legend(x="bottomleft", legend=ns, fill=1:length(ns), title="n")
   }
 }
 
@@ -107,18 +107,18 @@ anova(m)
 
 
 
-  for (i in 1:17){
-    layout(matrix(1:3, 1), respect=TRUE)
-  plot(0, 0, col=0, xlab="p", ylab= names_res[3], main=paste0(gse), xlim=range(results_g$p), ylim=c(0, max(results_g$up)))
-  ns = unique(results_g$n)
-  foo = lapply(ns, function(n) { 
-    results = results_g[results_g$n==n,]
-    tmp_col = which(n==ns)
-    lines(results$p, results$var, col=tmp_col, lty=1, type = "b")
-    arrows(x0=results$p, y0=results$lo, x1=results$p, y1=results$up, code=3, angle=90, length = 0.03, col=tmp_col, lwd=2)
-  })
-  legend(x="bottomleft", legend=ns, fill=1:length(ns), title="n")
-  
-  }
-}
+# for (i in 1:17){
+#   layout(matrix(1:3, 1), respect=TRUE)
+#   plot(0, 0, col=0, xlab="p", ylab= names_res[3], main=paste0(gse), xlim=range(results_g$p), ylim=c(0, max(results_g$up)))
+#   ns = unique(results_g$n)
+#   foo = lapply(ns, function(n) {
+#     results = results_g[results_g$n==n,]
+#     tmp_col = which(n==ns)
+#     lines(results$p, results$var, col=tmp_col, lty=1, type = "b")
+#     arrows(x0=results$p, y0=results$lo, x1=results$p, y1=results$up, code=3, angle=90, length = 0.03, col=tmp_col, lwd=2)
+#   })
+#   legend(x="bottomleft", legend=ns, fill=1:length(ns), title="n")
+#
+# }
+
 ```
