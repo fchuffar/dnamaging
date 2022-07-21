@@ -87,7 +87,7 @@ echo "source('sa_preparedf.R')" | Rscript -
 snakemake --cores 8 -s sa_launchexperiments.py  --latency-wait 60 -pn
 
 snakemake --cores 8 -s sa_launchexperiments.py  --latency-wait 60 -pn
-snakemake -s sa_launchexperiments.py --cores 20 --cluster "oarsub --project test -l /nodes=1,walltime=6:00:00 -t hpe -p "  --latency-wait 60 -pn
+snakemake -s sa_launchexperiments.py --cores 20 --cluster "oarsub --project test -l /nodes=1,walltime=6:00:00 -t hpe "  --latency-wait 60 -pn
 
 
 
