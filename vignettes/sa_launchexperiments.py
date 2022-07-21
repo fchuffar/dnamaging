@@ -4,7 +4,7 @@ with open("ourgses.txt") as f:
     gses = f.read().splitlines() 
 
 curdir = os.getcwd()
-results = [f"results_{gse}.rds" for gse in gses]
+results = [f"{curdir}/results_{gse}.rds" for gse in gses]
 
 
     
@@ -48,5 +48,5 @@ echo $RCODE
 echo $RCODE | Rscript -
 cp results_{wildcards.gse}.rds 00_fullpipeline1_{wildcards.gse}.html {wildcards.prefix}/.
 cd {wildcards.prefix}
-rm -Rf /tmp/wd_{wildcards.gse}
+rm -Rf 
 """
