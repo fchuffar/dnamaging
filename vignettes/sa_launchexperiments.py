@@ -45,7 +45,7 @@ ln -s {wildcards.prefix}/litterature_models.rds
 cp {wildcards.prefix}/*.Rmd {wildcards.prefix}/*.R .
 RCODE="MODESA=TRUE ; gse='{wildcards.gse}' ; source('sa_callpipeline.R')"
 echo $RCODE 
-echo $RCODE | Rscript -
+echo $RCODE | Rscript - 2>&1 > outputs_{wildcards.gse}.txt
 cp results_{wildcards.gse}.rds 00_fullpipeline1_{wildcards.gse}.html {wildcards.prefix}/.
 cd {wildcards.prefix}
 rm -Rf /tmp/wd_{wildcards.gse}
