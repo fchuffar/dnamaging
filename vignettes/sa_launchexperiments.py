@@ -4,7 +4,7 @@ with open("ourgses.txt") as f:
     gses = f.read().splitlines() 
 
 curdir = os.getcwd()
-results = [f"{curdir}/wd_{gse}/results_{gse}.rds" for gse in gses]
+results = [f"results_{gse}.rds" for gse in gses]
 
 
     
@@ -29,21 +29,24 @@ rule sa_callpipeline:
       rmd_script="{prefix}/sa_callpipeline.R",      
       rmd_script_model="{prefix}/04_model.Rmd",      
     output: 
-      rds = "{prefix}/wd_{gse}/results_{gse}.rds"      ,           
-      html = "{prefix}/wd_{gse}/00_fullpipeline1_{gse}.html"      ,           
+      rds = "{prefix}/results_{gse}.rds"      ,           
+      html = "{prefix}/00_fullpipeline1_{gse}.html"      ,           
     threads: 1
     shell:"""
 # export PATH="/summer/epistorage/opt/bin:$PATH"
 # export PATH="/summer/epistorage/miniconda3/bin:$PATH"
 cd {wildcards.prefix}
 
-rm -Rf wd_{wildcards.gse}
-mkdir -p wd_{wildcards.gse}
-cd wd_{wildcards.gse}
-ln -s ../df_{wildcards.gse}.rds
-ln -s ../litterature_models.rds
-cp ../*.Rmd ../*.R .
+rm -Rf /tmp/wd_{wildcards.gse}
+mkdir -p /tmp/wd_{wildcards.gse}
+cd /tmp/wd_{wildcards.gse}
+ln -s {wildcards.prefix}/df_{wildcards.gse}.rds
+ln -s {wildcards.prefix}/litterature_models.rds
+cp {wildcards.prefix}/*.Rmd {wildcards.prefix}/*.R .
 RCODE="MODESA=TRUE ; gse='{wildcards.gse}' ; source('sa_callpipeline.R')"
 echo $RCODE 
 echo $RCODE | Rscript -
+cp results_{wildcards.gse}.rds 00_fullpipeline1_{wildcards.gse}.html {wildcards.prefix}/.
+cd {wildcards.prefix}
+rm -Rf /tmp/wd_{wildcards.gse}
 """
