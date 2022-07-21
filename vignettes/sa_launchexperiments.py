@@ -33,8 +33,8 @@ rule sa_callpipeline:
       html = "{prefix}/00_fullpipeline1_{gse}.html"      ,           
     threads: 1
     shell:"""
-# export PATH="/summer/epistorage/opt/bin:$PATH"
-# export PATH="/summer/epistorage/miniconda3/bin:$PATH"
+export PATH="/summer/epistorage/opt/bin:$PATH"
+export PATH="/summer/epistorage/miniconda3/bin:$PATH"
 cd {wildcards.prefix}
 
 rm -Rf /tmp/wd_{wildcards.gse}
