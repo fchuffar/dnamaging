@@ -42,6 +42,7 @@ if (!exists("MODESA")) {
   idx_test = rownames(mreadRDS(paste0("df_",gse,".rds")))[1:100]
   idx_test = idx_test[idx_test %in% rownames(df)] 
   idx_train = setdiff(rownames(df), idx_test)   
+  nb_train = length(idx_train)
 }
 ```
 
