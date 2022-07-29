@@ -100,6 +100,7 @@ if (!is.null(tmp_alphas)) {
 best_model_cvaglmnet_params = sub_cvrecaps[sub_cvrecaps$cvm==min(sub_cvrecaps$cvm),][1,]
 best_model_cvaglmnet = mmodel_factory_glmnet(idx_train=idx_train, y_key=y_key, alpha=best_model_cvaglmnet_params$alpha, lambda=best_model_cvaglmnet_params$lambda, gse=gse, idx_cpg=idx_cpg) 
 best_model_cvaglmnet_probes = as.character(best_model_cvaglmnet$coeff$probes)
+rmse = sub_cvrecaps[sub_cvrecaps$cvm==min(sub_cvrecaps$cvm),][1,]$rmse
 ```
 
 
@@ -118,6 +119,8 @@ foo = lapply(tmp_alphas, function(alpha) {
   if (best_model_cvaglmnet_params$alpha==alpha & best_model_cvaglmnet_params$lambda==sub_recap$lambda) {
     points(  log10(sub_recap$lambda), sub_recap$rmse  , col=tmp_col, pch=16)
     arrows(x0=log10(sub_recap$lambda), y0=sub_recap$rmselo, x1=log10(sub_recap$lambda), y1=sub_recap$rmseup, code=3, angle=90, length = 0.03, col=tmp_col, lwd=2)
+    abline(h=rmse, v=log10(sub_recap$lambda), col=tmp_col)
+    legend("bottomright", paste0("RMSE=", signif(rmse, 3), ", alpha=", signif(alpha, 3), ", lambda=", signif(sub_recap$lambda, 3)), lty=1, cex=.5)
   }    
 })
 plot(0, 0, col=0, xlab="log10(lambda)", ylab="nbprobes", main=main, xlim=log10(range(cvrecaps$lambda)), ylim=c(0, max(nb_train, best_model_cvaglmnet_params$nbprobes*1.5)))
@@ -127,7 +130,11 @@ foo = lapply(tmp_alphas, function(alpha) {
   tmp_col = which(alpha==tmp_alphas)
   lines(log10(cvrecap$lambda), cvrecap$nbprobes         , col=tmp_col, lty=2)
   points(  log10(sub_recap$lambda), sub_recap$nbprobes  , col=tmp_col, pch=1)
-  if (best_model_cvaglmnet_params$alpha==alpha & best_model_cvaglmnet_params$lambda==sub_recap$lambda) points(  log10(sub_recap$lambda), sub_recap$nbprobes  , col=tmp_col, pch=16)
+  if (best_model_cvaglmnet_params$alpha==alpha & best_model_cvaglmnet_params$lambda==sub_recap$lambda) {
+    points(  log10(sub_recap$lambda), sub_recap$nbprobes  , col=tmp_col, pch=16)
+    abline(h=sub_recap$nbprobes, v=log10(sub_recap$lambda), col=tmp_col)
+    legend("bottomright", paste0(sub_recap$nbprobes, " probes"), cex=.5)
+  }
 })
 legend(x="topright", legend=tmp_alphas, fill=1:length(tmp_alphas), title="alpha", cex=.5)
 ```
@@ -464,6 +471,7 @@ stats$foccurence = ceiling(stats$occurence/w_size)*w_size
 x = sort(unique(stats$foccurence))
 y = sapply(sort(unique(stats$foccurence)), function(o) mean(stats[stats$foccurence==o,]$test_err))
 x_optim = x[which(y==min(y))][1]
+tmp_rmse = min(y)
 
 
 
@@ -494,6 +502,9 @@ layout(matrix(1:2,1),respect = TRUE)
 plot(x, y, col=2, main="Cross validation", xlab="minimal occurence", ylab="RMSE", ylim=c(0, max(stats$test_err)), pch=3)
 abline(v=x_optim, col=2)
 points(x, ytr, col=1, pch=3)
+abline(h=tmp_rmse, col=2, lty=3)
+legend("topleft", paste0("RMSE=", signif(tmp_rmse,3)), col=2, lty=3, cex=.5)
+
 
 lines(x, y+y1se, col=2)
 lines(x, y-y1se, col=2)

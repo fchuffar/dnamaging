@@ -2,7 +2,7 @@ start_ci = Sys.time()
 # Only train
 gses = c( 
   "GSE40279", # 450k Hannum 2013
-  "GSE41037", # 27k Genome wide DNA methylation profiling of whole blood in schizophrenia patients and healthy subjects.
+  # "GSE41037", # 27k Genome wide DNA methylation profiling of whole blood in schizophrenia patients and healthy subjects.
   "GSE50660", # smoking status and age 
   # "27kLima",
   # "cancair",
@@ -18,11 +18,11 @@ for (gse in gses) {
 
 # train on GSE40279 and predict on a new dataset
 gses = c( 
-  "GSE41037", # 27k Genome wide DNA methylation profiling of whole blood in schizophrenia patients and healthy subjects.
-  "GSE20067", # 27k Genome wide DNA methylation profiling of diabetic nephropathy in type 1 diabetes mellitus
   "GSE43976", # smoking status and age
   "GSE106648", # smoking status and age
-  "GSE50660", # smoking status and age
+  "GSE20067", # 27k Genome wide DNA methylation profiling of diabetic nephropathy in type 1 diabetes mellitus
+  # "GSE41037", # 27k Genome wide DNA methylation profiling of whole blood in schizophrenia patients and healthy subjects.
+  # "GSE50660", # smoking status and age
   # "Lima",
   # "27kGSE40279", # Hannum 2013 27k version
   # "GSE41169",
@@ -53,6 +53,7 @@ for (gse_eval in gses) {
   gse = gse_eval ; rmarkdown::render("03_preproc.Rmd", output_file=paste0("03_preproc_", gse, ".html"))    
   gse_m = gse_given ; gse = gse_eval ; rmarkdown::render("05_eval.Rmd", output_file=paste0("05_eval_", gse, "_", gse_m, ".html"))
 }
+
 exec_time_ci = Sys.time() - start_ci
 
 

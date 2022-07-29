@@ -104,35 +104,56 @@ stats$nb_probes = stats$nbmod2_probes
 stats$nb_probes = stats$nbmod1_probes
 
 
+
+```
+
+
+
+
+
+
+
+
+
+
+# res
+
+```{r, fig.height=7, fig.width=7}
 sum(stats$exec_time) / 60 / 60
 # Note cette experience reprsnete 85 heures de calcul
 
-layout(matrix(1:length(gses), 1), respect=TRUE)
+
+layout(matrix(1:4, 2, byrow=TRUE), respect=TRUE)
 for(gse in gses){ 
   formula = as.formula(paste0("time", "~n+p"))
-  boxplot(formula, stats[stats$gse==gse,], col=1:length(ns), las=2, main=gse)
+  foo = boxplot(formula, stats[stats$gse==gse,], col=1:length(ns), las=2, main=gse, ylab="time (min.)", xaxt="n", xlab="p")
+  axis(1, at=2+(round(1:(length(foo$names)/4))-1)*4, label=unique(substr(foo$names, 5, 100)), las=2)
   legend(x="topleft", legend=ns, fill=1:length(ns), title="n")
 }
 sum(stats$exec_time) / 60 / 60
 # Note cette experience reprsnete 85 heures de calcul
 # le temps d'execution explose avec p. en effet x est en en echelle log et malgré cela exec_time augmente de facon "exponetielle".
 
-layout(matrix(1:length(gses), 1), respect=TRUE)
+
+
 for(gse in gses){ 
   formula = as.formula(paste0("RMSE_test", "~n+p"))
-  boxplot(formula, stats[stats$gse==gse,], col=1:length(ns), las=2, main=gse)
-  legend(x="bottomleft", legend=ns, fill=1:length(ns), title="n")
+  boxplot(formula, stats[stats$gse==gse,], col=1:length(ns), las=2, main=gse, ylab="RMSE (test)", xaxt="n", xlab="p", ylim=c(3,10))
+  axis(1, at=2+(round(1:(length(foo$names)/4))-1)*4, label=unique(substr(foo$names, 5, 100)), las=2)
+  # legend(x="bottomleft", legend=ns, fill=1:length(ns), title="n")
 }
 # La performance de notre horloge augemte de facon logarithmique avec p(x en echelle log). 
 # Les gains de performance deviennet de plus en plus couteux en terme de p.
 
 
 
-layout(matrix(1:length(gses), 1), respect=TRUE)
+
+
+
 for(gse in gses){ 
   formula = as.formula(paste0("nbmod2_probes", "~n+p"))
-  boxplot(formula, stats[stats$gse==gse,], col=1:length(ns), las=2, main=gse)
-  legend(x="topleft", legend=ns, fill=1:length(ns), title="n")
+  boxplot(formula, stats[stats$gse==gse,], col=1:length(ns), las=2)
+  # legend(x="topleft", legend=ns, fill=1:length(ns), title="n")
 }
 # problem, nbmod2_probes trop grand, probleme avec x_optim
 
