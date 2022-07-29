@@ -9,8 +9,7 @@ gses = c(
   NULL
 )
 for (gse in gses) {
-  # rm(list = ls()[-which(ls()%in%c("gse", "gses"))])
-  rm(list="idx_test")
+  rm(list = ls()[-which(ls()%in%c("gse", "gses"))])
   rmarkdown::render("00_fullpipeline1.Rmd", output_file=paste0("00_fullpipeline1_", gse, ".html"))
 }
 
@@ -42,8 +41,7 @@ gses = c(
 )
 
 for (gse_eval in gses) {
-  #rm(list = ls()[-which(ls()%in%c("gse", "gses", "gse_eval"))])
-  rm(list="idx_test")
+  rm(list = ls()[-which(ls()%in%c("gse", "gses", "gse_eval"))])
   n_boot = 500
   gse_learn = "GSE40279"
   gse_given = paste0(gse_learn, "given", gse_eval)
