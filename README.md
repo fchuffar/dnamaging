@@ -65,6 +65,25 @@ https://github.com/fchuffar/epimedtools
 devtools::document(); devtools::install(); devtools::check(build_args="--no-build-vignettes")
 ```
 
+## CMD on cluster
+
+```
+# from dahu frontend, get (quickely) interactively a developemnt node for 30 minutes (ssh like)
+oarsub --project epimed  -l nodes=1,walltime=:30:00 -t devel -I
+# from dahu frontend, get  interactively with a fixed ratio walltime/nodes
+oarsub --project epimed  -l nodes=1/core=1,walltime=48:00:00  -I
+oarsub --project epimed  -l nodes=1/core=2,walltime=24:00:00  -I
+oarsub --project epimed  -l nodes=1/core=4,walltime=12:00:00  -I
+oarsub --project epimed  -l nodes=1/core=8,walltime=6:00:00  -I
+# from dahu frontend, book a node and use it assynchronously
+oarsub --project epimed  -l nodes=1,walltime=48:00:00  "sleep 2d"
+oarstat -fu chuffarf
+oarsh dahu129
+screen # ... screen -r ; ctrl+a d
+# to killa job
+oarstat | grep chuffarf
+oarstat | grep chuffarf | cut -d" " -f1 | xargs oardel
+```
 
 ## Testing
 Functionnal testing is performed by executing vignettes with many parameters values.
@@ -84,14 +103,10 @@ source("ci_full.R")
 ```
 cd ~/projects/dnamaging/vignettes/
 echo "source('sa_preparedf.R')" | Rscript -
-snakemake --cores 8 -s sa_launchexperiments.py  --latency-wait 60 -pn
-
-snakemake --cores 8 -s sa_launchexperiments.py  --latency-wait 60 -pn
-snakemake -s sa_launchexperiments.py --cores 20 --cluster "oarsub --project test -l /nodes=1,walltime=6:00:00 -t hpe "  --latency-wait 60 -pn
-
-
-
-
-
+# snakemake --cores 8 -s sa_launchexperiments.py  --latency-wait 60 -pn
+# on HPE nodes
+snakemake -s sa_launchexperiments.py --cores 20 --cluster "oarsub --project epimed -l /nodes=1,walltime=6:00:00 -t hpe "  --latency-wait 60 -pn
+# on classical dahu nodes
+snakemake -s sa_launchexperiments.py --cores 50 --cluster "oarsub --project epimed -l /nodes=1,walltime=6:00:00 "  --latency-wait 60 -pn
 ```
 
