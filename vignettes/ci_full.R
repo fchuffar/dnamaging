@@ -17,9 +17,9 @@ for (gse in gses) {
 
 # train on GSE40279 and predict on a new dataset
 gses = c( 
+  "GSE20067", # 27k Genome wide DNA methylation profiling of diabetic nephropathy in type 1 diabetes mellitus
   "GSE43976", # smoking status and age
   "GSE106648", # smoking status and age
-  "GSE20067", # 27k Genome wide DNA methylation profiling of diabetic nephropathy in type 1 diabetes mellitus
   # "GSE41037", # 27k Genome wide DNA methylation profiling of whole blood in schizophrenia patients and healthy subjects.
   # "GSE50660", # smoking status and age
   # "Lima",
