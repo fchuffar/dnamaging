@@ -65,6 +65,25 @@ https://github.com/fchuffar/epimedtools
 devtools::document(); devtools::install(); devtools::check(build_args="--no-build-vignettes")
 ```
 
+## CMD on cluster
+
+```
+# from dahu frontend, get (quickely) interactively a developemnt node for 30 minutes (ssh like)
+oarsub --project epimed  -l nodes=1,walltime=:30:00 -t devel -I
+# from dahu frontend, get  interactively with a fixed ratio walltime/nodes
+oarsub --project epimed  -l nodes=1/core=1,walltime=48:00:00  -I
+oarsub --project epimed  -l nodes=1/core=2,walltime=24:00:00  -I
+oarsub --project epimed  -l nodes=1/core=4,walltime=12:00:00  -I
+oarsub --project epimed  -l nodes=1/core=8,walltime=6:00:00  -I
+# from dahu frontend, book a node and use it assynchronously
+oarsub --project epimed  -l nodes=1,walltime=48:00:00  "sleep 2d"
+oarstat -fu chuffarf
+oarsh dahu129
+screen # ... screen -r ; ctrl+a d
+# to killa job
+oarstat | grep chuffarf
+oarstat | grep chuffarf | cut -d" " -f1 | xargs oardel
+```
 
 ## Testing
 Functionnal testing is performed by executing vignettes with many parameters values.
