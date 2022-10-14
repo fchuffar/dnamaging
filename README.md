@@ -22,6 +22,15 @@ echo "rmarkdown::render('00_fullpipeline1.Rmd')" | Rscript -
 ```
 
 
+# Fast tutorial
+
+```
+# Get GSEXXX data
+wget http://epimed.univ-grenoble-alpes.fr/downloads/dmzfch/dnamaging/vignettes/df_GSE20067.rds
+wget http://epimed.univ-grenoble-alpes.fr/downloads/dmzfch/dnamaging/vignettes/df_GSE41037.rds
+echo "source('ci_fast.R')" | Rscript -
+```
+
 
 # Troubleshooting
 
