@@ -31,6 +31,18 @@ wget http://epimed.univ-grenoble-alpes.fr/downloads/dmzfch/dnamaging/vignettes/d
 echo "source('ci_fast.R')" | Rscript -
 ```
 
+# Full tutorial
+
+```
+# Get GSEXXX data
+wget http://epimed.univ-grenoble-alpes.fr/downloads/dmzfch/dnamaging/vignettes/df_GSE20067.rds
+wget http://epimed.univ-grenoble-alpes.fr/downloads/dmzfch/dnamaging/vignettes/df_GSE40279.rds
+wget http://epimed.univ-grenoble-alpes.fr/downloads/dmzfch/dnamaging/vignettes/df_GSE50660.rds
+wget http://epimed.univ-grenoble-alpes.fr/downloads/dmzfch/dnamaging/vignettes/df_GSE43976.rds
+wget http://epimed.univ-grenoble-alpes.fr/downloads/dmzfch/dnamaging/vignettes/df_GSE106648.rds
+echo "source('ci_full.R')" | Rscript -
+```
+
 
 # Troubleshooting
 
