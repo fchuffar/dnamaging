@@ -2,8 +2,7 @@ source("common.R")
 source("sa_params.R")
 options(scipen=999)
 
-
- all_probes = NULL
+all_probes = NULL
  for (gse in gses) {
    print(gse)
    source("params_default.R")
@@ -19,6 +18,7 @@ options(scipen=999)
      all_probes = intersect(all_probes, idx_cpg)
    }
  }
+
 
  print(paste0(length(all_probes), " common probes."))
 

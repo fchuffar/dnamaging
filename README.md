@@ -31,6 +31,7 @@ CRAN
 
 ``` 
 glmnet
+glmnetUtils
 RColorBrewer
 WriteXLS
 ```
