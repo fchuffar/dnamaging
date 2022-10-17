@@ -59,6 +59,7 @@ For information, Elastic net regularization is a method consisting in mix Lasso 
 
 ```{r cva.glmnet call}
 print("Building modelcva...")
+
 modelcva = mcvaglmnet(idx_train=idx_train, y_key=y_key, gse=gse, idx_cpg=idx_cpg)
 
 cvarecaps = data.frame(
@@ -96,8 +97,8 @@ if (!is.null(tmp_alphas)) {
 } else {
   sub_cvrecaps = cvrecaps
 }
-
-best_model_cvaglmnet_params = sub_cvrecaps[sub_cvrecaps$cvm==min(sub_cvrecaps$cvm),][1,]
+sub_cvrecaps_nbp = sub_cvrecaps[sub_cvrecaps$nbprobes<=1*length(idx_train),]
+best_model_cvaglmnet_params = sub_cvrecaps_nbp[sub_cvrecaps_nbp$cvm==min(sub_cvrecaps_nbp$cvm),][1,]
 best_model_cvaglmnet = mmodel_factory_glmnet(idx_train=idx_train, y_key=y_key, alpha=best_model_cvaglmnet_params$alpha, lambda=best_model_cvaglmnet_params$lambda, gse=gse, idx_cpg=idx_cpg) 
 best_model_cvaglmnet_probes = as.character(best_model_cvaglmnet$coeff$probes)
 rmse = sub_cvrecaps[sub_cvrecaps$cvm==min(sub_cvrecaps$cvm),][1,]$rmse
