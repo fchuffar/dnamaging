@@ -1,5 +1,5 @@
 ---
-title: "Sensibility Analysis"
+title: "Sensitivity Analysis"
 author: "Fabien Jossaud, Florent Chuffart"
 date: "`r Sys.Date()`"
 output: 
@@ -57,9 +57,19 @@ stats = data.frame(lapply(data.frame(stats, stringsAsFactors=FALSE), unlist), st
 
 
 
-
-
-
+# gse="GSE40279"
+# n=200
+# p=300000
+# seed=2
+#
+# results_file = paste0("results_gse", gse, "n", n, "seed", seed, "p", p,".rds")
+# results = mreadRDS(results_file)
+# results = as.list(results)
+# results$n    = n
+# results$p    = p
+# results$seed = seed
+# results$gse  = gse
+# results$nbmod1_probes
 
 
 
@@ -82,8 +92,9 @@ for (i in c(1:3, 14, 15, 1:17)){
     # })
     # legend(x="bottomleft", legend=ns, fill=1:length(ns), title="n")
     
-    formula = as.formula(paste0(colnames(stats)[i], "~n+p"))
-    boxplot(formula, stats[stats$gse==gse,], col=1:length(ns), las=2, main=gse)
+    ylab = colnames(stats)[i]
+    formula = as.formula(paste0(ylab, "~n+p"))
+    boxplot(formula, stats[stats$gse==gse,], col=1:length(ns), las=2, main=gse, ylab=ylab)
     # legend(x="bottomleft", legend=ns, fill=1:length(ns), title="n")
   }
 }
