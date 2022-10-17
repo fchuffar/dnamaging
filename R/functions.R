@@ -22,11 +22,12 @@ get_df_preproc = function(gse){
 #' @param gse the gse of your data
 #' @param idx_smp idx of samples from the data that you will keep in the return matrix 
 #' @param idx_cpg idx of cpg from the data that you will keep in the return matrix
+#' @param MEMOISATION boolean use or not memoisation
 #'
 #' @return matrix 
 #' @export
 
-get_full_cpg_matrix = function(gse, idx_smp=NULL, idx_cpg=NULL){
+get_full_cpg_matrix = function(gse, idx_smp=NULL, idx_cpg=NULL, MEMOISATION=TRUE){
     df = mget_df_preproc(gse)
     if (is.null(idx_smp) & is.null(idx_cpg)) {
       # print("is.null(idx_smp) & is.null(idx_cpg)")
@@ -42,7 +43,11 @@ get_full_cpg_matrix = function(gse, idx_smp=NULL, idx_cpg=NULL){
       } else {
         # here idx_smp could be null
         # print("!is.null(idx_cpg)")
-        ret = mget_full_cpg_matrix(gse, idx_smp)
+        if (MEMOISATION) {
+          ret = mget_full_cpg_matrix(gse, idx_smp)          
+        } else {
+          ret = get_full_cpg_matrix(gse, idx_smp)
+        }
         ret = ret[, idx_cpg]
       }      
     }
@@ -61,14 +66,25 @@ get_full_cpg_matrix = function(gse, idx_smp=NULL, idx_cpg=NULL){
 #' @param lambda numeric lambda parameter use for glmnet function
 #' @param gse character gse of your data
 #' @param idx_cpg vector of idx of cpg markers use to make glmnet regression
+#' @param confounders vector of colnames of confounders use to make cva.glmnet regression
+#' @param MEMOISATION boolean use or not memoisation
 #'
 #' @importFrom glmnet glmnet
 #' @return list with intercept and coeff results on the glmnet regression
 #' @export
 
-model_factory_glmnet = function(idx_train, y_key, alpha, lambda, gse, idx_cpg=NULL) {
-  x = mget_full_cpg_matrix(gse, idx_train, idx_cpg)
-  y = mget_df_preproc(gse)[idx_train,y_key]
+model_factory_glmnet = function(idx_train, y_key, alpha, lambda, gse, idx_cpg=NULL, confounders=NULL, MEMOISATION=TRUE) {
+  if (MEMOISATION) {
+    x = mget_full_cpg_matrix(gse, idx_train, idx_cpg)
+  } else {
+    x = get_full_cpg_matrix(gse, idx_train, idx_cpg, MEMOISATION=FALSE)
+  }
+  y = mget_df_preproc(gse)[idx_train,y_key]    
+  if (!is.null(confounders)) {
+    conf = mget_df_preproc(gse)[idx_train, confounders]
+    x = cbind(x, conf)            
+    x = as.matrix(x)
+  }
   m = glmnet::glmnet(x=x, y=y, alpha=alpha, lambda=lambda, standardize=TRUE)
   idx = rownames(m$beta)[m$beta@i+1]
   coeff = data.frame(probes=idx, beta=m$beta[idx,])
@@ -138,6 +154,7 @@ call_glmnet_mod = function(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, 
 #' @param y_key character correspond to the name of the column of explicative variable
 #' @param gse character gse of your data
 #' @param idx_cpg vector of idx of cpg markers use to make cva.glmnet regression
+#' @param confounders vector of colnames of confounders use to make cva.glmnet regression
 #' @param alpha vector of alphas use for cva.glmnet 
 #' 
 #' @importFrom glmnetUtils cva.glmnet
@@ -145,9 +162,14 @@ call_glmnet_mod = function(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, 
 #' @return Results of cva.glmnet function
 #' @export
 
-cvaglmnet = function(idx_train, y_key, gse, idx_cpg=NULL, alpha=seq(0, 1, len = 11)^3) {
+cvaglmnet = function(idx_train, y_key, gse, idx_cpg=NULL, confounders=confounders, alpha=seq(0, 1, len = 11)^3) {
   x = mget_full_cpg_matrix(gse, idx_train, idx_cpg)
   y = mget_df_preproc(gse)[idx_train, y_key] # service. Design Patterns, Gamma et al. 
+  if (!is.null(confounders)) {
+    conf = mget_df_preproc(gse)[idx_train, confounders]
+    x = cbind(x, conf)            
+    x = as.matrix(x)
+  }
   modelcva = glmnetUtils::cva.glmnet(x=x, y=y, type.measure="mse", standardize=TRUE,  alpha=alpha)
   return(modelcva)  
 }

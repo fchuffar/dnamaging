@@ -20,22 +20,75 @@ source("common.R")
 
 ```{r params_default, echo=FALSE}
 source("params_default.R")
+if (!exists("seed")) seed = 1
+  if (!exists("scenario")) scenario = "A"
 ```
 
 ```{r building_indexes, echo=FALSE}
+print("Loading data")
 df = mreadRDS(paste0("df_preproc_",gse,".rds"))
+
+# idx_samples = rownames(df)
+# markers_start = grep("cg",colnames(df))[1]
+# idx_clinicals = colnames(df)[1:(markers_start-1)]
+# idx_cpg = colnames(df)[markers_start:ncol(df)]
+# gender01 = as.numeric(df$gender)
+# library(EpiDISH)
+# hannumData.m = t(mget_full_cpg_matrix(gse))[,idx_samples]
+# BloodFrac.m <- epidish(hannumData.m, ref.m = centDHSbloodDMC.m, method = "RPC")$estF
+# head(BloodFrac.m)
+# df = cbind(df[,idx_clinicals], gender01, BloodFrac.m, df[,idx_cpg])
+# saveRDS(df, paste0("df_preproc_",gse,".rds"))
+
 idx_samples = rownames(df)
 markers_start = grep("cg",colnames(df))[1]
 idx_clinicals = colnames(df)[1:(markers_start-1)]
 idx_cpg = colnames(df)[markers_start:ncol(df)]
 ```
 
+## Model
+
+```{r}
+if (scenario=="A") {
+  confounders = NULL  
+} else if (scenario=="B") {
+  confounders = "gender01"
+} else if (scenario=="C") {
+  confounders = c(
+    # "B"      ,
+    "NK"     ,
+    "CD4T"   ,
+    "CD8T"   ,
+    "Gran"   ,
+    "Mono"   ,
+    "Neutro" ,
+    "Eosino"
+  )
+} else if (scenario=="D") {
+  confounders = c(
+    "gender01"      ,
+    "NK"     ,
+    "CD4T"   ,
+    "CD8T"   ,
+    "Gran"   ,
+    "Mono"   ,
+    "Neutro" ,
+    "Eosino"
+  )
+} else {
+  confounders = NULL  
+}
+```
+
+`r paste0("~", paste0(c(y_key, confounders), collapse="+"))`
+
+
 ## Training and test sets 
 
 ```{r parameters, echo=TRUE, results="verbatim"}
-print(nb_train)
-set.seed(1)
+print(paste0("Use ", nb_train, " observations for training."))
 if (!exists("MODESA")) {
+  set.seed(seed)
   idx_train = sample(rownames(df), nb_train)
   idx_test = setdiff(rownames(df), idx_train)  
 } else { # Sensitivity analysis
@@ -46,7 +99,54 @@ if (!exists("MODESA")) {
 }
 ```
 
+## Filtering probes using EWAS 
 
+
+```{r ewas}
+if (nbewasprobes>0) {
+  print("filtering EWAS top probes")
+  x = mget_full_cpg_matrix(gse, idx_train, idx_cpg)
+  cpg_matrix = t(x)
+  if (!is.null(confounders)) {
+    design_matrix <- model.matrix(formula(paste0("~", y_key, "+", paste0(confounders, collapse="+"))), df[idx_train,idx_clinicals])    
+  } else {
+    design_matrix <- model.matrix(formula(paste0("~", y_key)), df[idx_train,idx_clinicals])    
+  }
+  dim(design_matrix)
+  dim(cpg_matrix)
+  fit = mlimma_lmFit(cpg_matrix, design_matrix)
+  fit = limma::eBayes(fit) # compute moderated t-statistics, moderated F-statistic, and log-odds of differential expression by empirical Bayes moderation of the standard errors towards a global value
+  # head(fit$p.value)
+  idx_cpg_oi = rownames(fit$p.value)[rank(fit$p.value[,2]) <= nbewasprobes]
+  layout(1, respect=TRUE)
+  plot(fit$coefficients[,2], -log10(fit$p.value[,2]), col=(rownames(fit$p.value) %in% idx_cpg_oi)+1, pch=".", main=paste0(nbewasprobes, " probes"))
+
+  litterature_models = readRDS("litterature_models.rds")  
+  idx_cpg_litt = unique(unlist(lapply(lapply(litterature_models, "[[", "coeff"), "[[", "probes")))  
+
+  idx_cpg = intersect(idx_cpg, c(idx_cpg_oi, idx_cpg_litt))
+
+  dim(df)
+  df = df[,c(idx_clinicals, idx_cpg)]
+  dim(df)
+
+
+  # df_dnamaging = df
+  # colnames(df_dnamaging)[2] = "age"
+  # head(df_dnamaging[,1:20])
+  # save(df_dnamaging, file='~/projects/dnamaging/data/df_dnamaging.RData' , compress='xz')
+} else {
+  # Nothing to do for idx_cpg
+}
+
+
+
+
+
+
+
+
+```
 
 
 ## Elastic net regularization
@@ -59,8 +159,7 @@ For information, Elastic net regularization is a method consisting in mix Lasso 
 
 ```{r cva.glmnet call}
 print("Building modelcva...")
-
-modelcva = mcvaglmnet(idx_train=idx_train, y_key=y_key, gse=gse, idx_cpg=idx_cpg)
+modelcva = mcvaglmnet(idx_train=idx_train, y_key=y_key, gse=gse, idx_cpg=idx_cpg, confounders=confounders, alpha=0.2) 
 
 cvarecaps = data.frame(
   lambda   = unlist(lapply(modelcva$modlist, "[[", "lambda")), 
@@ -69,7 +168,9 @@ cvarecaps = data.frame(
   cvup     = unlist(lapply(modelcva$modlist, "[[", "cvup")  ),
   cvlo     = unlist(lapply(modelcva$modlist, "[[", "cvlo")  ),
   nbprobes = unlist(lapply(modelcva$modlist, "[[", "nzero") ),
-  alpha    = rep(modelcva$alpha, sapply(lapply(modelcva$modlist, "[[", "lambda"), length)),
+  lambdamin= rep(unlist(lapply(modelcva$modlist, "[[", "lambda.min")) , sapply(lapply(modelcva$modlist, "[[", "lambda"), length)), 
+  lambda1se= rep(unlist(lapply(modelcva$modlist, "[[", "lambda.1se")) , sapply(lapply(modelcva$modlist, "[[", "lambda"), length)), 
+  alpha    = rep(modelcva$alpha                                       , sapply(lapply(modelcva$modlist, "[[", "lambda"), length)),
   nfolds   = modelcva$nfolds
 )
 cvarecaps$rmse = sqrt(cvarecaps$cvm)
@@ -83,23 +184,27 @@ dim(cvrecaps)
 
 ```{r best_model_cvaglmnet_params}
 tmp_alphas = sort(unique(cvrecaps$alpha))
-tmp_alphas = unlist(sapply(tmp_alphas, function(alpha) { 
-  cvrecap = cvrecaps[cvrecaps$alpha==alpha,]
-  if (cvrecap[cvrecap$rmse==min(cvrecap$rmse),]$nbprobes<=1*length(idx_train)) {
-    alpha
-  } else {
-    NULL
-  }
-}))
+# tmp_alphas = unlist(sapply(tmp_alphas, function(alpha) {
+#   cvrecap = cvrecaps[cvrecaps$alpha==alpha,]
+#   if (cvrecap[cvrecap$rmse==min(cvrecap$rmse),]$nbprobes<=1*length(idx_train)) {
+#     alpha
+#   } else {
+#     NULL
+#   }
+# }))
 
 if (!is.null(tmp_alphas)) {
   sub_cvrecaps = cvrecaps[cvrecaps$alpha%in%tmp_alphas,] 
 } else {
   sub_cvrecaps = cvrecaps
 }
-sub_cvrecaps_nbp = sub_cvrecaps[sub_cvrecaps$nbprobes<=1*length(idx_train),]
-best_model_cvaglmnet_params = sub_cvrecaps_nbp[sub_cvrecaps_nbp$cvm==min(sub_cvrecaps_nbp$cvm),][1,]
-best_model_cvaglmnet = mmodel_factory_glmnet(idx_train=idx_train, y_key=y_key, alpha=best_model_cvaglmnet_params$alpha, lambda=best_model_cvaglmnet_params$lambda, gse=gse, idx_cpg=idx_cpg) 
+
+sub_cvrecaps = cvrecaps[cvrecaps$lambda==cvrecaps$lambda1se,] 
+sub_cvrecaps[sub_cvrecaps$cvm==min(sub_cvrecaps$cvm),]
+
+
+best_model_cvaglmnet_params = sub_cvrecaps[sub_cvrecaps$cvm==min(sub_cvrecaps$cvm),][1,]
+best_model_cvaglmnet = mmodel_factory_glmnet(idx_train=idx_train, y_key=y_key, alpha=best_model_cvaglmnet_params$alpha, lambda=best_model_cvaglmnet_params$lambda, gse=gse, idx_cpg=idx_cpg, confounders=confounders) 
 best_model_cvaglmnet_probes = as.character(best_model_cvaglmnet$coeff$probes)
 rmse = sub_cvrecaps[sub_cvrecaps$cvm==min(sub_cvrecaps$cvm),][1,]$rmse
 ```
@@ -113,17 +218,23 @@ plot(0, 0, col=0, xlab="log10(lambda)", ylab="RMSE", main=main, xlim=log10(range
 tmp_alphas = sort(unique(cvrecaps$alpha))
 foo = lapply(tmp_alphas, function(alpha) { 
   cvrecap = cvrecaps[cvrecaps$alpha==alpha,]
+  # cvrecap = sub_cvrecaps[sub_cvrecaps$alpha==alpha,]
   sub_recap = cvrecap[cvrecap$rmse==min(cvrecap$rmse),]
   tmp_col = which(alpha==tmp_alphas)
   lines(log10(cvrecap$lambda), cvrecap$rmse             , col=tmp_col, lty=2)
   points(  log10(sub_recap$lambda), sub_recap$rmse  , col=tmp_col, pch=1)
+  cvrecap = sub_cvrecaps[sub_cvrecaps$alpha==alpha,]
+  sub_recap = cvrecap[cvrecap$rmse==min(cvrecap$rmse),]
   if (best_model_cvaglmnet_params$alpha==alpha & best_model_cvaglmnet_params$lambda==sub_recap$lambda) {
+    # stop("EFN")
     points(  log10(sub_recap$lambda), sub_recap$rmse  , col=tmp_col, pch=16)
     arrows(x0=log10(sub_recap$lambda), y0=sub_recap$rmselo, x1=log10(sub_recap$lambda), y1=sub_recap$rmseup, code=3, angle=90, length = 0.03, col=tmp_col, lwd=2)
     abline(h=rmse, v=log10(sub_recap$lambda), col=tmp_col)
     legend("bottomright", paste0("RMSE=", signif(rmse, 3), ", alpha=", signif(alpha, 3), ", lambda=", signif(sub_recap$lambda, 3)), lty=1, cex=.5)
   }    
 })
+
+
 plot(0, 0, col=0, xlab="log10(lambda)", ylab="nbprobes", main=main, xlim=log10(range(cvrecaps$lambda)), ylim=c(0, max(nb_train, best_model_cvaglmnet_params$nbprobes*1.5)))
 foo = lapply(tmp_alphas, function(alpha) { 
   cvrecap = cvrecaps[cvrecaps$alpha==alpha,]
@@ -131,6 +242,8 @@ foo = lapply(tmp_alphas, function(alpha) {
   tmp_col = which(alpha==tmp_alphas)
   lines(log10(cvrecap$lambda), cvrecap$nbprobes         , col=tmp_col, lty=2)
   points(  log10(sub_recap$lambda), sub_recap$nbprobes  , col=tmp_col, pch=1)
+  cvrecap = sub_cvrecaps[sub_cvrecaps$alpha==alpha,]
+  sub_recap = cvrecap[cvrecap$rmse==min(cvrecap$rmse),]
   if (best_model_cvaglmnet_params$alpha==alpha & best_model_cvaglmnet_params$lambda==sub_recap$lambda) {
     points(  log10(sub_recap$lambda), sub_recap$nbprobes  , col=tmp_col, pch=16)
     abline(h=sub_recap$nbprobes, v=log10(sub_recap$lambda), col=tmp_col)
@@ -160,63 +273,63 @@ best_model_cvaglmnet_params
 
 
 ```{r loading train/test sets, eval=FALSE}
-#Create Train and Test samples
-Xtrain = mget_full_cpg_matrix(gse, idx_train, idx_cpg)
-Ytrain = mget_df_preproc(gse)[idx_train,y_key]
-Xtest = mget_full_cpg_matrix(gse, idx_test, idx_cpg)
-Ytest = mget_df_preproc(gse)[idx_test,y_key]
-``` 
-
-```{r plot prediction for best model, echo=FALSE, eval=FALSE}
-m = modelcva$modlist[[which(modelcva$alpha==best_model_cvaglmnet_params$alpha)]]
-predTr = predict(m, Xtrain, type="response", s="lambda.min")
-rmseTr = sqrt(mean((Ytrain - predTr)^2))
-predTe = predict(m, Xtest, type="response", s="lambda.min")
-rmseTe = sqrt(mean((Ytest - predTe)^2))
-
-layout(matrix(1:2,1), respect=TRUE)
-plot(Ytrain, predTr, xlab="Chronological Age", ylab="Predicted Age", main=paste0(m$name, " train rmse: ", signif(rmseTr, 3)))
-plot(Ytest , predTe, xlab="Chronological Age", ylab="Predicted Age", main=paste0(m$name, " test  rmse: ", signif(rmseTe, 3))) 
-```
-
-```{r eval=FALSE}
-m = best_model_cvaglmnet 
-# build model
-predTr = Xtrain[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
-rmseTr = sqrt(mean((Ytrain - predTr)^2))
-predTe = Xtest[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
-rmseTe = sqrt(mean((Ytest - predTe)^2))
-
-layout(matrix(1:2,1), respect=TRUE)
-plot(Ytrain, predTr, xlab="Chronological Age", ylab="Predicted Age", main=paste0(m$name, " train rmse: ", signif(rmseTr, 3)))
-plot(Ytest , predTe, xlab="Chronological Age", ylab="Predicted Age", main=paste0(m$name, " test  rmse: ", signif(rmseTe, 3))) 
-
-
-build_model_from_probes = function(probes, sub_df, y_key, name) {
-  tmp_m = lm(formula(paste0(y_key,"~0+",paste0(probes,collapse="+"))), data=sub_df) #lm model with probes previously find with bootstrap
-  idx = probes
-  idx = idx[!is.na(tmp_m$coefficients[idx])]
-  beta = tmp_m$coefficients[idx]
-  coeff = data.frame(probes=idx, beta=beta)
-  rownames(coeff) = idx
-  coeff$mean = apply(sub_df[,rownames(coeff)], 2, mean)
-  head(coeff)
-  model = list(coeff=coeff, Intercept=0, name=name)  
-  return(model)  
-}
-
-sub_df = df[idx_train, c(best_model_cvaglmnet_probes,y_key)]
-m = build_model_from_probes(best_model_cvaglmnet_probes, sub_df, y_key, name="best_model_cvaglmnet")
-
-# build model
-predTr = Xtrain[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
-rmseTr = sqrt(mean((Ytrain - predTr)^2))
-predTe = Xtest[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
-rmseTe = sqrt(mean((Ytest - predTe)^2))
-
-layout(matrix(1:2,1), respect=TRUE)
-plot(Ytrain, predTr, xlab="Chronological Age", ylab="Predicted Age", main=paste0(m$name, " train rmse: ", signif(rmseTr, 3)))
-plot(Ytest , predTe, xlab="Chronological Age", ylab="Predicted Age", main=paste0(m$name, " test  rmse: ", signif(rmseTe, 3))) 
+# #Create Train and Test samples
+# Xtrain = mget_full_cpg_matrix(gse, idx_train, idx_cpg)
+# Ytrain = mget_df_preproc(gse)[idx_train,y_key]
+# Xtest = mget_full_cpg_matrix(gse, idx_test, idx_cpg)
+# Ytest = mget_df_preproc(gse)[idx_test,y_key]
+# ```
+#
+# ```{r plot prediction for best model, echo=FALSE, eval=FALSE}
+# m = modelcva$modlist[[which(modelcva$alpha==best_model_cvaglmnet_params$alpha)]]
+# predTr = predict(m, Xtrain, type="response", s="lambda.min")
+# rmseTr = sqrt(mean((Ytrain - predTr)^2))
+# predTe = predict(m, Xtest, type="response", s="lambda.min")
+# rmseTe = sqrt(mean((Ytest - predTe)^2))
+#
+# layout(matrix(1:2,1), respect=TRUE)
+# plot(Ytrain, predTr, xlab="Chronological Age", ylab="Predicted Age", main=paste0(m$name, " train rmse: ", signif(rmseTr, 3)))
+# plot(Ytest , predTe, xlab="Chronological Age", ylab="Predicted Age", main=paste0(m$name, " test  rmse: ", signif(rmseTe, 3)))
+# ```
+#
+# ```{r eval=FALSE}
+# m = best_model_cvaglmnet
+# # build model
+# predTr = Xtrain[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
+# rmseTr = sqrt(mean((Ytrain - predTr)^2))
+# predTe = Xtest[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
+# rmseTe = sqrt(mean((Ytest - predTe)^2))
+#
+# layout(matrix(1:2,1), respect=TRUE)
+# plot(Ytrain, predTr, xlab="Chronological Age", ylab="Predicted Age", main=paste0(m$name, " train rmse: ", signif(rmseTr, 3)))
+# plot(Ytest , predTe, xlab="Chronological Age", ylab="Predicted Age", main=paste0(m$name, " test  rmse: ", signif(rmseTe, 3)))
+#
+#
+# build_model_from_probes = function(probes, sub_df, y_key, name) {
+#   tmp_m = lm(formula(paste0(y_key,"~0+",paste0(probes,collapse="+"))), data=sub_df) #lm model with probes previously find with bootstrap
+#   idx = probes
+#   idx = idx[!is.na(tmp_m$coefficients[idx])]
+#   beta = tmp_m$coefficients[idx]
+#   coeff = data.frame(probes=idx, beta=beta)
+#   rownames(coeff) = idx
+#   coeff$mean = apply(sub_df[,rownames(coeff)], 2, mean)
+#   head(coeff)
+#   model = list(coeff=coeff, Intercept=0, name=name)
+#   return(model)
+# }
+#
+# sub_df = df[idx_train, c(best_model_cvaglmnet_probes,y_key)]
+# m = build_model_from_probes(best_model_cvaglmnet_probes, sub_df, y_key, name="best_model_cvaglmnet")
+#
+# # build model
+# predTr = Xtrain[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
+# rmseTr = sqrt(mean((Ytrain - predTr)^2))
+# predTe = Xtest[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
+# rmseTe = sqrt(mean((Ytest - predTe)^2))
+#
+# layout(matrix(1:2,1), respect=TRUE)
+# plot(Ytrain, predTr, xlab="Chronological Age", ylab="Predicted Age", main=paste0(m$name, " train rmse: ", signif(rmseTr, 3)))
+# plot(Ytest , predTe, xlab="Chronological Age", ylab="Predicted Age", main=paste0(m$name, " test  rmse: ", signif(rmseTe, 3)))
 ```
 
 
@@ -262,11 +375,12 @@ We repete this method 500 times and, at the end, we select for our final model o
 
 
 ```{r bootstrap}
-bs_func = function(i, idx_train, best_model_cvaglmnet_params) { #epimedtools to see evolution of running 
+bs_func = function(i, idx_train, best_model_cvaglmnet_params, gse, idx_cpg, confounders, USE_PARAPPLY) { #epimedtools to see evolution of running 
   # Bootstrap sample creation
   # print(i)
   set.seed(i)
-  idx_bstrain = c(
+  # idx_bstrain = idx_train
+  idx_bstrain =   c(
     sample(idx_train, ceiling(2/3 * length(idx_train)), replace=FALSE),
     sample(idx_train, floor(  1/3 * length(idx_train)), replace=TRUE)
   )
@@ -274,27 +388,38 @@ bs_func = function(i, idx_train, best_model_cvaglmnet_params) { #epimedtools to 
   # print(best_model_cvaglmnet_params)
   alpha = best_model_cvaglmnet_params$alpha
   lambda = best_model_cvaglmnet_params$lambda
-  models_bs = mmodel_factory_glmnet(idx_bstrain, y_key, alpha=alpha, lambda=lambda, gse=gse, idx_cpg=idx_cpg) 
+  # print(length(idx_cpg))
+  if (USE_PARAPPLY) {
+    models_bs = dnamaging::model_factory_glmnet(idx_train=idx_bstrain, y_key=y_key, alpha=alpha, lambda=lambda, gse=gse, idx_cpg=idx_cpg, confounders=confounders, MEMOISATION=FALSE) 
+  } else {
+    models_bs = mmodel_factory_glmnet(idx_train=idx_bstrain, y_key=y_key, alpha=alpha, lambda=lambda, gse=gse, idx_cpg=idx_cpg, confounders=confounders)
+  }
   # For each bootstrap, capture all probes use in the model 
   probes = rownames(models_bs$coeff)
   return(probes)
 }
 
-USE_PARAPPLY = FALSE
+USE_PARAPPLY = TRUE
+
 
 if (USE_PARAPPLY) {
   print("bootstrap using parallel::parApply...")
+  fetchit = mget_full_cpg_matrix(gse)
+  fetchit = mget_df_preproc(gse)
   if (!exists("cl_bs")) {
-    cl_bs = parallel::makeCluster(parallel::detectCores(),  type="PSOCK")    
+    cl_bs = parallel::makeCluster(parallel::detectCores(), type="FORK")
+    # cl_bs = parallel::makeCluster(24, type="FORK")
     # parallel::stopCluster(cl_bs)
   }
-  bs = parallel::parApply(cl_bs, t(t(1:n_boot)), 1, bs_func, idx_train=idx_train, best_model_cvaglmnet_params=best_model_cvaglmnet_params)
+  bs_probes = parallel::parApply(cl_bs, t(t(1:n_boot)), 1, bs_func, idx_train=idx_train, best_model_cvaglmnet_params=best_model_cvaglmnet_params, gse=gse, idx_cpg=idx_cpg, confounders=confounders,  USE_PARAPPLY=USE_PARAPPLY)
+  parallel::stopCluster(cl_bs)
+  rm("cl_bs")
 } else {
+  USE_PARAPPLY = FALSE
   print("bootstrap using epimedtools::monitored_apply")
-  bs_probes = epimedtools::monitored_apply(mod=1, t(t(1:n_boot)), 1, bs_func, idx_train=idx_train, best_model_cvaglmnet_params=best_model_cvaglmnet_params)   
+  bs_probes = epimedtools::monitored_apply(mod=1, t(t(1:n_boot)), 1, bs_func, idx_train=idx_train, best_model_cvaglmnet_params=best_model_cvaglmnet_params, gse=gse, idx_cpg=idx_cpg, confounders=confounders, USE_PARAPPLY=USE_PARAPPLY)   
 }
 
-length(bs_probes)
 ```
 
 
@@ -319,225 +444,12 @@ barplot(cumsum(rev(table(table(probes)))), las=2,
 ```
 
 
-### Cross validation
+### Robust probes
 
 ```{r cv_bs, results="hide"}
-#  1. folds
-n_folds = 3
-n_seeds = 1
-fold_size = floor(length(idx_train) / n_folds)
-
-folds = lapply(1:n_seeds, function(seed) {
-  tmp_folds = list()
-  set.seed(seed)
-  idx_train_remaining = idx_train
-  for (i in 1:n_folds) {
-    foo = sample(idx_train_remaining, fold_size)
-    tmp_folds[[i]] = list(idx_train=setdiff(idx_train, foo), idx_test=foo)
-    idx_train_remaining = setdiff(idx_train, unlist(lapply(tmp_folds, "[[", "idx_test")))
-  }
-  tmp_folds
-})
-folds = unlist(folds, recursive=FALSE)
-
-# 2. eval
-RMSE = function(data_truth, data_pred) {
-    # Root Mean Square Error
-    return(sqrt(mean((data_truth - data_pred)^2)))
-}
-
-
-pb_occ_tab = sort(table(unlist(bs_probes))) # probe occurence
-
-# barplot(table(pb_occ_tab), las=2)
-
-# iterator = unique(sort(pb_occ_tab[pb_occ_tab>=n_boot/2]))
-iterator = unique(sort(pb_occ_tab))
-
-# Patchs
-if (length(iterator) == 1 ) {
-  iterator = unique(sort(pb_occ_tab))
-}
-# Check if many probes for highest occurence
-if (sum(pb_occ_tab>=iterator[length(iterator)]) == 1) {
-  iterator = iterator[-length(iterator)]
-}
-
-
-# tmp_probes = names(pb_occ_tab)[pb_occ_tab>=min(iterator)]
-# sub_df = df[idx_train, c(tmp_probes, y_key)]
-#
-#
-# stats = epimedtools::monitored_apply(mod=1, t(t(iterator)), 1, function(occ) {
-#   print(occ)
-#   tmp_probes = names(pb_occ_tab)[pb_occ_tab>=occ]
-#   stats = lapply(1:length(folds), function(fold) {
-#     print(fold)
-#     tmp_idx_train = folds[[fold]]$idx_train
-#     tmp_idx_test = folds[[fold]]$idx_test
-#     ret = mcall_glmnet_mod(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, fold, sub_df, alpha=best_model_cvaglmnet_params$alpha, lambda=best_model_cvaglmnet_params$lambda)
-#     return(ret)
-#   })
-#   stats = do.call(rbind, stats)
-#   stats
-# })
-# stats = do.call(rbind, stats)
-
-stats = lapply(1:length(folds), function(fold) {
-  print(paste0("fold ", fold, "/", length(folds)))
-  tmp_idx_train = folds[[fold]]$idx_train
-  tmp_idx_test = folds[[fold]]$idx_test
-  USE_PARAPPLY = FALSE
-  if (USE_PARAPPLY) {
-    print("bootstrap using parallel::parApply...")
-    if (!exists("cl_bs")) {
-      cl_bs = parallel::makeCluster(parallel::detectCores(),  type="PSOCK")    
-      # parallel::stopCluster(cl_bs)
-    }
-    bs = parallel::parApply(cl_bs, t(t(1:n_boot)), 1, bs_func, idx_train=tmp_idx_train, best_model_cvaglmnet_params=best_model_cvaglmnet_params)
-  } else {
-    print("bootstrap using epimedtools::monitored_apply")
-    bs_probes = epimedtools::monitored_apply(mod=1, t(t(1:n_boot)), 1, bs_func, idx_train=tmp_idx_train, best_model_cvaglmnet_params=best_model_cvaglmnet_params)   
-  }
-  pb_occ_tab = sort(table(unlist(bs_probes))) # probe occurence
-
-  iterator = unique(sort(pb_occ_tab))
-  tmp_probes = names(pb_occ_tab)[pb_occ_tab>=min(iterator)]
-  sub_df = df[idx_train, c(tmp_probes, y_key)] 
-    
-  stats = epimedtools::monitored_apply(mod=1, t(t(iterator)), 1, function(occ, pb_occ_tab, tmp_idx_train, tmp_idx_test, y_key, tmp_probes, fold, sub_df) {
-  # print(occ)
-  tmp_probes = names(pb_occ_tab)[pb_occ_tab>=occ]
-  # ADD
-  if(length(tmp_probes) >= 2){
-    ret = mcall_glmnet_mod(tmp_idx_train, tmp_idx_test, y_key, tmp_probes, occ, fold, sub_df, alpha=best_model_cvaglmnet_params$alpha, lambda=best_model_cvaglmnet_params$lambda)
-    return(ret)
-  }
-  }, pb_occ_tab=pb_occ_tab, tmp_idx_train=tmp_idx_train, tmp_idx_test=tmp_idx_test, y_key=y_key, tmp_probes=tmp_probes, fold=fold, sub_df=sub_df)
-  stats = do.call(rbind, stats)
-  stats
-})
-stats = do.call(rbind, stats)
-
-head(stats)
-dim(stats)
-```
-
-
-
-
-
-```{r plot_cv_each_bs, echo=FALSE, eval=TRUE}
-# # 3. plot
-
-# stats$labs = paste0(stats$occurence, " (", sapply(stats$occurence, function(o) floor(mean(stats[stats$occurence==o,]$nb_probes))), " probes)")
-# stats$labs = factor(paste0(stats$occurence, " (", sapply(stats$occurence, function(o) floor(mean(stats[stats$occurence==o,]$nb_probes))), " probes)"), levels=unique(stats$labs[order(stats$occurence)]))
-# # stats$labs = paste0(stats$nb_probes, " (", stats$nb_probes, " probes)")
-# # stats$labs = factor(paste0(stats$nb_probes, " (", stats$nb_probes, " probes)"),levels=unique(stats$labs[order(stats$nb_probes)]))
-# layout(matrix(1:2,1), respect=TRUE)
-# par(mar=c(10, 4.1, 4.1, 2.1))
-# foo = boxplot(train_err~labs, data=stats, border=1, las=2, ylab="RMSE", main="Cross Validation for occurence min", xlab="", ylim=c(0, max(stats$test_err)))
-# bar = boxplot( test_err~labs, data=stats, border=adjustcolor(2, alpha.f=.5), col=adjustcolor("grey", alpha.f=.1), las=2, ylab="RMSE", main="Cross Validation", add=TRUE, xlab="probes occurence")
-# legend("bottomright", col=1:2, c("Nested train", "Validation"), pch=1)
-#
-#
-#
-# lines(sapply(sort(unique(stats$occurence)), function(o) mean(stats[stats$occurence==o,]$train_err)), lwd=3)
-# lines(sapply(sort(unique(stats$occurence)), function(o) mean(stats[stats$occurence==o,]$test_err)), lwd=3, col=2)
-# par(mar=c(5.1, 4.1, 4.1, 2.1))
-#
-#
-#
-# if (!is.null(occ_optim)) {
-#   idx = which(as.numeric(do.call(rbind,strsplit(bar$names, " "))[,1])>=occ_optim)[1]
-#   best_params = bar$names[idx]
-# } else {
-#   idx = floor(ncol(bar$stats)*.5)
-#   best_params = bar$names[idx]
-#   occ_optim = as.numeric(strsplit(best_params, " ")[[1]][1])
-# }
-#
-# abline(v=idx, col=2, lty=1)
-#
-# best_model_bs_probes = names(pb_occ_tab[pb_occ_tab>=occ_optim])
-# par(mar=c(5.1, 4.1, 4.1, 2.1))
-# legend("topleft", best_params, col=2, lty=1)
-
-
-
-
-w_size = 10
-stats$foccurence = ceiling(stats$occurence/w_size)*w_size
-
-x = sort(unique(stats$foccurence))
-y = sapply(sort(unique(stats$foccurence)), function(o) mean(stats[stats$foccurence==o,]$test_err))
-x_optim = x[which(y==min(y))][1]
-tmp_rmse = min(y)
-
-
-
-# ADD
- 
-best_model_bs_probes = names(pb_occ_tab[pb_occ_tab>=x_optim])
-l_probes = length(best_model_bs_probes)
-
-x_tmp = x
-y_tmp = y
-while(l_probes < 2) {
-  x_tmp = x_tmp[-which(x_tmp == x_optim)] 
-  y_tmp = y_tmp[-which(y_tmp == min(y_tmp))]
-  x_optim = x_tmp[which(y_tmp==min(y_tmp))]
-  best_model_bs_probes = names(pb_occ_tab[pb_occ_tab>=x_optim])
-  l_probes = length(best_model_bs_probes)
-}
-
-
-
-y1se = sapply(sort(unique(stats$foccurence)), function(o) sd(stats[stats$foccurence==o,]$test_err) / sqrt(length(stats[stats$foccurence==o,]$test_err)))
-ytr = sapply(sort(unique(stats$foccurence)), function(o) mean(stats[stats$foccurence==o,]$train_err))
-ytr1se = sapply(sort(unique(stats$foccurence)), function(o) sd(stats[stats$foccurence==o,]$train_err) / sqrt(length(stats[stats$foccurence==o,]$train_err)))
-
-
-
-layout(matrix(1:2,1),respect = TRUE)
-plot(x, y, col=2, main="Cross validation", xlab="minimal occurence", ylab="RMSE", ylim=c(0, max(stats$test_err)), pch=3)
-abline(v=x_optim, col=2)
-points(x, ytr, col=1, pch=3)
-abline(h=tmp_rmse, col=2, lty=3)
-legend("topleft", paste0("RMSE=", signif(tmp_rmse,3)), col=2, lty=3, cex=.5)
-
-
-lines(x, y+y1se, col=2)
-lines(x, y-y1se, col=2)
-lines(x, ytr+ytr1se, col=1)
-lines(x, ytr-ytr1se, col=1)
-
-points(stats$occurence, stats$test_err, col=adjustcolor(2, alpha.f=.1))
-points(stats$occurence, stats$train_err, col=adjustcolor(1, alpha.f=.1))
-
-par(mar=c(5.1, 4.1, 4.1, 2.1))
-legend("bottomright", c("Nested train +/- 1se", "Validation +/- 1se", paste0(x_optim, " occ. over ", n_boot, " bs")), 
-  pch=c(3,3,NA), 
-  col=c(1, 2, 2),
-  lty=c(NA,NA,1), 
-  cex=.7
-)
-
-
-
-
-foo = cumsum(rev(table(pb_occ_tab)))
-plot(as.numeric(names(foo)), foo, las=2, 
-  xlab=paste0("cumulated probes occurence (for ", n_boot, " bootstraps)"), 
-  ylab="nb. probes",
-  main=paste0("Cumulated probes occurence"), 
-  xlim=c(500,1), lty=1
-)
-abline(v=x_optim, col=2)
-abline(h=length(best_model_bs_probes), col=2)
-legend("topleft", paste0(length(best_model_bs_probes), " probes viewed", x_optim, " times"), col=2, lty=1, cex=.7)
-
-
+tmp_tab = sort(table(unlist(bs_probes)))
+best_model_bs_probes = names(tmp_tab)[tmp_tab > (n_boot / 2)]
+best_model_bs_probes = intersect(best_model_bs_probes, idx_cpg)
 ```
 
 
@@ -546,28 +458,41 @@ best_model_bs_probes
 ```
 
 
-```{r best_model_bs }
-sub_df = df[idx_train,c(best_model_bs_probes,y_key)] 
-# best_model_bs = build_model_from_probes(best_model_bs_probes, sub_df, y_key, name="Bootstrapped model")
-
-# tmp_Xtrain = as.matrix(sub_df[tmp_idx_train, tmp_probes])
-# tmp_Ytrain = sub_df[tmp_idx_train, y_key]
-# tmp_Xtest = as.matrix(sub_df[tmp_idx_test, tmp_probes])
-# tmp_Ytest = sub_df[tmp_idx_test, y_key]
-# m = glmnet::cv.glmnet(x=tmp_Xtrain, y=tmp_Ytrain, alpha=0, type.measure="mse", standardize=TRUE)
-
-tmp_Xtrain = as.matrix(sub_df[idx_train, best_model_bs_probes])
-tmp_Ytrain = sub_df[idx_train, y_key]
-m = glmnet::cv.glmnet(x=tmp_Xtrain, y=tmp_Ytrain, alpha=0, type.measure="mse", standardize=TRUE)
+```{r best_model_bs}
+if (scenario=="E") {
+  confounders = "gender01"
+} else if (scenario=="F") {
+  confounders = c(
+    # "B"      ,
+    "NK"     ,
+    "CD4T"   ,
+    "CD8T"   ,
+    "Gran"   ,
+    "Mono"   ,
+    "Neutro" ,
+    "Eosino"
+  )
+} else if (scenario=="G") {
+  confounders = c(
+    "gender01"      ,
+    "NK"     ,
+    "CD4T"   ,
+    "CD8T"   ,
+    "Gran"   ,
+    "Mono"   ,
+    "Neutro" ,
+    "Eosino"
+  )
+} else {
+  # DO NOTHING
+}
+sub_df = df[idx_train,c(best_model_bs_probes,y_key, confounders)] 
+x = as.matrix(sub_df[idx_train, c(best_model_bs_probes, confounders)])
+y = sub_df[idx_train, y_key]
+m = glmnet::cv.glmnet(x=x, y=y, alpha=0, type.measure="mse", standardize=TRUE)
 tmp_alpha = 0
 tmp_lambda = m$lambda.min
 # tmp_lambda = m$lambda.1se
-
-
-# tmp_alpha = best_model_cvaglmnet_params$alpha
-# tmp_lambda = best_model_cvaglmnet_params$lambda
-x = tmp_Xtrain
-y = tmp_Ytrain
 m = glmnet::glmnet(x=x, y=y, alpha=tmp_alpha, lambda=tmp_lambda, standardize=TRUE)
 idx = rownames(m$beta)[m$beta@i+1]
 coeff=data.frame(probes=idx, beta=m$beta[idx,])
@@ -583,15 +508,15 @@ best_model_bs = ret
 
 
 ```{r plot models_bs, eval=FALSE}
-#Plot rmse like with cross validation but with bootstrap results
-layout(matrix(1:2,1), respect=TRUE)
-m = best_model_bs
-predTr = Xtrain[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
-rmseTr = sqrt(mean((Ytrain - predTr)^2))
-predTe = Xtest[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
-rmseTe = sqrt(mean((Ytest - predTe)^2))
-plot(predTr, Ytrain, xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " RMSE: ", signif(rmseTr, 3)))
-plot(predTe, Ytest , xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " RMSE: ", signif(rmseTe, 3)))  
+# #Plot rmse like with cross validation but with bootstrap results
+# layout(matrix(1:2,1), respect=TRUE)
+# m = best_model_bs
+# predTr = Xtrain[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
+# rmseTr = sqrt(mean((Ytrain - predTr)^2))
+# predTe = Xtest[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
+# rmseTe = sqrt(mean((Ytest - predTe)^2))
+# plot(predTr, Ytrain, xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " RMSE: ", signif(rmseTr, 3)))
+# plot(predTe, Ytest , xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " RMSE: ", signif(rmseTe, 3)))
 ```
 
 
@@ -637,6 +562,15 @@ saveRDS(list(best_model_cvaglmnet, best_model_bs), paste0("models_", gse, ".rds"
 #Create Train and Test samples
 Xtrain = mget_full_cpg_matrix(gse, idx_train, idx_cpg)
 Xtest =  mget_full_cpg_matrix(gse, idx_test,  idx_cpg)
+if (!is.null(confounders)) {
+  conf_train = mget_df_preproc(gse)[idx_train, confounders]
+  Xtrain = cbind(Xtrain, conf_train)            
+  Xtrain = as.matrix(Xtrain)
+  conf_test = mget_df_preproc(gse)[idx_test, confounders]
+  Xtest = cbind(Xtest, conf_test)            
+  Xtest = as.matrix(Xtest)
+}
+
 Ytrain = mget_df_preproc(gse)[idx_train,y_key]
 Ytest =  mget_df_preproc(gse)[idx_test, y_key]
 
@@ -652,6 +586,9 @@ for (covariate in covariates) {
     info_g[[length(info_g)+1]] = info
   }
   names(info_g) = c("ElasticNet","Bootstrap","Hannum","Horvath") 
+  info_g$ElasticNet$alpha  = best_model_cvaglmnet_params$alpha
+  info_g$ElasticNet$lambda = best_model_cvaglmnet_params$lambda 
+  
 }
 ```
 
@@ -814,10 +751,6 @@ barplot(tab_probes, las=2) # Check when number of probes stabilised
 
 
 
-
-
-
-
-
+https://github.com/fchuffar/dnamaging
 
 

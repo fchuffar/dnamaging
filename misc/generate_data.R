@@ -11,7 +11,7 @@ idx_cpg = colnames(df)[markers_start:ncol(df)]
 set.seed(1)
 df_dnamaging = df[, c("gender", "age", sample(idx_cpg, 3000))]
 save(df_dnamaging, file='~/projects/dnamaging/data/df_dnamaging.RData' , compress='xz')
-
+# DEPRECATED, see `r gse = 'GSE40279' ; rmarkdown::render("04_model.Rmd")`
 
 
 litterature_models = mreadRDS("../vignettes/litterature_models.rds")
