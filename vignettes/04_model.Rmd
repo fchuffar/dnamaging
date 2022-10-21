@@ -407,9 +407,8 @@ if (USE_PARAPPLY) {
   fetchit = mget_full_cpg_matrix(gse)
   fetchit = mget_df_preproc(gse)
   if (!exists("cl_bs")) {
-    cl_bs = parallel::makeCluster(parallel::detectCores(), type="FORK")
-    # cl_bs = parallel::makeCluster(24, type="FORK")
-    # parallel::stopCluster(cl_bs)
+    if(!exists("nb_core")) {nb_core = parallel::detectCores()}
+    cl_bs = parallel::makeCluster(nb_core, type="FORK")
   }
   bs_probes = parallel::parApply(cl_bs, t(t(1:n_boot)), 1, bs_func, idx_train=idx_train, best_model_cvaglmnet_params=best_model_cvaglmnet_params, gse=gse, idx_cpg=idx_cpg, confounders=confounders,  USE_PARAPPLY=USE_PARAPPLY)
   parallel::stopCluster(cl_bs)
