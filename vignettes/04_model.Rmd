@@ -21,13 +21,13 @@ source("common.R")
 ```{r params_default, echo=FALSE}
 source("params_default.R")
 if (!exists("seed")) seed = 1
-  if (!exists("scenario")) scenario = "A"
+if (!exists("scenario")) scenario = "A"
 ```
 
 ```{r building_indexes, echo=FALSE}
 print("Loading data")
-df = mreadRDS(paste0("df_preproc_",gse,".rds"))
 
+# df = readRDS(paste0("df_preproc_",gse,".rds"))
 # idx_samples = rownames(df)
 # markers_start = grep("cg",colnames(df))[1]
 # idx_clinicals = colnames(df)[1:(markers_start-1)]
@@ -39,6 +39,8 @@ df = mreadRDS(paste0("df_preproc_",gse,".rds"))
 # head(BloodFrac.m)
 # df = cbind(df[,idx_clinicals], gender01, BloodFrac.m, df[,idx_cpg])
 # saveRDS(df, paste0("df_preproc_",gse,".rds"))
+
+df = mreadRDS(paste0("df_preproc_",gse,".rds"))
 
 idx_samples = rownames(df)
 markers_start = grep("cg",colnames(df))[1]
@@ -506,20 +508,6 @@ best_model_bs = ret
 
 
 
-```{r plot models_bs, eval=FALSE}
-# #Plot rmse like with cross validation but with bootstrap results
-# layout(matrix(1:2,1), respect=TRUE)
-# m = best_model_bs
-# predTr = Xtrain[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
-# rmseTr = sqrt(mean((Ytrain - predTr)^2))
-# predTe = Xtest[,rownames(m$coeff)] %*% as.matrix(m$coeff$beta) + m$Intercept
-# rmseTe = sqrt(mean((Ytest - predTe)^2))
-# plot(predTr, Ytrain, xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " RMSE: ", signif(rmseTr, 3)))
-# plot(predTe, Ytest , xlab="Predicted Age", ylab="Chronological Age", main = paste0(m$name, " RMSE: ", signif(rmseTe, 3)))
-```
-
-
-
 
 
 
@@ -587,7 +575,6 @@ for (covariate in covariates) {
   names(info_g) = c("ElasticNet","Bootstrap","Hannum","Horvath") 
   info_g$ElasticNet$alpha  = best_model_cvaglmnet_params$alpha
   info_g$ElasticNet$lambda = best_model_cvaglmnet_params$lambda 
-  
 }
 ```
 
