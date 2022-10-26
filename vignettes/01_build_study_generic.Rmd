@@ -26,11 +26,12 @@ This vignette
 
 - build
 - check
+- decorate exp_grp
 - save 
 
 methylation study for `r gse`.
 
-```{r build check}
+```{r build}
 # Build
 print(paste0("#####", gse))
 s = epimedtools::create_study()
@@ -42,19 +43,20 @@ tmp_data = s$get_data(dest_dir="~/projects/datashare")
 dim(tmp_data)
 dim(s$data)
 
-# # get exp_grp (colums metadata) from NCBI/GEO
-# dim(s$exp_grp)
-# head(s$exp_grp)
-
-# get exp_grp from epimed_DB
+# get exp_grp from epimed_DB http://epimed.univ-grenoble-alpes.fr/database/series
 url = paste0("http://epimed.univ-grenoble-alpes.fr/database/parameters/",gse)
-df1 = read.csv2(url, header=TRUE, sep=";", stringsAsFactors=FALSE, dec=".", na.strings="", row.names=1)
+df1 = try(read.csv2(url, header=TRUE, sep=";", stringsAsFactors=FALSE, dec=".", na.strings="", row.names=1))
 # url = paste0("http://epimed.univ-grenoble-alpes.fr/database/expgroup/",gse)
 # df2 = read.csv2(url, header=TRUE, sep=";", stringsAsFactors=FALSE, dec=".", na.strings="", row.names=1)
 # head(df2)
-s$exp_grp = df1
+if (attributes(df1)$class == "try-error") {
+  # Do nothing, exp_grp (columns metadata) is obtained from NCBI/GEO
+} else {
+  s$exp_grp = df1
+}
 dim(s$exp_grp)
 head(s$exp_grp)
+
 
 # get platform (rows metdata)from NCBI/GEO 
 if (s$platform_name=="GPL8490") {
@@ -104,17 +106,36 @@ for (cov in colnames(s$exp_grp)) {
 }
 ```
 
+
+```{r decorate_exp_grp}
+decorator_file = paste0("01_specialize_study_", gse, ".R")
+if (file.exists(decorator_file)) {
+  source(decorator_file)
+}
+```
+
+
 ```{r save, results="verbatim"}
 # Save
-s_filename = paste0("study_", gse, ".rds")
+s_filename = paste0("~/projects/datashare/study_", gse, ".rds")
 print(paste0("Writing ", s_filename, "..."))
 s$save(s_filename)
-df = cbind(s$exp_grp, t(s$data[,rownames(s$exp_grp)]))
+dim(s$data)
+dim(s$exp_grp)
+dim(s$platform)
 
-df_filename = paste0("df_", gse, ".rds")
+df = cbind(s$exp_grp, t(s$data[,rownames(s$exp_grp)]))
+df_filename = paste0("~/projects/datashare/df_", gse, ".rds")
 print(paste0("Writing ", df_filename, "..."))
 saveRDS(df, df_filename)
 dim(df)
+
+log_filename = paste0("~/projects/datashare/info_", gse, ".log")
+cat(s_filename        , file=log_filename, sep="\n", append=FALSE)
+cat(" and "           , file=log_filename, sep="\n", append=TRUE)
+cat(df_filename       , file=log_filename, sep="\n", append=TRUE)
+cat(" built from:\n"  , file=log_filename, sep="\n", append=TRUE)
+cat(getwd()           , file=log_filename, sep="\n", append=TRUE)
 ```
 
 # Session Information
