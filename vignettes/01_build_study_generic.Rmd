@@ -13,11 +13,10 @@ output:
 
 ```{r echo=FALSE}
 knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide")
-source("common.R")
 ```
 
 ```{r params}
-source("params_default.R")
+# gse = "GSE20067" ; rmarkdown::render("01_build_study_generic.Rmd", output_file=paste0("01_build_study_", gse, ".html"))
 ```
 
 
@@ -31,44 +30,59 @@ This vignette
 
 methylation study for `r gse`.
 
-```{r, echo=FALSE, eval=TRUE}
+```{r build check}
 # Build
 print(paste0("#####", gse))
-s_tmp = epimedtools::create_study()
-s_tmp$gse = gse
-foo = s_tmp$get_data(dest_dir="~/projects/datashare")
-dim(foo)
 s = epimedtools::create_study()
-# data
-s$data = foo
-# exp_grp from epimed_DB
+s$gse = gse
+
+# get data matrix from NCBI/GEO
+dim(s$data)
+tmp_data = s$get_data(dest_dir="~/projects/datashare")
+dim(tmp_data)
+dim(s$data)
+
+# # get exp_grp (colums metadata) from NCBI/GEO
+# dim(s$exp_grp)
+# head(s$exp_grp)
+
+# get exp_grp from epimed_DB
 url = paste0("http://epimed.univ-grenoble-alpes.fr/database/parameters/",gse)
 df1 = read.csv2(url, header=TRUE, sep=";", stringsAsFactors=FALSE, dec=".", na.strings="", row.names=1)
+# url = paste0("http://epimed.univ-grenoble-alpes.fr/database/expgroup/",gse)
+# df2 = read.csv2(url, header=TRUE, sep=";", stringsAsFactors=FALSE, dec=".", na.strings="", row.names=1)
+# head(df2)
 s$exp_grp = df1
-if (s_tmp$platform_name=="GPL8490") {
+dim(s$exp_grp)
+head(s$exp_grp)
+
+# get platform (rows metdata)from NCBI/GEO 
+if (s$platform_name=="GPL8490") {
   print("27k")
   library(IlluminaHumanMethylation27kanno.ilmn12.hg19)
   pf27k = data.frame(getAnnotation(IlluminaHumanMethylation27kanno.ilmn12.hg19))
   s$platform = pf27k
-} else if (s_tmp$platform_name=="GPL13534") {
+} else if (s$platform_name=="GPL13534") {
   print("450k")
   library(IlluminaHumanMethylation450kanno.ilmn12.hg19)
   pf450k = data.frame(getAnnotation(IlluminaHumanMethylation450kanno.ilmn12.hg19))
   s$platform = pf450k  
-} else if (s_tmp$platform_name=="GPL23976") {
+} else if (s$platform_name=="GPL23976") {
   print("epic")
   library(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)  
   pfepic = data.frame(getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b4.hg19))
   s$platform = pfepic  
 } else {
-  stop(paste0("platform problem ", gse, " ", s_tmp$platform_namE))
+  stop(paste0("platform problem ", gse, " ", s$platform_name))
 }
+```
 
+```{r check}
 # Check
 dim(s$data)
 dim(s$exp_grp)
-s$data = s$data[,!colnames(s$data)%in%sample_blacklist]
-s$exp_grp = s$exp_grp[!rownames(s$exp_grp)%in%sample_blacklist,]
+# s$data = s$data[,!colnames(s$data)%in%sample_blacklist]
+# s$exp_grp = s$exp_grp[!rownames(s$exp_grp)%in%sample_blacklist,]
 dim(s$data)
 dim(s$exp_grp)
 if (sum(!rownames(s$exp_grp) %in% colnames(s$data)) !=0 ) {stop(paste0("problem exp_grp names ", gse))}
@@ -83,13 +97,14 @@ s$data = s$data[rownames(s$platform),]
 if (sum(rownames(s$data) != rownames(s$platform)) !=0 ) {stop(paste0("problem pf names ", gse))}
 
 # covariates
-for (cov in covariates) {
+for (cov in colnames(s$exp_grp)) {
   if (is.character(s$exp_grp[[cov]])) {
     s$exp_grp[[cov]] = as.factor(s$exp_grp[[cov]])
   }
 }
+```
 
-```{r results="verbatim"}
+```{r save, results="verbatim"}
 # Save
 s_filename = paste0("study_", gse, ".rds")
 print(paste0("Writing ", s_filename, "..."))
