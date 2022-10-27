@@ -41,6 +41,15 @@ s$gse = gse
 dim(s$data)
 tmp_data = s$get_data(dest_dir="~/projects/datashare")
 dim(tmp_data)
+if (nrow(tmp_data)==0) {
+  datawrapper_file = paste0("01_datawrapper_", gse, ".R")
+  if (!file.exists(datawrapper_file)) {
+    stop(paste0("could not directly load beta matrix from GEO API for ", gse, ". Need to customize by creating ", datawrapper_file, " script."))
+  } else {
+    source(datawrapper_file)    
+  }
+}
+  
 dim(s$data)
 
 # get exp_grp from epimed_DB http://epimed.univ-grenoble-alpes.fr/database/series
@@ -64,12 +73,12 @@ if (s$platform_name=="GPL8490") {
   library(IlluminaHumanMethylation27kanno.ilmn12.hg19)
   pf27k = data.frame(getAnnotation(IlluminaHumanMethylation27kanno.ilmn12.hg19))
   s$platform = pf27k
-} else if (s$platform_name=="GPL13534") {
+} else if (s$platform_name=="GPL13534") { 
   print("450k")
   library(IlluminaHumanMethylation450kanno.ilmn12.hg19)
   pf450k = data.frame(getAnnotation(IlluminaHumanMethylation450kanno.ilmn12.hg19))
   s$platform = pf450k  
-} else if (s$platform_name=="GPL23976") {
+} else if (s$platform_name=="GPL23976") { # also GPL21145	TODO
   print("epic")
   library(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)  
   pfepic = data.frame(getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b4.hg19))
@@ -108,9 +117,9 @@ for (cov in colnames(s$exp_grp)) {
 
 
 ```{r decorate_exp_grp}
-decorator_file = paste0("01_specialize_study_", gse, ".R")
-if (file.exists(decorator_file)) {
-  source(decorator_file)
+expgrpwrapper_file = paste0("01_expgrpwrapper_", gse, ".R")
+if (file.exists(expgrpwrapper_file)) {
+  source(expgrpwrapper_file)
 }
 ```
 
