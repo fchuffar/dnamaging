@@ -1,3 +1,5 @@
+s$exp_grp$age = as.numeric(s$exp_grp$"age:ch1")
+
 s$exp_grp$"Sex:ch1"  
 s$exp_grp$gender = as.factor(as.character(s$exp_grp$"Sex:ch1"))  
 sort(s$exp_grp$gender)
