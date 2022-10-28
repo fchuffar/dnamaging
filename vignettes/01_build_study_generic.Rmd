@@ -19,8 +19,11 @@ knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, 
 # gse = "GSE20067" ; rmarkdown::render("01_build_study_generic.Rmd", output_file=paste0("01_build_study_", gse, ".html"))
 # gse = "GSE87571" ; rmarkdown::render("01_build_study_generic.Rmd", output_file=paste0("01_build_study_", gse, ".html"))
 # gse = "GSE87571"; nb_core=12; rmarkdown::render('00_fullpipeline1.Rmd', output_file=paste0("00_fullpipeline1_", gse, ".html"))
+# gse = "GSE42861" ; source(knitr::purl("01_build_study_generic.Rmd"))
 # gse = "GSE42861" ; rmarkdown::render("01_build_study_generic.Rmd", output_file=paste0("01_build_study_", gse, ".html"))
 # gse = "GSE42861"; nb_core=12; rmarkdown::render('00_fullpipeline1.Rmd', output_file=paste0("00_fullpipeline1_", gse, ".html"))
+# gse = "GSE136296" ; rmarkdown::render("01_build_study_generic.Rmd", output_file=paste0("01_build_study_", gse, ".html"))
+# gse = "GSE147740" ; rmarkdown::render("01_build_study_generic.Rmd", output_file=paste0("01_build_study_", gse, ".html"))
 ```
 
 
@@ -28,7 +31,10 @@ knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, 
 
 This vignette 
 
-- build
+- build data and exp_grp
+- decorate data
+- build exp_grp from EpiMedDB
+- build platform
 - check
 - decorate exp_grp
 - save 
@@ -61,7 +67,7 @@ if (nrow(tmp_data)==0) {
 dim(s$data)
 ```
 
-```{r build exp_grp}
+```{r build exp_grp from EpiMedDB}
 # get exp_grp from epimed_DB http://epimed.univ-grenoble-alpes.fr/database/series
 url = paste0("http://epimed.univ-grenoble-alpes.fr/database/parameters/",gse)
 df1 = try(read.csv2(url, header=TRUE, sep=";", stringsAsFactors=FALSE, dec=".", na.strings="", row.names=1))
@@ -75,8 +81,9 @@ if (attributes(df1)$class == "try-error") {
 }
 dim(s$exp_grp)
 head(s$exp_grp)
+```
 
-
+```{r platform}
 # get platform (rows metdata)from NCBI/GEO 
 if (s$platform_name=="GPL8490") {
   print("27k")
@@ -88,7 +95,7 @@ if (s$platform_name=="GPL8490") {
   library(IlluminaHumanMethylation450kanno.ilmn12.hg19)
   pf450k = data.frame(getAnnotation(IlluminaHumanMethylation450kanno.ilmn12.hg19))
   s$platform = pf450k  
-} else if (s$platform_name=="GPL23976") { # also GPL21145	TODO
+} else if (s$platform_name%in%c("GPL21145", "GPL23976")) {
   print("epic")
   library(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)  
   pfepic = data.frame(getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b4.hg19))
