@@ -17,6 +17,10 @@ knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, 
 
 ```{r params}
 # gse = "GSE20067" ; rmarkdown::render("01_build_study_generic.Rmd", output_file=paste0("01_build_study_", gse, ".html"))
+# gse = "GSE87571" ; rmarkdown::render("01_build_study_generic.Rmd", output_file=paste0("01_build_study_", gse, ".html"))
+# gse = "GSE87571"; nb_core=12; rmarkdown::render('00_fullpipeline1.Rmd', output_file=paste0("00_fullpipeline1_", gse, ".html"))
+# gse = "GSE42861" ; rmarkdown::render("01_build_study_generic.Rmd", output_file=paste0("01_build_study_", gse, ".html"))
+# gse = "GSE42861"; nb_core=12; rmarkdown::render('00_fullpipeline1.Rmd', output_file=paste0("00_fullpipeline1_", gse, ".html"))
 ```
 
 
@@ -31,7 +35,7 @@ This vignette
 
 methylation study for `r gse`.
 
-```{r build}
+```{r build data}
 # Build
 print(paste0("#####", gse))
 s = epimedtools::create_study()
@@ -41,6 +45,10 @@ s$gse = gse
 dim(s$data)
 tmp_data = s$get_data(dest_dir="~/projects/datashare")
 dim(tmp_data)
+```
+
+```{r decorate data}
+# get data matrix from wrapper
 if (nrow(tmp_data)==0) {
   datawrapper_file = paste0("01_datawrapper_", gse, ".R")
   if (!file.exists(datawrapper_file)) {
@@ -51,7 +59,9 @@ if (nrow(tmp_data)==0) {
 }
   
 dim(s$data)
+```
 
+```{r build exp_grp}
 # get exp_grp from epimed_DB http://epimed.univ-grenoble-alpes.fr/database/series
 url = paste0("http://epimed.univ-grenoble-alpes.fr/database/parameters/",gse)
 df1 = try(read.csv2(url, header=TRUE, sep=";", stringsAsFactors=FALSE, dec=".", na.strings="", row.names=1))
