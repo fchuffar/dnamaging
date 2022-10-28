@@ -1,0 +1,95 @@
+---
+title: "Sensitivity Analysis"
+author: "Fabien Jossaud, Florent Chuffart"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+
+```{r echo=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=10, fig.height=5, eval=TRUE, echo=FALSE, results="hide", show.warnings=FALSE)
+source("common.R")
+options(scipen=999)
+```
+
+```{r}
+
+gse = "GSE40279"
+ns = n = 100
+p = seed = 1
+results_files = list.files(pattern=paste0("results_", gse, "_nbewasprobes*"))
+# results_file = results_files[1]
+stats = lapply(results_files, function(results_file) { 
+        
+        if (file.exists(results_file)) {
+          results = readRDS(results_file)
+          results = as.list(results)
+          results$n       = n    
+          results$p       = p
+          results$seed    = as.numeric(substr(strsplit(rev(strsplit(results_file, "_")[[1]])[1], "\\.")[[1]][1], 5, 100)) 
+          results$nbewasprobes= as.numeric(substr(rev(strsplit(results_file, "_")[[1]])[2], 13, 100))
+          results$gse     = gse  
+          return(results)
+        } else {
+          NULL
+        }
+})
+stats = do.call(rbind, stats)
+stats = as.data.frame(stats)
+stats = data.frame(lapply(data.frame(stats, stringsAsFactors=FALSE), unlist), stringsAsFactors=FALSE)
+
+stats$exec_time = stats$exec_time/60
+
+```
+
+This experiment represents `r signif(sum(stats$exec_time) / 60, 3)` hours of computing.
+
+```{r}
+layout(matrix(1:2,1), respect=TRUE)
+keys = c(  
+  "rmsemod1_test"    ,
+  "rmsemod2_test"    ,
+  "nbmod1_probes"    ,
+  "nbmod2_probes"    ,
+  # "nbmod1_lambda"    ,
+  # "nbmod1_alpha"    ,
+  # "rmsemod3_test"    ,
+  # "nbmod3_probes"    ,
+  # "rmsemod4_test"    ,
+  # "nbmod4_probes"    ,
+  # "n"                ,
+  # "p"                ,
+  # "seed"             ,
+  # "gse"              ,
+  "exec_time"        
+)
+stats = stats[,c("nbewasprobes", "seed", keys)]
+for (ylab in keys) {   
+  if  (length(grep("1|2", ylab))>0) {
+    idx = grep(substr(ylab, 1, 5), colnames(stats))
+    ylim=range(unlist(stats[idx]))
+  } else {
+    ylim=range(stats[[ylab]])
+  }
+  formula = as.formula(paste0(ylab, "~nbewasprobes"))
+  foo = boxplot(formula, stats, las=2, main=gse, ylab=ylab, ylim=ylim)
+  
+  # legend(x="bottomleft", legend=ns, fill=1:length(ns), title="n")
+}
+
+layout(matrix(1:2,1), respect=TRUE)
+plot(stats$nbewasprobes, stats$rmsemod1_test, col=stats$seed)
+plot(stats$nbewasprobes, stats$rmsemod2_test, col=stats$seed)
+```
+
+
+
+
+
+
+
