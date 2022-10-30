@@ -25,15 +25,6 @@ foo = mread.tablegz(paste0("~/projects/datashare/", gse, "/", betamatrix_file), 
 head(foo[,1:10])
 dim(foo)
 
-
-pdf()
-layout(matrix(1:2, 1), respect=TRUE)
-plot(density((foo[1:2,]), na.rm=TRUE))
-dev.off()
-
-head(foo[,1:10])
-dim(foo)
-
 tmp_data = foo
 colnames(tmp_data)
 

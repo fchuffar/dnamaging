@@ -40,6 +40,7 @@ This vignette
 - build platform
 - check
 - decorate exp_grp
+- viualize
 - save 
 
 methylation study for `r gse`.
@@ -143,9 +144,35 @@ if (file.exists(expgrpwrapper_file)) {
 }
 ```
 
+# Visualize  
+
+```{r, echo=TRUE, results="verbatim"}
+dim(s$data)
+dim(s$exp_grp)
+dim(s$platform)
+sum(is.na(s$data))
+table(s$platform[,1])
+```
+
+```{r viualize, }
+layout(matrix(1:2, 1), respect=TRUE)
+plot(density(s$data, na.rm=TRUE))
+```
+
+```{r, echo=TRUE, results="verbatim"}
+for (exp_grp_key in colnames(s$exp_grp)) {
+  print(exp_grp_key)
+  x = s$exp_grp[,exp_grp_key]
+  sum(is.na(x))
+  table(x)  
+}
+```
+
+
+
+# Save
 
 ```{r save, results="verbatim"}
-# Save
 s_filename = paste0("~/projects/datashare/study_", gse, ".rds")
 print(paste0("Writing ", s_filename, "..."))
 s$save(s_filename)
