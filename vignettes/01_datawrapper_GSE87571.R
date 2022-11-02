@@ -47,7 +47,7 @@ head(bar[,1:10])
 tmp_data = as.matrix(cbind(foo, bar))
 
 
-dict = cbind(rownames(s$exp_grp), do.call(rbind, strsplit(s$exp_grp[,1], " "))[,1])
+dict = cbind(rownames(s$exp_grp), do.call(rbind, strsplit(as.character(s$exp_grp[,1]), " "))[,1])
 rownames(dict) = dict[,2]
 
 colnames(tmp_data) %in% rownames(dict)

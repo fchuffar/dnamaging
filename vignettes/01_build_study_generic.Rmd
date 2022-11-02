@@ -16,7 +16,9 @@ knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, 
 ```
 
 ```{r params}
+# source ~/conda_config_R3.6.1.sh 
 # gse = "GSE20067" ; rmarkdown::render("01_build_study_generic.Rmd", output_file=paste0("01_build_study_", gse, ".html"))
+# gse = "GSE20067"; rmarkdown::render('00_fullpipeline1.Rmd', output_file=paste0("00_fullpipeline1_", gse, ".html"))
 # gse = "GSE87571" ; rmarkdown::render("01_build_study_generic.Rmd", output_file=paste0("01_build_study_", gse, ".html"))
 # gse = "GSE87571"; nb_core=12; rmarkdown::render('00_fullpipeline1.Rmd', output_file=paste0("00_fullpipeline1_", gse, ".html"))
 # gse = "GSE136296" ; rmarkdown::render("01_build_study_generic.Rmd", output_file=paste0("01_build_study_", gse, ".html"))
@@ -26,6 +28,10 @@ knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, 
 # gse = "GSE42861"; nb_core=12; rmarkdown::render('00_fullpipeline1.Rmd', output_file=paste0("00_fullpipeline1_", gse, ".html"))
 
 # gse = "GSE147740" ; rmarkdown::render("01_build_study_generic.Rmd", output_file=paste0("01_build_study_", gse, ".html"))
+# gse = "GSE147740"; nb_core=12; rmarkdown::render('00_fullpipeline1.Rmd', output_file=paste0("00_fullpipeline1_", gse, ".html"))
+
+# gse = "GSE40279" ; rmarkdown::render("01_build_study_generic.Rmd", output_file=paste0("01_build_study_", gse, ".html"))
+
 
 ```
 
@@ -155,16 +161,16 @@ table(s$platform[,1])
 ```
 
 ```{r viualize, }
-layout(matrix(1:2, 1), respect=TRUE)
-plot(density(s$data, na.rm=TRUE))
+# layout(matrix(1:2, 1), respect=TRUE)
+layout(1, respect=TRUE)
+plot(density(s$data, na.rm=TRUE), main=paste0(gse, " beta value dist."))
 ```
 
 ```{r, echo=TRUE, results="verbatim"}
 for (exp_grp_key in colnames(s$exp_grp)) {
-  print(exp_grp_key)
+  print(paste0("*** ", exp_grp_key, " ***"))
   x = s$exp_grp[,exp_grp_key]
-  sum(is.na(x))
-  table(x)  
+  print(table(x, useNA="ifany"))  
 }
 ```
 

@@ -1,3 +1,8 @@
+# conda deactivate
+# rm -Rf /summer/epistorage/miniconda3/*
+# ~/Miniconda3-latest-Linux-x86_64.sh -u -p /summer/epistorage/miniconda3 -b
+# conda update -n base -c defaults conda
+
 __conda_setup="$('/summer/epistorage/miniconda3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
 if [ $? -eq 0 ]; then
    eval "$__conda_setup"
@@ -9,28 +14,75 @@ else
    fi
 fi
 unset __conda_setup
+
+
+# conda create --name R3.6.1_env
+conda activate R3.6.1_env
+
+# conda install  -c anaconda libopenblas
 #
-# conda create --name dnamaning_env
-# conda activate dnamaning_env
-conda activate dnamaning_env
-# conda install -c r r-base r-rmarkdown r-glmnet r-beeswarm r-rcolorbrewer 
-
-# conda install -c bioconda                                     \
-#   bioconductor-methylclock                                    \
-#   bioconductor-Biobase                                        \
-#   bioconductor-affy                                           \
-#   bioconductor-GEOquery                                       \
-#   bioconductor-methylclockdata                                \
-#   bioconductor-illuminahumanmethylation27kanno.ilmn12.hg19    \
-#   bioconductor-illuminahumanmethylation450kanno.ilmn12.hg19   \
-#   bioconductor-illuminahumanmethylationepicanno.ilm10b4.hg19  \
+# conda install -c r \
+#   r-base=3.6.1     \
+#   r-rmarkdown      \
+#   r-devtools       \
+#   r r-xml
 #
+#   install.package("https://cran.r-project.org/src/contrib/Archive/locfit/locfit_1.5-9.tar.gz")
+#
+#
+# # conda install --no-update-deps -c r r-xml
+#
+# conda install -c bioconda \
+#   bioconductor-Biobase    \
+#   bioconductor-affy       \
+#   bioconductor-GEOquery
+#
+# # conda install --no-update-deps -c bioconda            \
+# #   bioconductor-illuminahumanmethylation27kanno.ilmn12.hg19    \
+# #   bioconductor-illuminahumanmethylation450kanno.ilmn12.hg19   \
+# #   bioconductor-illuminahumanmethylationepicanno.ilm10b4.hg19
+#
+#
+# #conda install -c r r-locfit
+# conda install -c r r-glmnet
+#
+#
+#
+# conda install -c bioconda bioconductor-rhdf5lib
+# conda install -c bioconda bioconductor-rhdf5
+# conda install -c bioconda bioconductor-hdf5array
+#
+#
+# BiocManager::install("HDF5Array")
+# BiocManager::install("minfi")
+# BiocManager::install("IlluminaHumanMethylation27kanno.ilmn12.hg19")
+# BiocManager::install("IlluminaHumanMethylation450kanno.ilmn12.hg19")
+# BiocManager::install("IlluminaHumanMethylationEPICanno.ilm10b4.hg19")
+# BiocManager::install("EpiDISH")
+#
+#
+#
+#
+# # https://github.com/fchuffar/epimedtools
+# Sys.setenv(TAR = "/bin/tar") ; devtools::install_github("fchuffar/epimedtools")
+# Sys.setenv(TAR = "/bin/tar") ; devtools::install_github("fchuffar/dnamaging")
+
+# BiocManager::install("impute")
 
 
-# conda install -c bioconda/label/cf201901 bioconductor-impute 
-
-
-
-# https://github.com/fchuffar/epimedtools
-# devtools::install_github("fchuffar/epimedtools")
-
+# install.packages("dbplyr")
+# install.packages("tidyr")
+# install.packages("memoise")
+# install.packages("glmnet")
+# install.packages("glmnetUtils")
+# install.packages("beeswarm")
+#
+#
+#
+#
+# # bioconductor-methylclockdata                                \
+# # bioconductor-methylclock                                    \
+#
+#
+#
+#
