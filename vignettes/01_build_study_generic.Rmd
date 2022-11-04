@@ -45,9 +45,9 @@ This vignette
 - decorate data
 - build exp_grp from EpiMedDB
 - build platform
-- check
 - decorate exp_grp
-- viualize
+- check
+- visualize
 - save 
 
 methylation study for `r gse`.
@@ -116,6 +116,16 @@ if (s$platform_name=="GPL8490") {
 }
 ```
 
+
+
+```{r decorate_exp_grp}
+expgrpwrapper_file = paste0("01_expgrpwrapper_", gse, ".R")
+if (file.exists(expgrpwrapper_file)) {
+  source(expgrpwrapper_file)
+}
+```
+
+
 ```{r check}
 # Check
 dim(s$data)
@@ -144,13 +154,6 @@ for (cov in colnames(s$exp_grp)) {
 ```
 
 
-```{r decorate_exp_grp}
-expgrpwrapper_file = paste0("01_expgrpwrapper_", gse, ".R")
-if (file.exists(expgrpwrapper_file)) {
-  source(expgrpwrapper_file)
-}
-```
-
 # Visualize  
 
 ```{r, echo=TRUE, results="verbatim"}
@@ -161,7 +164,7 @@ sum(is.na(s$data))
 table(s$platform[,1])
 ```
 
-```{r viualize, }
+```{r visualize, }
 # layout(matrix(1:2, 1), respect=TRUE)
 layout(1, respect=TRUE)
 plot(density(s$data, na.rm=TRUE), main=paste0(gse, " beta value dist."))
@@ -171,7 +174,11 @@ plot(density(s$data, na.rm=TRUE), main=paste0(gse, " beta value dist."))
 for (exp_grp_key in colnames(s$exp_grp)) {
   print(paste0("*** ", exp_grp_key, " ***"))
   x = s$exp_grp[,exp_grp_key]
-  print(table(x, useNA="ifany"))  
+  if (length(unique(x)) != length(x)) {
+    print(table(x, useNA="always"))      
+  } else {
+    print("Not printed.")          
+  }
 }
 ```
 
