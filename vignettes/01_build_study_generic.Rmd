@@ -177,10 +177,11 @@ for (exp_grp_key in colnames(s$exp_grp)) {
 
 
 
+
 # Save
 
 ```{r save, results="verbatim"}
-s_filename = paste0("~/projects/datashare/study_", gse, ".rds")
+s_filename = paste0("~/projects/datashare/", gse, "/study_", gse, ".rds")
 print(paste0("Writing ", s_filename, "..."))
 s$save(s_filename)
 dim(s$data)
@@ -188,12 +189,12 @@ dim(s$exp_grp)
 dim(s$platform)
 
 df = cbind(s$exp_grp, t(s$data[,rownames(s$exp_grp)]))
-df_filename = paste0("~/projects/datashare/df_", gse, ".rds")
+df_filename = paste0("~/projects/datashare/", gse, "/df_", gse, ".rds")
 print(paste0("Writing ", df_filename, "..."))
 saveRDS(df, df_filename)
 dim(df)
 
-log_filename = paste0("~/projects/datashare/info_", gse, ".log")
+log_filename = paste0("~/projects/datashare/", gse, "/info_", gse, ".log")
 cat(s_filename        , file=log_filename, sep="\n", append=FALSE)
 cat(" and "           , file=log_filename, sep="\n", append=TRUE)
 cat(df_filename       , file=log_filename, sep="\n", append=TRUE)
