@@ -27,7 +27,7 @@ conda activate R3.6.1_env
 #   r-devtools       \
 #   r r-xml
 #
-#   install.package("https://cran.r-project.org/src/contrib/Archive/locfit/locfit_1.5-9.tar.gz")
+#   install.packages("https://cran.r-project.org/src/contrib/Archive/locfit/locfit_1.5-9.tar.gz")
 #
 #
 # # conda install --no-update-deps -c r r-xml
@@ -51,6 +51,7 @@ conda activate R3.6.1_env
 # conda install -c bioconda bioconductor-rhdf5lib
 # conda install -c bioconda bioconductor-rhdf5
 # conda install -c bioconda bioconductor-hdf5array
+# conda install -c bioconda snakemake
 #
 #
 # BiocManager::install("HDF5Array")
