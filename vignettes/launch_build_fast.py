@@ -8,17 +8,17 @@ curdir = os.getcwd()
 df = [f"{curdir}/../../datashare/{gse}/df_{gse}.rds" for gse in gses]
 fpip = [f"{curdir}/00_fullpipeline1_{gse}.html" for gse in gses]
 
-for gse in gses:
-    dw_exists = os.path.exists(f"{curdir}/01_datawrapper_{gse}.R")
-    exp_exists = os.path.exists(f"{curdir}/01_expgrpwrapper_{gse}.R")
-    if not dw_exists:
-        fichier = open(f"{curdir}/01_datawrapper_{gse}.R", "x")
-        fichier.close()
-    if not exp_exists:
-        fichier = open(f"{curdir}/01_expgrpwrapper_{gse}.R", "x")
-        fichier.close()
+# for gse in gses:
+#     dw_exists = os.path.exists(f"{curdir}/01_datawrapper_{gse}.R")
+#     exp_exists = os.path.exists(f"{curdir}/01_expgrpwrapper_{gse}.R")
+#     if not dw_exists:
+#         fichier = open(f"{curdir}/01_datawrapper_{gse}.R", "x")
+#         fichier.close()
+#     if not exp_exists:
+#         fichier = open(f"{curdir}/01_expgrpwrapper_{gse}.R", "x")
+#         fichier.close()
         
-localrules: target
+localrules: target create_empty_wrapper
 
 rule target:
     threads: 1
@@ -32,7 +32,22 @@ pwd
 
 
 
+rule create_empty_wrapper:
+    input: 
+      rmd_build="{prefix}/01_build_study_generic.Rmd",
+    output: 
+      r_datawrapper="{prefix}/01_datawrapper_{gse}.R",
+      r_expgrpwrapper="{prefix}/01_expgrpwrapper_{gse}.R",
+    threads: 1
+    shell:"""
+cd {wildcards.prefix}
+touch {wildcards.r_datawrapper}
+touch {wildcards.r_expgrpwrapper}
+"""
 
+        
+        
+        
 rule build_gse:
     input: 
       rmd_build="{prefix}/01_build_study_generic.Rmd",
