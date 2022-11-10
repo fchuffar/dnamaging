@@ -22,7 +22,9 @@ betaData.m = s$data
 dim(s$data)
 BloodFrac.m <- epidish(betaData.m, ref.m = centDHSbloodDMC.m, method = "RPC")$estF
 head(BloodFrac.m)
-s$exp_grp = cbind(s$exp_grp, BloodFrac.m[rownames(s$exp_grp)])
+dim(BloodFrac.m)
+s$exp_grp = cbind(s$exp_grp, BloodFrac.m[rownames(s$exp_grp),])
+head(s$exp_grp)
 
 
 

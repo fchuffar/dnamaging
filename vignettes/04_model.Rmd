@@ -24,23 +24,14 @@ if (!exists("seed")) seed = 1
 if (!exists("scenario")) scenario = "A"
 ```
 
-```{r building_indexes, echo=FALSE}
+```{r load data and build indexes, echo=FALSE}
 print("Loading data")
-
-# df = readRDS(paste0("df_preproc_",gse,".rds"))
-# idx_samples = rownames(df)
-# markers_start = grep("cg",colnames(df))[1]
-# idx_clinicals = colnames(df)[1:(markers_start-1)]
-# idx_cpg = colnames(df)[markers_start:ncol(df)]
-# gender01 = as.numeric(df$gender)
-# library(EpiDISH)
-# hannumData.m = t(mget_full_cpg_matrix(gse))[,idx_samples]
-# BloodFrac.m <- epidish(hannumData.m, ref.m = centDHSbloodDMC.m, method = "RPC")$estF
-# head(BloodFrac.m)
-# df = cbind(df[,idx_clinicals], gender01, BloodFrac.m, df[,idx_cpg])
-# saveRDS(df, paste0("df_preproc_",gse,".rds"))
-
 df = mreadRDS(paste0("df_preproc_",gse,".rds"))
+for (new_factoi in c("tobacco", "disease")) {
+  if (new_factoi %in% colnames(df)) {
+    covariates = unique(c(covariates, new_factoi))  
+  }  
+}
 
 idx_samples = rownames(df)
 markers_start = grep("cg",colnames(df))[1]
@@ -88,11 +79,14 @@ if (scenario=="A") {
 ## Training and test sets 
 
 ```{r parameters, echo=TRUE, results="verbatim"}
+if (nrow(df) - nb_train<100) {
+  nb_train = ceiling(nrow(df)/2)
+}
 print(paste0("Use ", nb_train, " observations for training."))
 if (!exists("MODESA")) {
   set.seed(seed)
   idx_train = sample(rownames(df), nb_train)
-  idx_test = setdiff(rownames(df), idx_train)  
+  idx_test = setdiff(rownames(df), idx_train)      
 } else { # Sensitivity analysis
   idx_test = rownames(mreadRDS(paste0("df_",gse,".rds")))[1:100]
   idx_test = idx_test[idx_test %in% rownames(df)] 
