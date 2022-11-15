@@ -1,5 +1,4 @@
 # 1. age
-s$exp_grp$age = s$exp_grp$age__y_
 sort(s$exp_grp$age)
 s$exp_grp = s$exp_grp[!is.na(s$exp_grp$age), ]
 s$data = s$data[,rownames(s$exp_grp)] 
@@ -12,13 +11,27 @@ table(s$exp_grp$tissue, useNA="always")
 s$exp_grp$tissue = "blood"
 
 # 4. tobacco
+table(s$exp_grp$smoking, useNA="always")
+s$exp_grp$smoking = as.numeric(s$exp_grp$smoking)
 
-# No tobacco informations in this data
-
+# 4.1 tobacco_never_01 tobacco_current_01 tobacco_former_01
+df$smoking_never = 0
+df$smoking_current = 0
+df$smoking_former = 0
+for(i in 1:length(s$exp_grp$smoking)){
+	if(s$exp_grp$smoking[i] == 0){
+		df$smoking_never[i] = 1
+	} else if(s$exp_grp$smoking[i] == 1){
+		df$smoking_former[i] = 1
+	} else if(s$exp_grp$smoking[i] == 2){
+		df$smoking_current[i] = 1
+	}
+}
 
 # 5. disease
 
-# No disease status in this data
+# No disease in this data
+
 
 # A. cell composition
 library(EpiDISH)
