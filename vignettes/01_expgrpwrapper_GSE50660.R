@@ -15,16 +15,16 @@ table(s$exp_grp$smoking, useNA="always")
 s$exp_grp$smoking = as.numeric(s$exp_grp$smoking)
 
 # 4.1 tobacco_never_01 tobacco_current_01 tobacco_former_01
-df$smoking_never = 0
-df$smoking_current = 0
-df$smoking_former = 0
+s$exp_grp$smoking_never = 0
+s$exp_grp$smoking_current = 0
+s$exp_grp$smoking_former = 0
 for(i in 1:length(s$exp_grp$smoking)){
 	if(s$exp_grp$smoking[i] == 0){
-		df$smoking_never[i] = 1
+		s$exp_grp$smoking_never01[i] = 1
 	} else if(s$exp_grp$smoking[i] == 1){
-		df$smoking_former[i] = 1
+		s$exp_grp$smoking_former01[i] = 1
 	} else if(s$exp_grp$smoking[i] == 2){
-		df$smoking_current[i] = 1
+		s$exp_grp$smoking_current01[i] = 1
 	}
 }
 
