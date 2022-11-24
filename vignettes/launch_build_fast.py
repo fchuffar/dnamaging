@@ -22,6 +22,7 @@ rule target:
       fpip,
     shell:"""
 pwd
+
           """
 
 

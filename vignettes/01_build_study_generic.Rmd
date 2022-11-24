@@ -62,8 +62,6 @@ dim(tmp_data)
 ```
 
 ```{r decorate data}
-stop("EFN")
-
 # get data matrix from wrapper
 if (nrow(tmp_data)==0) {
   datawrapper_file = paste0("01_datawrapper_", gse, ".R")
