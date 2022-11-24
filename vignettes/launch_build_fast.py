@@ -8,10 +8,11 @@ gses = [
   "GSE136296" ,
   "GSE97362"
 ]
+
 df = [f"{curdir}/../../datashare/{gse}/df_{gse}.rds" for gse in gses]
 fpip = [f"{curdir}/00_fullpipeline1_{gse}.html" for gse in gses]
 
-localrules: target create_empty_wrapper
+localrules: target create_empty_expgrpwrapper create_empty_datawrapper
 
 rule target:
     threads: 1
@@ -33,7 +34,7 @@ rule create_empty_expgrpwrapper:
     threads: 1
     shell:"""
 cd {wildcards.prefix}
-touch {wildcards.r_expgrpwrapper}
+touch {output.r_expgrpwrapper}
 """
 
 rule create_empty_datawrapper:
@@ -44,7 +45,7 @@ rule create_empty_datawrapper:
     threads: 1
     shell:"""
 cd {wildcards.prefix}
-touch {wildcards.r_datawrapper}
+touch {output.r_datawrapper}
 """
 
         

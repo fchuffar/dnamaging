@@ -9,45 +9,28 @@ s$exp_grp$gender01 = as.numeric(s$exp_grp$gender)-1
 
 # 3. tissue
 table(s$exp_grp$cell_type, useNA="always")
-s$exp_grp$cell_type = "blood"
+s$exp_grp$tissue = s$exp_grp$cell_type
 
 # 4. tobacco
-
-table(s$exp_grp$smoking, useNA="always")
-
+table(s$exp_grp$smoking_status, useNA="always")
+s$exp_grp$tobacco = NA
+s$exp_grp$tobacco[s$exp_grp$smoking_status%in%"current",] = "current"
+s$exp_grp$tobacco[s$exp_grp$smoking_status%in%"ex",] = "former"
+s$exp_grp$tobacco[s$exp_grp$smoking_status%in%"never",] = "never"
 # 4.1 tobacco_never_01 tobacco_current_01 tobacco_former_01 tobacco_occas01
-s$exp_grp$smoking_never01 = 0
-s$exp_grp$smoking_current01 = 0
-s$exp_grp$smoking_former01 = 0
-s$exp_grp$smoking_occas01 = 0
-
-for(i in 1:length(s$exp_grp$smoking_status)){
-	if(s$exp_grp$smoking_status[i] == "never"){
-		s$exp_grp$smoking_never01[i] = 1
-	} else if(s$exp_grp$smoking_status[i] == "ex"){
-		s$exp_grp$smoking_former01[i] = 1
-	} else if(s$exp_grp$smoking_status[i] == "current"){
-		s$exp_grp$smoking_current01[i] = 1
-	} else if(s$exp_grp$smoking_status[i] == "occasional"){
-		s$exp_grp$smoking_occas01[i] = 1
-	} else if(s$exp_grp$smoking_status[i] == "na"){
-		s$exp_grp$smoking_status[i] = NA
-	}
-}
-
-s$exp_grp = s$exp_grp[!is.na(s$exp_grp$smoking_status), ]
+s$exp_grp$tobacco_current01 = 0
+s$exp_grp$tobacco_former01 = 0 
+s$exp_grp$tobacco_never01 = 0
+s$exp_grp[s$exp_grp$tobacco%in%"current",]$tobacco_current01 = 1
+s$exp_grp[s$exp_grp$tobacco%in%"former" ,]$tobacco_former01  = 1
+s$exp_grp[s$exp_grp$tobacco%in%"never"  ,]$tobacco_never01   = 1
+# s$exp_grp = s$exp_grp[!is.na(s$exp_grp$tobacco), ]
 s$data = s$data[,rownames(s$exp_grp)] 
 
-
 # 5. disease
-
-s$exp_grp$disease = "control"
-for (i in 1:length(s$exp_grp$disease_state)){
-	if(s$exp_grp$disease_state[i] == "rheumatoid arthritis"){
-		s$exp_grp$disease[i] = "rheumatoid arthritis"
-	}
-}
-
+s$exp_grp$disease = NA
+s$exp_grp$disease[s$exp_grp$disease_state %in% "rheumatoid arthritis",] = "rheumatoid arthritis"
+s$exp_grp$disease[s$exp_grp$disease_state %in% "Normal",] = "control"
 
 # A. cell composition
 library(EpiDISH)
