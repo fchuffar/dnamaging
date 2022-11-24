@@ -12,6 +12,7 @@ if (! exists("mread.tablegz")) {
     read.table(gzfile(matrix_file), ...)
   }, cache = cachem::cache_mem(max_size = 10*1024 * 1024^2))  
 }
+
 foo = mread.tablegz(paste0("~/projects/datashare/", gse, "/GSE136296_eegoguevara.2019.08.23.data.beta.pdet.csv.gz"), nrow=100, header=TRUE, row.names=1, sep=",")
 head(foo[,1:10])
 dim(foo)

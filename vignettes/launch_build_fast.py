@@ -28,7 +28,6 @@ pwd
 
 rule create_empty_expgrpwrapper:
     input: 
-      rmd_build="{prefix}/01_build_study_generic.Rmd",
     output: 
       r_expgrpwrapper="{prefix}/01_expgrpwrapper_{gse}.R",
     threads: 1
@@ -39,7 +38,6 @@ touch {output.r_expgrpwrapper}
 
 rule create_empty_datawrapper:
     input: 
-      rmd_build="{prefix}/01_build_study_generic.Rmd",
     output: 
       r_datawrapper="{prefix}/01_datawrapper_{gse}.R",
     threads: 1
