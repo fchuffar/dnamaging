@@ -99,6 +99,7 @@ oarsub --project epimed  -l nodes=1/core=4,walltime=12:00:00  -I
 oarsub --project epimed  -l nodes=1/core=8,walltime=6:00:00  -I
 # from dahu frontend, book a node and use it assynchronously
 oarsub --project epimed  -l nodes=1,walltime=48:00:00  "sleep 2d"
+oarsub --project epimed  -p "network_address='dahu67'" -l nodes=1,walltime=48:00:00  "sleep 2d"
 oarstat -fu chuffarf
 oarsh dahu129
 screen # ... screen -r ; ctrl+a d
