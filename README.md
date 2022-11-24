@@ -130,5 +130,9 @@ echo "source('sa_preparedf.R')" | Rscript -
 snakemake -s sa_launchexperiments.py --cores 20 --cluster "oarsub --project epimed -l /nodes=1,walltime=6:00:00 -t hpe "  --latency-wait 60 -pn
 # on classical dahu nodes
 snakemake -s sa_launchexperiments.py --cores 50 --cluster "oarsub --project epimed -l /nodes=1,walltime=6:00:00 "  --latency-wait 60 -pn
+
+# on devel node
+snakemake -s launch_build_fast.py --cores 50 --cluster "oarsub --project epimed -l /nodes=1,walltime=6:00:00 -t devel"  --latency-wait 60 -pn
+
 ```
 
