@@ -570,6 +570,9 @@ for (covariate in covariates) {
   info_g$ElasticNet$alpha  = best_model_cvaglmnet_params$alpha
   info_g$ElasticNet$lambda = best_model_cvaglmnet_params$lambda 
 }
+
+
+saveRDS(info_g,paste0("info_model_",gse,".rds"))
 ```
 
 

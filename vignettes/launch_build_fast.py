@@ -12,7 +12,7 @@ gses = [
 df = [f"{curdir}/../../datashare/{gse}/df_{gse}.rds" for gse in gses]
 fpip = [f"{curdir}/00_fullpipeline1_{gse}.html" for gse in gses]
 
-localrules: target create_empty_expgrpwrapper create_empty_datawrapper
+localrules: target create_empty_expgrpwrapper create_empty_datawrapper info_gse
 
 rule target:
     threads: 1
@@ -47,8 +47,23 @@ cd {wildcards.prefix}
 touch {output.r_datawrapper}
 """
 
-        
-        
+rule info_gse:
+    input: 
+      info_model="{prefix}/info_model_{gse}.rds",
+      info_desc="{prefix}/info_desc_{gse}.rds",
+      data_info="{prefix}/data_info.R",
+      pipeline="{prefix}/00_fullpipeline1_{gse}.html",
+    output: 
+      info = "{prefix}/data_info.xlsx",           
+    threads: 1
+    shell:"""
+export PATH="/summer/epistorage/opt/bin:$PATH"
+export PATH="/summer/epistorage/miniconda3/envs/R3.6.1_env/bin:$PATH"
+cd {wildcards.prefix}
+
+RCODE="gse='{wildcards.gse}' ; source(data_info.R)"
+echo $RCODE | Rscript - 2>&1 > data_info_{gse}.Rout
+"""        
         
 rule build_gse:
     input: 

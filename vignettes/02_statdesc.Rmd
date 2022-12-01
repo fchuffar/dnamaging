@@ -29,7 +29,7 @@ if (gse != "dnamaging") {
   df = dnamaging::df_dnamaging  
 }
 
-for (new_factoi in c("tobacco", "disease")) {
+for (new_factoi in c("tobacco", "disease","gender")) {
   if (new_factoi %in% colnames(df)) {
     covariates = unique(c(covariates, new_factoi))  
   }  
@@ -60,7 +60,7 @@ lines(density(df[[y_key]]))
 ```{r, fig.height=4.5}
 layout(matrix(1:2,1), respect=TRUE)
 for (cov in covariates) {
-  tmp_tab = table(df[[cov]], useNA="ifany")  
+  tmp_tab = table(df[[cov]], useNA="ifany")
   # tmp_col = 1:dim(tmp_tab)
   tmp_col = RColorBrewer::brewer.pal(n=max(3,dim(tmp_tab)), name = "Set1")
   tmp_x = barplot(tmp_tab, col=tmp_col, ylim=c(0,max(tmp_tab)*1.2), main=cov, las=2)
@@ -72,5 +72,40 @@ for (cov in covariates) {
   beeswarm::beeswarm(formula(f), data=df, ylab=y_key, xlab="", col=tmp_col, las=2, main=f)  
 }
 ```
+```{r stock_info gse}
+all_cofactors = c("disease","gender","tobacco")
+info = c(
+	name_gse = gse,
+	platform = as.character(unique(df$platform)), 
+	tissue = paste(unique(df$tissue),collapse="/"),
+	n = nrow(df),
+	cofactors = paste0(covariates,collapse="/")
+)
 
+distrib = list()
+for (cov in covariates) {
+  tmp_distrib = table(df[[cov]], useNA="always")
+  names(tmp_distrib)[length(tmp_distrib)] = "NA"  
+  if(length(distrib)==0){
+  	distrib[[length(list)]] = tmp_distrib
+  } else {
+  	distrib[[length(list)+1]] = tmp_distrib
+  }
+}
+names(distrib) = covariates
+
+cofactors_distrib = c()
+for (i in all_cofactors){
+	if(i %in% covariates){
+		tab = distrib[[i]]
+		cofactors_distrib = c(cofactors_distrib, paste0(stringr::str_c(names(tab),tab,sep="="),collapse=" / "))
+	} else { cofactors_distrib = c(cofactors_distrib,paste0("No ",i," distribution in this GSE")) }
+}
+names(cofactors_distrib) = all_cofactors
+info = c(info,cofactors_distrib)	
+
+saveRDS(info,paste0("info_desc_",gse,".rds"))
+
+
+```
 
