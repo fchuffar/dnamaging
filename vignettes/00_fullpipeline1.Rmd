@@ -89,14 +89,9 @@ clock on 27k  vs. DMR on 27k
 
 
 
-# Descriptive Statistics
+# Descriptive Statistics and preproc
 
-```{r child = "02_statdesc.Rmd", eval=TRUE}
-```
-
-# Data Preprocessing
-
-```{r child = "03_preproc.Rmd", eval=TRUE}
+```{r child = "02_stat_preproc.Rmd", eval=TRUE}
 ```
 
 # Build Model

@@ -1,5 +1,5 @@
 if(!file.exists("data_info.xlsx")){
-	data_info_gen = as.data.frame(setNames(replicate(9,numeric(0), simplify = F),c("name_gse","platform","tissue","n","cofactors","disease_distrib","gender_distrib","tobacco_distrib","RMSE") ))
+	data_info_gen = as.data.frame(setNames(replicate(9,numeric(0), simplify = F),c("name_gse","platform","tissue","n","n_preproc","cofactors","disease_distrib","gender_distrib","tobacco_distrib","RMSE","nb_probes") ))
 	openxlsx::write.xlsx(data_info_gen,"data_info.xlsx")
 }
 
@@ -20,10 +20,10 @@ for (gse in gses){
   if(file.exists(file_desc)){
     info_desc=readRDS(file_desc)
     info=c(info,info_desc)
-  } else { info = c(info,rep("NA",6)) }
+  } else { info = c(info,rep("NA",7)) }
   if(file.exists(file_model)){
     info_model=readRDS(file_model)
-    info=c(info,info_model)
+    info=c(info,info_model$Bootstrap$RMSE,info_model$Bootstrap$nb_probes)
   } else { info =c(info,rep("NA",2)) }
   
   if (gse %in% info_gen$name_gse){
