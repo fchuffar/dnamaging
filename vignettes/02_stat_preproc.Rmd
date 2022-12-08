@@ -82,11 +82,7 @@ distrib = list()
 for (cov in covariates) {
   tmp_distrib = table(df[[cov]], useNA="always")
   names(tmp_distrib)[length(tmp_distrib)] = "NA"  
-  if(length(distrib)==0){
-  	distrib[[length(list)]] = tmp_distrib
-  } else {
-  	distrib[[length(list)+1]] = tmp_distrib
-  }
+  distrib[[length(distrib)+1]] = tmp_distrib
 }
 names(distrib) = covariates
 

@@ -97,7 +97,7 @@ ln -s {wildcards.prefix}/df_{wildcards.gse}.rds
 ln -s {wildcards.prefix}/litterature_models.rds
 cp {wildcards.prefix}/*.Rmd {wildcards.prefix}/*.R .
 
-RCODE="gse='{wildcards.gse}' ; nb_core=2; rmarkdown::render('00_fullpipeline1.Rmd',output_file=paste0('00_fullpipeline1_',gse,'.html'));print(paste0(gse,'launched'));"
+RCODE="gse='{wildcards.gse}' ; nb_core=6; rmarkdown::render('00_fullpipeline1.Rmd',output_file=paste0('00_fullpipeline1_',gse,'.html'));print(paste0(gse,'launched'));"
 echo $RCODE | Rscript - 2>&1 > 00_fullpipeline1_{wildcards.gse}.Rout
 
 cp 00_fullpipeline1_{wildcards.gse}.html 00_fullpipeline1_{wildcards.gse}.Rout {wildcards.prefix}/.
