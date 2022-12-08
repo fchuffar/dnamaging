@@ -1,5 +1,6 @@
 if(!file.exists("data_info.xlsx")){
-	data_info_gen = as.data.frame(setNames(replicate(9,numeric(0), simplify = F),c("name_gse","platform","tissue","n","n_preproc","cofactors","disease_distrib","gender_distrib","tobacco_distrib","RMSE","nb_probes") ))
+  cn = c("name_gse","platform","tissue","n","n_preproc","cofactors","disease_distrib","gender_distrib","tobacco_distrib","RMSE","nb_probes")
+	data_info_gen = as.data.frame(setNames(replicate(length(cn),numeric(0), simplify = F),cn ))
 	openxlsx::write.xlsx(data_info_gen,"data_info.xlsx")
 }
 
