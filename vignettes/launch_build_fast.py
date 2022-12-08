@@ -6,7 +6,8 @@ curdir = os.getcwd()
 gses = [
   "GSE41037"  ,
   "GSE136296" ,
-  "GSE97362"
+  "GSE97362",
+  "GSE42861"
 ]
 
 df = [f"{curdir}/../../datashare/{gse}/df_{gse}.rds" for gse in gses]
@@ -22,7 +23,8 @@ rule target:
       fpip,
     shell:"""
 pwd
-
+RCODE="source(data_info.R)"
+echo $RCODE | Rscript - 2>&1 > data_info.Rout
           """
 
 
@@ -45,24 +47,6 @@ rule create_empty_datawrapper:
     shell:"""
 cd {wildcards.prefix}
 touch {output.r_datawrapper}
-"""
-
-rule info_gse:
-    input: 
-      info_model="{prefix}/info_model_{gse}.rds",
-      info_desc="{prefix}/info_desc_{gse}.rds",
-      data_info="{prefix}/data_info.R",
-      pipeline="{prefix}/00_fullpipeline1_{gse}.html",
-    output: 
-      info = "{prefix}/data_info.xlsx",           
-    threads: 1
-    shell:"""
-export PATH="/summer/epistorage/opt/bin:$PATH"
-export PATH="/summer/epistorage/miniconda3/envs/R3.6.1_env/bin:$PATH"
-cd {wildcards.prefix}
-
-RCODE="gse='{wildcards.gse}' ; source(data_info.R)"
-echo $RCODE | Rscript - 2>&1 > data_info_{gse}.Rout
 """        
         
 rule build_gse:
@@ -113,7 +97,7 @@ ln -s {wildcards.prefix}/df_{wildcards.gse}.rds
 ln -s {wildcards.prefix}/litterature_models.rds
 cp {wildcards.prefix}/*.Rmd {wildcards.prefix}/*.R .
 
-RCODE="gse='{wildcards.gse}' ; nb_core=6; rmarkdown::render('00_fullpipeline1.Rmd',output_file=paste0('00_fullpipeline1_',gse,'.html'));print(paste0(gse,'launched'));"
+RCODE="gse='{wildcards.gse}' ; nb_core=2; rmarkdown::render('00_fullpipeline1.Rmd',output_file=paste0('00_fullpipeline1_',gse,'.html'));print(paste0(gse,'launched'));"
 echo $RCODE | Rscript - 2>&1 > 00_fullpipeline1_{wildcards.gse}.Rout
 
 cp 00_fullpipeline1_{wildcards.gse}.html 00_fullpipeline1_{wildcards.gse}.Rout {wildcards.prefix}/.

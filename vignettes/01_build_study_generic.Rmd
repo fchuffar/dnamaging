@@ -199,6 +199,16 @@ print(paste0("Writing ", df_filename, "..."))
 saveRDS(df, df_filename)
 dim(df)
 
+if (s$platform_name=="GPL8490") {
+	info_build = "27k"
+} else if (s$platform_name=="GPL13534"){
+	info_build = "450k"
+} else if (s$platform_name%in%c("GPL21145", "GPL23976")) {
+	info_build = "epic"
+}
+
+saveRDS(info_build,paste0("info_build_",gse,".rds"))
+
 log_filename = paste0("~/projects/datashare/", gse, "/info_", gse, ".log")
 cat(s_filename        , file=log_filename, sep="\n", append=FALSE)
 cat(" and "           , file=log_filename, sep="\n", append=TRUE)

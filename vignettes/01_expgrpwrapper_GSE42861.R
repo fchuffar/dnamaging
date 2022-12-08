@@ -14,9 +14,9 @@ s$exp_grp$tissue = s$exp_grp$cell_type
 # 4. tobacco
 table(s$exp_grp$smoking_status, useNA="always")
 s$exp_grp$tobacco = NA
-s$exp_grp$tobacco[s$exp_grp$smoking_status%in%"current",] = "current"
-s$exp_grp$tobacco[s$exp_grp$smoking_status%in%"ex",] = "former"
-s$exp_grp$tobacco[s$exp_grp$smoking_status%in%"never",] = "never"
+s$exp_grp$tobacco[s$exp_grp$smoking_status%in%"current"] = "current"
+s$exp_grp$tobacco[s$exp_grp$smoking_status%in%"ex"] = "former"
+s$exp_grp$tobacco[s$exp_grp$smoking_status%in%"never"] = "never"
 # 4.1 tobacco_never_01 tobacco_current_01 tobacco_former_01 tobacco_occas01
 s$exp_grp$tobacco_current01 = 0
 s$exp_grp$tobacco_former01 = 0 
@@ -29,8 +29,8 @@ s$data = s$data[,rownames(s$exp_grp)]
 
 # 5. disease
 s$exp_grp$disease = NA
-s$exp_grp$disease[s$exp_grp$disease_state %in% "rheumatoid arthritis",] = "rheumatoid arthritis"
-s$exp_grp$disease[s$exp_grp$disease_state %in% "Normal",] = "control"
+s$exp_grp$disease[s$exp_grp$disease_state %in% "rheumatoid arthritis"] = "rheumatoid arthritis"
+s$exp_grp$disease[s$exp_grp$disease_state %in% "Normal"] = "control"
 
 # A. cell composition
 library(EpiDISH)

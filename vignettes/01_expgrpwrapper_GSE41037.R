@@ -3,18 +3,6 @@ sort(s$exp_grp$age)
 s$exp_grp = s$exp_grp[!is.na(s$exp_grp$age), ]
 s$data = s$data[,rownames(s$exp_grp)] 
 
-# Platform
-s$platform_name
-if (s$platform_name=="GPL8490") {
-	platform = "27k"
-} else if (s$platform_name=="GPL13534"){
-	platform = "450k"
-} else if (s$platform_name%in%c("GPL21145", "GPL23976")) {
-	platform = "epic"
-}
-
-s$exp_grp$platform = rep(platform,length(s$exp_grp$age))
-
 # 2. gender
 table(s$exp_grp$gender, useNA="always")
 gender = rep(NA,length(s$exp_grp$gender))
