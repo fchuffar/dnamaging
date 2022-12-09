@@ -4,9 +4,50 @@ import os.path
 curdir = os.getcwd()
 
 gses = [
+  
+  "GSE40279", 
+  "GSE20067", 
+  "GSE87571", 
+  "GSE151732", 
+  "GSE136296", 
+  "GSE147740", 
+  
+  # "GSE40279",
+  # "GSE41037",
+  # "GSE20067",
+  # "GSE50660",
+  # "GSE43976",
+  # "GSE106648",
+  # "GSE42861",
+  # "GSE72680",
+  # "GSE55763",
+  # "GSE87571",
+  # "GSE85210",
+  # "GSE87648",
+  # "GSE89353",
+  # "GSE97362",
+  # "GSE169156",
+  # "GSE154566",
+  # "GSE151732",
+  # "GSE124413",
+  # "GSE136296",
+  # "GSE147740",
+  # "GSE152026",
+  # "GSE56105",
+  # "GSE185090",
+  # "GSE156274",
+  # "GSE140686",
+  # "GSE50923",
+  # "GSE48461",
+  # "GSE104293",
+  # "GSE68838",
+  # "GSE36278",
+  # "GSE60753",
+  # "GSE49393",
+  
   "GSE41037"  ,
   "GSE136296" ,
-  "GSE97362",
+  "GSE97362"  ,
   "GSE42861"
 ]
 
@@ -55,8 +96,8 @@ rule build_gse:
       r_datawrapper="{prefix}/01_datawrapper_{gse}.R",
       r_expgrpwrapper="{prefix}/01_expgrpwrapper_{gse}.R",
     output: 
-      study_rds =   "{prefix}/../../datashare/{gse}/study_{gse}.rds",
-      df_rds =      "{prefix}/../../datashare/{gse}/df_{gse}.rds"    ,           
+      study_rds =   "{prefix}/datashare/{gse}/study_{gse}.rds",
+      df_rds =      "{prefix}/datashare/{gse}/df_{gse}.rds"    ,           
       html =        "{prefix}/01_build_study_{gse}.html"      ,           
       info_build =  "{prefix}/info_build_{gse}.rds"   ,
     threads: 8
@@ -80,7 +121,7 @@ rm -Rf /tmp/wd_{wildcards.gse}
 
 rule launch_pipeline:
     input: 
-      df=os.path.expanduser("~/projects/datashare/{gse}/df_{gse}.rds"),
+      df="{prefix}/datashare/{gse}/df_{gse}.rds",
       rmd_script="{prefix}/00_fullpipeline1.Rmd",      
       rmd_script_model="{prefix}/04_model.Rmd",      
     output:           
