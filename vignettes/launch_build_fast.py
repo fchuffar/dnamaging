@@ -4,51 +4,40 @@ import os.path
 curdir = os.getcwd()
 
 gses = [
-  
-  "GSE40279", 
-  "GSE20067", 
-  "GSE87571", 
-  "GSE151732", 
-  "GSE136296", 
-  "GSE147740", 
-  
-  # "GSE40279",
-  # "GSE41037",
-  # "GSE20067",
-  # "GSE50660",
+  # "GSE20067",  best_model_bs   "incorrect number of dimensions" problem in selecting probes?
+  # "GSE36278",
+  "GSE41037",
+  "GSE42861",
   # "GSE43976",
-  # "GSE106648",
-  # "GSE42861",
-  # "GSE72680",
+  # "GSE50660",
   # "GSE55763",
-  # "GSE87571",
+  # "GSE48461",
+  # "GSE49393",
+  # "GSE50923",
+  # "GSE56105",
+  # "GSE60753",
+  # "GSE68838",
+  # "GSE72680",
+  "GSE97362",
   # "GSE85210",
+  # "GSE87571", 
   # "GSE87648",
   # "GSE89353",
-  # "GSE97362",
-  # "GSE169156",
-  # "GSE154566",
-  # "GSE151732",
-  # "GSE124413",
-  # "GSE136296",
-  # "GSE147740",
-  # "GSE152026",
-  # "GSE56105",
-  # "GSE185090",
-  # "GSE156274",
-  # "GSE140686",
-  # "GSE50923",
-  # "GSE48461",
-  # "GSE104293",
-  # "GSE68838",
-  # "GSE36278",
-  # "GSE60753",
-  # "GSE49393",
   
-  "GSE41037"  ,
+  # "GSE104293",
+  # "GSE106648",
+  # "GSE124413",
   "GSE136296" ,
-  "GSE97362"  ,
-  "GSE42861"
+  # "GSE140686",
+  "GSE147740", 
+  # "GSE151732", problem y_key var is "age" but not numeric
+  # "GSE152026",
+  # "GSE154566",
+  # "GSE156274",
+  # "GSE169156",
+  # "GSE185090"
+  
+  "GSE40279"
 ]
 
 info_models = [f"{curdir}/info_model_{gse}.rds" for gse in gses]
