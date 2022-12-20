@@ -55,11 +55,58 @@ print(paste0("#####", gse))
 s = epimedtools::create_study()
 s$gse = gse
 
+# get exp_grp df from NCBI/GEO
+dim(s$exp_grp)
+tmp_exp_grp = s$get_exp_grp(dest_dir="~/projects/datashare")
+dim(tmp_exp_grp)
+
 # get data matrix from NCBI/GEO
 dim(s$data)
 tmp_data = s$get_data(dest_dir="~/projects/datashare")
 dim(tmp_data)
 ```
+
+```{r build exp_grp from EpiMedDB, eval=FALSE}
+# get exp_grp from epimed_DB http://epimed.univ-grenoble-alpes.fr/database/series
+url = paste0("http://epimed.univ-grenoble-alpes.fr/database/parameters/",gse)
+df1 = try(read.csv2(url, header=TRUE, sep=";", stringsAsFactors=FALSE, dec=".", na.strings="", row.names=1))
+# url = paste0("http://epimed.univ-grenoble-alpes.fr/database/expgroup/",gse)
+# df2 = read.csv2(url, header=TRUE, sep=";", stringsAsFactors=FALSE, dec=".", na.strings="", row.names=1)
+# head(df2)
+if (attributes(df1)$class == "try-error") {
+  # Do nothing, exp_grp (columns metadata) is obtained from NCBI/GEO
+} else {
+  s$exp_grp = df1
+}
+dim(s$exp_grp)
+head(s$exp_grp)
+```
+
+```{r decorate_exp_grp}
+expgrpwrapper_file = paste0("01_expgrpwrapper_", gse, ".R")
+if (file.exists(expgrpwrapper_file)) {
+  source(expgrpwrapper_file)
+}
+
+for (fact in c("age")) {
+  if (fact %in% colnames(s$exp_grp)) {
+    if (!is.numeric(s$exp_grp[[fact]])) {
+      stop(paste0("s$exp_grp$", fact, " must be numeric.")) 
+    }  
+  }
+}
+
+for (fact in c("gender", "tobacco", "disease")) {
+  if (fact %in% colnames(s$exp_grp)) {
+    if (!is.factor(s$exp_grp[[fact]])) {
+      stop(paste0("s$exp_grp$", fact, " must be factor")) 
+    }  
+  }
+}
+
+```
+
+
 
 ```{r decorate data}
 # get data matrix from wrapper
@@ -75,21 +122,6 @@ if (nrow(tmp_data)==0) {
 dim(s$data)
 ```
 
-```{r build exp_grp from EpiMedDB}
-# get exp_grp from epimed_DB http://epimed.univ-grenoble-alpes.fr/database/series
-url = paste0("http://epimed.univ-grenoble-alpes.fr/database/parameters/",gse)
-df1 = try(read.csv2(url, header=TRUE, sep=";", stringsAsFactors=FALSE, dec=".", na.strings="", row.names=1))
-# url = paste0("http://epimed.univ-grenoble-alpes.fr/database/expgroup/",gse)
-# df2 = read.csv2(url, header=TRUE, sep=";", stringsAsFactors=FALSE, dec=".", na.strings="", row.names=1)
-# head(df2)
-if (attributes(df1)$class == "try-error") {
-  # Do nothing, exp_grp (columns metadata) is obtained from NCBI/GEO
-} else {
-  s$exp_grp = df1
-}
-dim(s$exp_grp)
-head(s$exp_grp)
-```
 
 ```{r platform}
 # get platform (rows metdata)from NCBI/GEO 
@@ -116,12 +148,6 @@ s$platform = s$platform[rownames(s$platform) %in% rownames(s$data),]
 
 
 
-```{r decorate_exp_grp}
-expgrpwrapper_file = paste0("01_expgrpwrapper_", gse, ".R")
-if (file.exists(expgrpwrapper_file)) {
-  source(expgrpwrapper_file)
-}
-```
 
 
 ```{r check}

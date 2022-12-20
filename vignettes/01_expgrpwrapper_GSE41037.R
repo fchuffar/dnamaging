@@ -1,36 +1,35 @@
- # 1. age
+# 1. age
+s$exp_grp$age = as.numeric(s$exp_grp$"age:ch1")
 sort(s$exp_grp$age)
 s$exp_grp = s$exp_grp[!is.na(s$exp_grp$age), ]
 s$data = s$data[,rownames(s$exp_grp)] 
 
+
 # 2. gender
+table(s$exp_grp$"gender:ch1")
+s$exp_grp = s$exp_grp[!s$exp_grp$"gender:ch1"%in%"NA",]
+table(s$exp_grp$"gender:ch1")
+s$exp_grp$gender = as.factor(s$exp_grp$"gender:ch1")
 table(s$exp_grp$gender, useNA="always")
-gender = rep(NA,length(s$exp_grp$gender))
-gender[s$exp_grp$gender%in%"male"]="m"
-gender[s$exp_grp$gender%in%"female"]="f"
-s$exp_grp$gender = gender
-#s$exp_grp$gender01 = as.numeric(s$exp_grp$gender)-1
-s$exp_grp$gender01 = rep(NA,length(s$exp_grp$gender))
-s$exp_grp$gender01[s$exp_grp$gender%in%"f"]=0
-s$exp_grp$gender01[s$exp_grp$gender%in%"m"]=1
+s$exp_grp$gender01 = as.numeric(s$exp_grp$gender)-1
+table(s$exp_grp$gender01, useNA="always")
 
 # 3. tissue
+s$exp_grp$tissue = as.factor(s$exp_grp$"tissue:ch1")
 table(s$exp_grp$tissue, useNA="always")
-s$exp_grp$tissue = "blood"
+s$exp_grp$tissue 
 
 # 4. tobacco
-
 # No Tobacco status in this df
 
 # 5. disease
+s$exp_grp$disease = as.factor(s$exp_grp$"diseasestatus:ch1")
+table(s$exp_grp$disease, useNA="always")
+levels(s$exp_grp$disease) = c("control", "schizophrenia")
+table(s$exp_grp$disease, useNA="always")
+s$exp_grp = s$exp_grp[!is.na(s$exp_grp$disease), ]
+s$data = s$data[,rownames(s$exp_grp)] 
 
-s$exp_grp$disease = "control"
-nb_disease = as.numeric(substr(s$exp_grp$diseasestatus,1,1))
-for (i in 1:length(nb_disease)){
-	if(nb_disease[i] != 1){
-		s$exp_grp$disease[i] = "schizophrenia"
-	}
-}
 
 # A. cell composition
 #library(EpiDISH)
@@ -55,3 +54,4 @@ s$data = s$data[rownames(s$platform),]
 
 # C. clean data
 s$data = s$data[rownames(s$platform),rownames(s$exp_grp)] 
+
