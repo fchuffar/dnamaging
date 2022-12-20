@@ -21,6 +21,7 @@ s$exp_grp$tobacco = NA
 s$exp_grp$tobacco[s$exp_grp$smoking_status%in%"current"] = "current"
 s$exp_grp$tobacco[s$exp_grp$smoking_status%in%"ex"] = "former"
 s$exp_grp$tobacco[s$exp_grp$smoking_status%in%"never"] = "never"
+s$exp_grp$tobacco = as.factor(s$exp_grp$tobacco)
 s$exp_grp = s$exp_grp[!is.na(s$exp_grp$tobacco), ]
 table(s$exp_grp$tobacco, useNA="always")
 # 4.1 tobacco_never_01 tobacco_current_01 tobacco_former_01 tobacco_occas01
