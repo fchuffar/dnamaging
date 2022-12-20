@@ -4,7 +4,7 @@ import os.path
 curdir = os.getcwd()
 
 gses = [
-  # "GSE20067",  best_model_bs   "incorrect number of dimensions" problem in selecting probes?
+  # "GSE20067",  best_model_bs   "incorrect number of dimensions" FCh: problem in selecting probes?
   # "GSE36278",
   
   "GSE41037",   # 27k

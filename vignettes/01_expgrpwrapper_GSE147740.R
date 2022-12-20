@@ -8,18 +8,5 @@ sort(s$exp_grp$gender)
 
 dim(s$exp_grp)
 s$exp_grp$gender01 = as.numeric(s$exp_grp$gender)
-library(EpiDISH)
-s$data = s$data[,rownames(s$exp_grp)] 
-betaData.m = s$data
-dim(s$data)
-BloodFrac.m <- epidish(betaData.m, ref.m = centDHSbloodDMC.m, method = "RPC")$estF
-head(BloodFrac.m)
-s$exp_grp = cbind(s$exp_grp, BloodFrac.m)
-
-
-
-s$data = s$data[,rownames(s$exp_grp)] 
-
-
 
 

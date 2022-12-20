@@ -119,6 +119,9 @@ if (nrow(tmp_data)==0) {
   }
 }
   
+s$data = s$data[,rownames(s$exp_grp)] 
+
+
 dim(s$data)
 ```
 
@@ -144,6 +147,18 @@ if (s$platform_name=="GPL8490") {
   stop(paste0("platform problem ", gse, " ", s$platform_name))
 }
 s$platform = s$platform[rownames(s$platform) %in% rownames(s$data),]
+
+# A. cell composition
+if (!s$platform_name=="GPL8490") {
+  library(EpiDISH)
+  betaData.m = s$data
+  dim(s$data)
+  BloodFrac.m <- epidish(betaData.m, ref.m = centDHSbloodDMC.m, method = "RPC")$estF
+  head(BloodFrac.m)
+  dim(BloodFrac.m)
+  s$exp_grp = cbind(s$exp_grp, BloodFrac.m[rownames(s$exp_grp),])
+  head(s$exp_grp)
+}
 
 # B. remove probes on chrX and chrY
 head(s$platform[,1:6]) 
