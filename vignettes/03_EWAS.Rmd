@@ -1,0 +1,146 @@
+---
+title: "EWAS"
+author: "Fabien Jossaud, Florent Chuffart"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+
+
+```{r echo=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide")
+start_time = Sys.time()
+source("common.R")
+```
+
+```{r params_default, echo=FALSE}
+source("params_default.R")
+if (!exists("seed")) seed = 1
+if (!exists("scenario")) scenario = "A"
+```
+
+```{r load data and build indexes, echo=FALSE}
+print("Loading data")
+df = mreadRDS(paste0("df_preproc_",gse,".rds"))
+for (new_factoi in c("tobacco", "disease")) {
+  if (new_factoi %in% colnames(df)) {
+    covariates = unique(c(covariates, new_factoi))  
+  }  
+}
+
+idx_samples = rownames(df)
+markers_start = grep("cg",colnames(df))[1]
+idx_clinicals = colnames(df)[1:(markers_start-1)]
+idx_cpg = colnames(df)[markers_start:ncol(df)]
+```
+
+## Model
+
+```{r}
+if (scenario=="A") {
+  confounders = NULL  
+} else if (scenario=="B") {
+  confounders = "gender01"
+} else if (scenario=="C") {
+  confounders = c(
+    # "B"      ,
+    "NK"     ,
+    "CD4T"   ,
+    "CD8T"   ,
+    "Gran"   ,
+    "Mono"   ,
+    "Neutro" ,
+    "Eosino"
+  )
+} else if (scenario=="D") {
+  confounders = c(
+    "gender01"      ,
+    "NK"     ,
+    "CD4T"   ,
+    "CD8T"   ,
+    "Gran"   ,
+    "Mono"   ,
+    "Neutro" ,
+    "Eosino"
+  )
+} else {
+  confounders = NULL  
+}
+```
+
+`r paste0("~", paste0(c(y_key, confounders), collapse="+"))`
+
+
+## Training and test sets 
+
+```{r parameters, echo=TRUE, results="verbatim"}
+if (nrow(df) - nb_train<100) {
+  nb_train = ceiling(nrow(df)/2)
+}
+print(paste0("Use ", nb_train, " observations for training."))
+if (!exists("MODESA")) {
+  set.seed(seed)
+  idx_train = sample(rownames(df), nb_train)
+  idx_test = setdiff(rownames(df), idx_train)      
+} else { # Sensitivity analysis
+  idx_test = rownames(mreadRDS(paste0("df_",gse,".rds")))[1:100]
+  idx_test = idx_test[idx_test %in% rownames(df)] 
+  idx_train = setdiff(rownames(df), idx_test)   
+  nb_train = length(idx_train)
+}
+```
+
+## Filtering probes using EWAS 
+
+
+```{r ewas}
+if (nbewasprobes>0) {
+  print("filtering EWAS top probes")
+  x = mget_full_cpg_matrix(gse, idx_train, idx_cpg)
+  cpg_matrix = t(x)
+  if (!is.null(confounders)) {
+    design_matrix <- model.matrix(formula(paste0("~", y_key, "+", paste0(confounders, collapse="+"))), df[idx_train,idx_clinicals])    
+  } else {
+    design_matrix <- model.matrix(formula(paste0("~", y_key)), df[idx_train,idx_clinicals])    
+  }
+  dim(design_matrix)
+  dim(cpg_matrix)
+  fit = mlimma_lmFit(cpg_matrix, design_matrix)
+  fit = limma::eBayes(fit) # compute moderated t-statistics, moderated F-statistic, and log-odds of differential expression by empirical Bayes moderation of the standard errors towards a global value
+  # head(fit$p.value)
+  idx_cpg_oi = rownames(fit$p.value)[rank(fit$p.value[,2]) <= nbewasprobes]
+  layout(1, respect=TRUE)
+  plot(fit$coefficients[,2], -log10(fit$p.value[,2]), col=(rownames(fit$p.value) %in% idx_cpg_oi)+1, pch=".", main=paste0(nbewasprobes, " probes"))
+
+  litterature_models = readRDS("litterature_models.rds")  
+  idx_cpg_litt = unique(unlist(lapply(lapply(litterature_models, "[[", "coeff"), "[[", "probes")))  
+
+  idx_cpg = intersect(idx_cpg, c(idx_cpg_oi, idx_cpg_litt))
+
+  dim(df)
+  df = df[,c(idx_clinicals, idx_cpg)]
+  dim(df)
+
+
+  # df_dnamaging = df
+  # colnames(df_dnamaging)[2] = "age"
+  # head(df_dnamaging[,1:20])
+  # save(df_dnamaging, file='~/projects/dnamaging/data/df_dnamaging.RData' , compress='xz')
+} else {
+  # Nothing to do for idx_cpg
+}
+ 
+saveRDS(df,paste0("df_",gse,"_EWAS_",nbewasprobes,".rds"))
+
+
+
+
+
+
+
+```

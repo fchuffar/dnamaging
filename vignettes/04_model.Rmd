@@ -26,7 +26,7 @@ if (!exists("scenario")) scenario = "A"
 
 ```{r load data and build indexes, echo=FALSE}
 print("Loading data")
-df = mreadRDS(paste0("df_preproc_",gse,".rds"))
+df = mreadRDS(paste0("df_",gse,"_EWAS_",nbewasprobes,".rds"))
 for (new_factoi in c("tobacco", "disease")) {
   if (new_factoi %in% colnames(df)) {
     covariates = unique(c(covariates, new_factoi))  
@@ -93,55 +93,6 @@ if (!exists("MODESA")) {
   idx_train = setdiff(rownames(df), idx_test)   
   nb_train = length(idx_train)
 }
-```
-
-## Filtering probes using EWAS 
-
-
-```{r ewas}
-if (nbewasprobes>0) {
-  print("filtering EWAS top probes")
-  x = mget_full_cpg_matrix(gse, idx_train, idx_cpg)
-  cpg_matrix = t(x)
-  if (!is.null(confounders)) {
-    design_matrix <- model.matrix(formula(paste0("~", y_key, "+", paste0(confounders, collapse="+"))), df[idx_train,idx_clinicals])    
-  } else {
-    design_matrix <- model.matrix(formula(paste0("~", y_key)), df[idx_train,idx_clinicals])    
-  }
-  dim(design_matrix)
-  dim(cpg_matrix)
-  fit = mlimma_lmFit(cpg_matrix, design_matrix)
-  fit = limma::eBayes(fit) # compute moderated t-statistics, moderated F-statistic, and log-odds of differential expression by empirical Bayes moderation of the standard errors towards a global value
-  # head(fit$p.value)
-  idx_cpg_oi = rownames(fit$p.value)[rank(fit$p.value[,2]) <= nbewasprobes]
-  layout(1, respect=TRUE)
-  plot(fit$coefficients[,2], -log10(fit$p.value[,2]), col=(rownames(fit$p.value) %in% idx_cpg_oi)+1, pch=".", main=paste0(nbewasprobes, " probes"))
-
-  litterature_models = readRDS("litterature_models.rds")  
-  idx_cpg_litt = unique(unlist(lapply(lapply(litterature_models, "[[", "coeff"), "[[", "probes")))  
-
-  idx_cpg = intersect(idx_cpg, c(idx_cpg_oi, idx_cpg_litt))
-
-  dim(df)
-  df = df[,c(idx_clinicals, idx_cpg)]
-  dim(df)
-
-
-  # df_dnamaging = df
-  # colnames(df_dnamaging)[2] = "age"
-  # head(df_dnamaging[,1:20])
-  # save(df_dnamaging, file='~/projects/dnamaging/data/df_dnamaging.RData' , compress='xz')
-} else {
-  # Nothing to do for idx_cpg
-}
-
-
-
-
-
-
-
-
 ```
 
 
@@ -572,9 +523,9 @@ for (covariate in covariates) {
 }
 
 
-saveRDS(info_g,paste0("info_model_",gse,".rds"))
+saveRDS(info_g,paste0("info_model_",gse,"_",nbewasprobes,".rds"))
 ```
-
+ 
 
 
 

@@ -68,7 +68,7 @@ In Hannum 2013, Aging Methylation Acceleration Rate (AMAR) according do sex show
 
 Lightness of epigenetic clocks allow to treat cases more powerfully than it could be with DMR.
 
-*e.g.*
+*e.g.* 
 
 clock on 27k  vs. DMR on 27k
 
@@ -92,6 +92,11 @@ clock on 27k  vs. DMR on 27k
 # Descriptive Statistics and preproc
 
 ```{r child = "02_stat_preproc.Rmd", eval=TRUE}
+```
+
+# Build EWAS df 
+
+```{r child = "03_EWAS.Rmd", eval=TRUE}
 ```
 
 # Build Model
