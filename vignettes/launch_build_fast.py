@@ -7,8 +7,8 @@ gses = [
   # "GSE20067",  best_model_bs   "incorrect number of dimensions" problem in selecting probes?
   # "GSE36278",
   
-  "GSE41037",
-  "GSE42861",
+  "GSE41037",   # 27k
+  "GSE42861",   # 450k
   
   # "GSE43976",
   # "GSE50660",
@@ -33,9 +33,9 @@ gses = [
   
   "GSE136296" ,
   
-  # "GSE140686",
+  # "GSE140686", # Do not work
   
-  "GSE147740", 
+  "GSE147740",
   
   # "GSE151732", problem y_key var is "age" but not numeric
   # "GSE152026",
@@ -47,10 +47,14 @@ gses = [
   "GSE40279"
 ]
 
-info_models = [f"{curdir}/info_model_{gse}.rds" for gse in gses]
-info_builds = [f"{curdir}/info_build_{gse}.rds" for gse in gses]
 
-nb_probes = 3000 
+
+nbewasprobes=3000
+runmax=2
+info_models = [f"{curdir}/info_model_ewas3000_{foo}.rds" for foo in gses]
+info_builds = [f"{curdir}/info_build_{gse}.rds" for gse in gses]
+html_models =  [f"{curdir}/04_model_r{runmax}_ewas{nbewasprobes}_{gse}.html" for gse in gses]
+
 
 localrules: target create_empty_expgrpwrapper create_empty_datawrapper info_gse
 
@@ -58,8 +62,9 @@ rule target:
     threads: 1
     message: "-- Rule target completed. --"
     input: 
-      info_builds,
-      info_models,
+      # info_builds,
+      # info_models,
+      html_models,
     shell:"""
 pwd
 RCODE="source('data_info.R')"
@@ -109,7 +114,7 @@ mkdir -p /tmp/wd_{wildcards.gse}
 cd /tmp/wd_{wildcards.gse}
 cp {input.rmd_build} {input.r_datawrapper} {input.r_expgrpwrapper} .
 
-RCODE="gse='{wildcards.gse}' ; print(paste0('#### ',gse,' ####')); rmarkdown::render('01_build_study_generic.Rmd',output_file=paste0('01_build_study_',gse,'.html')); print(paste0(gse,' constructed'));"
+RCODE="gse='{wildcards.gse}'; rmarkdown::render('01_build_study_generic.Rmd', output_file=paste0('01_build_study_',gse,'.html'));"
 echo $RCODE | Rscript - 2>&1 > 01_build_study_{wildcards.gse}.Rout
 
 cp 01_build_study_{wildcards.gse}.Rout info_build_{wildcards.gse}.rds 01_build_study_{wildcards.gse}.html {wildcards.prefix}/.
@@ -146,13 +151,14 @@ cd {wildcards.prefix}
 rm -Rf /tmp/wd_{wildcards.gse}
 """
 
-rule EWAS: 
+rule run_ewas: 
     input: 
-      rmd_EWAS="{prefix}/03_EWAS.Rmd",     
+      rmd_ewas="{prefix}/03_ewas.Rmd",     
       df="{prefix}/df_preproc_{gse}.rds",
     output:           
-      html =       "{prefix}/03_EWAS_{gse}_{nb_probes}.html"    ,       
-      df_EWAS  = "{prefix}/df_{gse}_EWAS_{nb_probes}.rds"      ,            
+      html    = "{prefix}/03_ewas{nbewasprobes}_{gse}.html"    ,       
+      rout    = "{prefix}/03_ewas{nbewasprobes}_{gse}.Rout"      ,            
+      df_ewas = "{prefix}/df_r0_ewas{nbewasprobes}_{gse}.rds"      ,            
     threads: 32
     shell:"""
 export PATH="/summer/epistorage/opt/bin:$PATH"
@@ -166,10 +172,10 @@ ln -s {wildcards.prefix}/df_preproc_{wildcards.gse}.rds
 ln -s {wildcards.prefix}/litterature_models.rds
 cp {wildcards.prefix}/*.Rmd {wildcards.prefix}/*.R .
 
-RCODE="gse='{wildcards.gse}' ; nbewasprobes = '{wildcards.nb_probes}'; nb_core=6; rmarkdown::render('03_EWAS.Rmd',output_file=paste0('03_EWAS_',gse,'_',nbewasprobes,'.html'));print(paste0(gse,'EWAS done'));"
-echo $RCODE | Rscript - 2>&1 > 03_EWAS_{wildcards.gse}_{wildcards.nb_probes}.Rout
+RCODE="gse='{wildcards.gse}' ; nbewasprobes={wildcards.nbewasprobes}; rmarkdown::render('03_ewas.Rmd',output_file=paste0('03_ewas', nbewasprobes,'_',gse, '.html'));"
+echo $RCODE | Rscript - 2>&1 > 03_ewas{wildcards.nbewasprobes}_{wildcards.gse}.Rout
 
-cp 03_EWAS_{wildcards.gse}_{wildcards.nb_probes}.html 03_EWAS_{wildcards.gse}_{wildcards.nb_probes}.Rout df_{wildcards.gse}_EWAS_{wildcards.nb_probes}.rds {wildcards.prefix}/. 
+cp 03_ewas{wildcards.nbewasprobes}_{wildcards.gse}.html 03_ewas{wildcards.nbewasprobes}_{wildcards.gse}.Rout df_r0_ewas{wildcards.nbewasprobes}_{wildcards.gse}.rds {wildcards.prefix}/. 
 cd {wildcards.prefix}
 rm -Rf /tmp/wd_{wildcards.gse}
 """
@@ -177,10 +183,10 @@ rm -Rf /tmp/wd_{wildcards.gse}
 rule model:
     input: 
       rmd_model="{prefix}/04_model.Rmd",
-      df="{prefix}/df_{gse}_EWAS_{nb_probes}.rds",            
+      df="{prefix}/df_r0_ewas{nbewasprobes}_{gse}.rds",            
     output:           
-      html =       "{prefix}/04_model_{gse}_{nb_probes}.html"      ,           
-      info_model = "{prefix}/info_model_{gse}_{nb_probes}.rds"      , #delete nb_probes or make 2 nb_probes           
+      html =       "{prefix}/04_model_r{runmax}_ewas{nbewasprobes}_{gse}.html"      ,           
+      # info_model = "{prefix}/info_model_ewas{nbewasprobes}_{gse}.rds"      , #delete nbewasprobes or make 2 nbewasprobes
     threads: 32
     shell:"""
 export PATH="/summer/epistorage/opt/bin:$PATH"
@@ -190,14 +196,20 @@ cd {wildcards.prefix}
 rm -Rf /tmp/wd_{wildcards.gse}
 mkdir -p /tmp/wd_{wildcards.gse}
 cd /tmp/wd_{wildcards.gse}
-ln -s {wildcards.prefix}/df_{wildcards.gse}_EWAS_{wildcards.nb_probes}.rds
+ln -s {input.df}
+ln -s {wildcards.prefix}/df_preproc_{wildcards.gse}.rds
 ln -s {wildcards.prefix}/litterature_models.rds
 cp {wildcards.prefix}/*.Rmd {wildcards.prefix}/*.R .
 
-RCODE="gse='{wildcards.gse}' ; nbewasprobes = '{wildcards.nb_probes}'; nb_core=6; rmarkdown::render('04_model.Rmd',output_file=paste0('04_model_',gse,'_',nbewasprobes,'.html'));print(paste0(gse,'model done'));"
-echo $RCODE | Rscript - 2>&1 > 04_model_{wildcards.gse}_{wildcards.nb_probes}.Rout
+for RUN in `seq -w 0 {wildcards.runmax}`  
+do 
+  RCODE="gse='{wildcards.gse}' ; run=${{RUN}}; nbewasprobes={wildcards.nbewasprobes}; nb_core=6; rmarkdown::render('04_model.Rmd', output_file=paste0('04_model_r',run,'_ewas',nbewasprobes,'_',gse,'.html'));"
+  echo $RCODE 
+  echo $RCODE | Rscript - 2>&1 > 04_model_r${{RUN}}_ewas{wildcards.nbewasprobes}_{wildcards.gse}.Rout
+done 
 
-cp 04_model_{wildcards.gse}_{wildcards.nb_probes}.html 04_model_{wildcards.gse}_{wildcards.nb_probes}.Rout info_model_{wildcards.gse}_{wildcards.nb_probes}.rds {wildcards.prefix}/. 
+cp 04_model_r*_ewas{wildcards.nbewasprobes}_{wildcards.gse}.html 04_model_r*_ewas{wildcards.nbewasprobes}_{wildcards.gse}.Rout   info_model_r*_ewas{wildcards.nbewasprobes}_{wildcards.gse}.rds {wildcards.prefix}/. 
+
 cd {wildcards.prefix}
 rm -Rf /tmp/wd_{wildcards.gse}
 """

@@ -30,13 +30,3 @@ table(s$exp_grp$tissue, useNA="always")
 # dim(BloodFrac.m)
 # s$exp_grp = cbind(s$exp_grp, BloodFrac.m[rownames(s$exp_grp),])
 # head(s$exp_grp)
-
-# B. remove probes on chrX and chrY
-head(s$platform[,1:6]) 
-table(s$platform[,1]) 
-s$platform = s$platform[!s$platform[,1] %in% c("chrX", "chrY"),]
-table(s$platform[,1]) 
-s$data = s$data[rownames(s$platform),]
-
-# C. clean data
-s$data = s$data[rownames(s$platform),rownames(s$exp_grp)] 

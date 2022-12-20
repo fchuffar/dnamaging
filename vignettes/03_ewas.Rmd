@@ -14,7 +14,6 @@ output:
 
 ```{r echo=FALSE}
 knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide")
-start_time = Sys.time()
 source("common.R")
 ```
 
@@ -83,16 +82,9 @@ if (nrow(df) - nb_train<100) {
   nb_train = ceiling(nrow(df)/2)
 }
 print(paste0("Use ", nb_train, " observations for training."))
-if (!exists("MODESA")) {
-  set.seed(seed)
-  idx_train = sample(rownames(df), nb_train)
-  idx_test = setdiff(rownames(df), idx_train)      
-} else { # Sensitivity analysis
-  idx_test = rownames(mreadRDS(paste0("df_",gse,".rds")))[1:100]
-  idx_test = idx_test[idx_test %in% rownames(df)] 
-  idx_train = setdiff(rownames(df), idx_test)   
-  nb_train = length(idx_train)
-}
+set.seed(seed)
+idx_train = sample(rownames(df), nb_train)
+idx_test = setdiff(rownames(df), idx_train)      
 ```
 
 ## Filtering probes using EWAS 
@@ -135,12 +127,5 @@ if (nbewasprobes>0) {
   # Nothing to do for idx_cpg
 }
  
-saveRDS(df,paste0("df_",gse,"_EWAS_",nbewasprobes,".rds"))
-
-
-
-
-
-
-
+saveRDS(df, paste0("df_r0_ewas", nbewasprobes, "_", gse, ".rds"))
 ```

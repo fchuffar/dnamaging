@@ -144,7 +144,19 @@ if (s$platform_name=="GPL8490") {
   stop(paste0("platform problem ", gse, " ", s$platform_name))
 }
 s$platform = s$platform[rownames(s$platform) %in% rownames(s$data),]
+
+# B. remove probes on chrX and chrY
+head(s$platform[,1:6]) 
+table(s$platform[,1]) 
+s$platform = s$platform[!s$platform[,1] %in% c("chrX", "chrY"),]
+table(s$platform[,1]) 
+s$data = s$data[rownames(s$platform),]
+
+# C. clean data
+s$data = s$data[rownames(s$platform),rownames(s$exp_grp)] 
 ```
+
+
 
 
 

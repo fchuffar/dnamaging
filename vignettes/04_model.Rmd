@@ -26,7 +26,7 @@ if (!exists("scenario")) scenario = "A"
 
 ```{r load data and build indexes, echo=FALSE}
 print("Loading data")
-df = mreadRDS(paste0("df_",gse,"_EWAS_",nbewasprobes,".rds"))
+df = mreadRDS(paste0("df_r", run, "_ewas", nbewasprobes, "_", gse, ".rds"))
 for (new_factoi in c("tobacco", "disease")) {
   if (new_factoi %in% colnames(df)) {
     covariates = unique(c(covariates, new_factoi))  
@@ -523,7 +523,8 @@ for (covariate in covariates) {
 }
 
 
-saveRDS(info_g,paste0("info_model_",gse,"_",nbewasprobes,".rds"))
+
+saveRDS(info_g, paste0("info_model_r", run, "_ewas", nbewasprobes, "_", gse, ".rds"))
 ```
  
 
@@ -680,6 +681,15 @@ tab_probes = table(nb_probes)
 barplot(tab_probes, las=2) # Check when number of probes stabilised
 ```
 
+
+
+```{r next run}
+dim(df)
+df = df [,!(colnames(df)%in%best_model_bs_probes)]
+dim(df)
+saveRDS(df,paste0("df_r", run+1, "_ewas", nbewasprobes, "_", gse, ".rds"))
+
+```
 
 
 
