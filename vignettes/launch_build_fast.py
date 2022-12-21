@@ -10,7 +10,9 @@ gses = [
   "GSE41037",   # 27k
   "GSE42861",   # 450k
   
-  "GSE43976",   # 450k, PB, tobacco
+  # "GSE43976",   # 450k, PB, tobacco # error in gse='GSE43976' ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render('04_model.Rmd', output_file=paste0('04_model_r',run,'_ewas',nbewasprobes,'_',gse,'.html'));
+
+
   "GSE50660",   # 450k, tobacco
   # "GSE55763",
   # "GSE48461",
