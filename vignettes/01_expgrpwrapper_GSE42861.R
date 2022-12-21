@@ -1,5 +1,5 @@
 # 1. age
-s$exp_grp$age = as.numeric(s$exp_grp$age)
+s$exp_grp$age = as.numeric(as.character(s$exp_grp$age))
 sort(s$exp_grp$age)
 s$exp_grp = s$exp_grp[!is.na(s$exp_grp$age), ]
 
@@ -18,9 +18,9 @@ s$exp_grp$tissue
 s$exp_grp$smoking_status = as.factor(s$exp_grp$"smoking status:ch1")
 table(s$exp_grp$smoking_status, useNA="always")
 s$exp_grp$tobacco = NA
-s$exp_grp$tobacco[s$exp_grp$smoking_status%in%"current"] = "current"
-s$exp_grp$tobacco[s$exp_grp$smoking_status%in%"ex"] = "former"
-s$exp_grp$tobacco[s$exp_grp$smoking_status%in%"never"] = "never"
+s$exp_grp[s$exp_grp$smoking_status%in%"never"  ,]$tobacco = "never"
+s$exp_grp[s$exp_grp$smoking_status%in%"ex"     ,]$tobacco = "former"
+s$exp_grp[s$exp_grp$smoking_status%in%"current",]$tobacco = "current"
 s$exp_grp$tobacco = as.factor(s$exp_grp$tobacco)
 s$exp_grp = s$exp_grp[!is.na(s$exp_grp$tobacco), ]
 table(s$exp_grp$tobacco, useNA="always")

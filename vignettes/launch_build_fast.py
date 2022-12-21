@@ -5,13 +5,13 @@ curdir = os.getcwd()
 
 gses = [
   # "GSE20067",  best_model_bs   "incorrect number of dimensions" FCh: problem in selecting probes?
-  # "GSE36278",
+  "GSE36278",   # 450k, primary glioblastoma
   
   "GSE41037",   # 27k
   "GSE42861",   # 450k
   
-  # "GSE43976",
-  # "GSE50660",
+  "GSE43976",   # 450k, PB, tobacco
+  # "GSE50660",   # 450k, tobacco
   # "GSE55763",
   # "GSE48461",
   # "GSE49393",
