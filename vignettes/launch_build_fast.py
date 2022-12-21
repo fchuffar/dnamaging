@@ -11,7 +11,7 @@ gses = [
   "GSE42861",   # 450k
   
   "GSE43976",   # 450k, PB, tobacco
-  # "GSE50660",   # 450k, tobacco
+  "GSE50660",   # 450k, tobacco
   # "GSE55763",
   # "GSE48461",
   # "GSE49393",
