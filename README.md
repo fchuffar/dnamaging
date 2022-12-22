@@ -137,7 +137,7 @@ snakemake -s sa_launchexperiments.py --cores 50 --cluster "oarsub --project epim
 snakemake -s launch_build_fast.py --cores 50 --cluster "oarsub --project epimed -l /nodes=1,walltime=0:30:00 -t devel"  --latency-wait 60 -pn
 
 # on dahu classical
-snakemake -k -s launch_build_fast.py --cores 50 --cluster "oarsub --project epimed -l /nodes=1/core={threads},walltime=1:00:00"  --latency-wait 60 -pn
+snakemake -k -s launch_build_fast.py --cores 50 --cluster "oarsub --project epimed -l /nodes=1/core={threads},walltime=6:00:00"  --latency-wait 60 -pn
 
 # print DAG
 snakemake -s launch_build_fast.py --forceall --dag | dot -Tpdf > dag.pdf
