@@ -106,6 +106,7 @@ screen # ... screen -r ; ctrl+a d
 # to killa job
 oarstat | grep chuffarf
 oarstat | grep chuffarf | cut -d" " -f1 | xargs oardel
+
 ```
 
 ## Testing
@@ -134,6 +135,9 @@ snakemake -s sa_launchexperiments.py --cores 50 --cluster "oarsub --project epim
 
 # on devel node
 snakemake -s launch_build_fast.py --cores 50 --cluster "oarsub --project epimed -l /nodes=1,walltime=0:30:00 -t devel"  --latency-wait 60 -pn
+
+# on dahu classical
+snakemake -k -s launch_build_fast.py --cores 50 --cluster "oarsub --project epimed -l /nodes=1/core={threads},walltime=1:00:00"  --latency-wait 60 -pn
 
 # print DAG
 snakemake -s launch_build_fast.py --forceall --dag | dot -Tpdf > dag.pdf
