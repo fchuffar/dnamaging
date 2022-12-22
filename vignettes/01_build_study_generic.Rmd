@@ -84,9 +84,8 @@ head(s$exp_grp)
 
 ```{r decorate_exp_grp}
 expgrpwrapper_file = paste0("01_expgrpwrapper_", gse, ".R")
-if (file.exists(expgrpwrapper_file)) {
-  source(expgrpwrapper_file)
-}
+print(expgrpwrapper_file)
+source(expgrpwrapper_file)
 
 for (fact in c("age")) {
   if (fact %in% colnames(s$exp_grp)) {
@@ -112,22 +111,19 @@ for (fact in c("gender", "tobacco", "disease")) {
 # get data matrix from wrapper
 if (nrow(tmp_data)==0) {
   datawrapper_file = paste0("01_datawrapper_", gse, ".R")
-  if (!file.exists(datawrapper_file)) {
-    stop(paste0("could not directly load beta matrix from GEO API for ", gse, ". Need to customize by creating ", datawrapper_file, " script."))
-  } else {
-    source(datawrapper_file)    
-  }
+  print(datawrapper_file)
+  source(datawrapper_file)    
 }
-  
+if (nrow(s$data)==0) {
+  stop(paste0("could not directly load beta matrix from GEO API for ", gse, ". Need to customize by creating ", datawrapper_file, " script."))  
+} 
 s$data = s$data[,rownames(s$exp_grp)] 
-
-
 dim(s$data)
 ```
 
 
 ```{r platform}
-# get platform (rows metdata)from NCBI/GEO 
+print("# get platform (rows metdata) from IlluminaHumanMethylationXXXanno")
 if (s$platform_name=="GPL8490") {
   print("27k")
   library(IlluminaHumanMethylation27kanno.ilmn12.hg19)

@@ -1,35 +1,47 @@
-if(!file.exists("data_info.xlsx")){
-  cn = c("name_gse","platform","tissue","n","n_preproc","cofactors","disease_distrib","gender_distrib","tobacco_distrib","RMSE","nb_probes")
-	data_info_gen = as.data.frame(setNames(replicate(length(cn),numeric(0), simplify = F),cn ))
-	openxlsx::write.xlsx(data_info_gen,"data_info.xlsx")
-}
+# Use **strsplit** + **do.call(rbind,** to get a params in list of filenames
+gses = do.call(rbind, strsplit(list.files(pattern="info_build"), "info_build_|\\.rds"))[,2]
 
-info_gen = openxlsx::read.xlsx("data_info.xlsx")
-gses=stringr::str_sub(list.files(pattern="info_"),end=-5)
-gses=unlist(stringr::str_split(gses,pattern="_"))
-gses=unique(gses[grep(pattern="GSE",gses)])
-
-for (gse in gses){
+# use lapply instead of for loop to build a data.frame
+data_info = lapply(gses, function(gse) {
+  # for each data.frame line, build a list of named values
+  print(gse)
+  # gse = "GSE42861"
+  # gse = "GSE40279"
+  # gse = "GSE43976"
   file_build = paste0("info_build_",gse,".rds") #platform
   file_desc = paste0("info_desc_",gse,".rds") #tissue,n,cofactors,distribs,
-  file_model = paste0("info_model_",gse,".rds") #RMSE,nb_pb
-  info=gse
-  if(file.exists(file_build)){
-    info_build=readRDS(file_build)
-    info=c(info,info_build)
-  } else { info = c(info,"NA") }
-  if(file.exists(file_desc)){
-    info_desc=readRDS(file_desc)
-    info=c(info,info_desc)
-  } else { info = c(info,rep("NA",7)) }
-  if(file.exists(file_model)){
-    info_model=readRDS(file_model)
-    info=c(info,info_model$Bootstrap$RMSE,info_model$Bootstrap$nb_probes)
-  } else { info =c(info,rep("NA",2)) }
-  
-  if (gse %in% info_gen$name_gse){
-    info_gen[info_gen$name_gse==gse,] = info
-  } else { info_gen[nrow(info_gen)+1,] = info }
-}
-
-openxlsx::write.xlsx(info_gen,"data_info.xlsx")
+  file_model = paste0("info_model_r0_ewas3000_",gse,".rds") #RMSE,nb_pb
+  if (file.exists(file_build)) {
+    info_build = list(platform=readRDS(file_build))
+  } else { 
+    info_build = lits()
+  }
+  if (file.exists(file_desc)) {
+    info_desc = as.list(readRDS(file_desc))
+  } else { 
+    info_desc = list()
+  }
+  if (file.exists(file_model)) {
+    info_model = readRDS(file_model)
+  } else { 
+    info_model = list(Bootstrap=list())
+  }
+  ret = list(
+    GSE        = gse,
+    GPL        = info_build$platform ,
+    tissue          = info_desc$tissue    ,
+    n               = info_desc$n,    
+    n_preproc       = info_desc$n_preproc ,
+    cofactors       = info_desc$cofactors ,
+    disease         = info_desc$disease   ,
+    gender          = info_desc$gender    ,
+    tobacco         = info_desc$tobacco   ,
+    RMSE            = info_model$Bootstrap$RMSE           ,
+    nb_probes       = info_model$Bootstrap$nb_probes_mod
+  )
+  ret
+})
+data_info = data.frame(do.call(rbind, data_info))
+data_info
+WriteXLS::WriteXLS(data_info, "data_info.xlsx", verbose=TRUE, row.names=FALSE, AdjWidth=TRUE, BoldHeaderRow=TRUE, FreezeRow=1, FreezeCol=1)
+#      envir=          ExcelFileName=  perl=           Encoding=       col.names=      AutoFilter=     na=                   

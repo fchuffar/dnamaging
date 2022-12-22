@@ -6,17 +6,13 @@ curdir = os.getcwd()
 gses = [
   # "GSE20067",  best_model_bs   "incorrect number of dimensions" FCh: problem in selecting probes?
   "GSE36278",   # 450k, primary glioblastoma
-  
-  "GSE41037",   # 27k
+  "GSE41037",   # **************27k***************
   "GSE42861",   # 450k
-  
   # "GSE43976",   # 450k, PB, tobacco # error in gse='GSE43976' ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render('04_model.Rmd', output_file=paste0('04_model_r',run,'_ewas',nbewasprobes,'_',gse,'.html'));
-
-
   "GSE50660",   # 450k, tobacco
-  # "GSE55763",
-  # "GSE48461",
-  # "GSE49393",
+  # "GSE55763", # need to write wrappers (boths) n=2711, blood 450k
+  "GSE48461",   # 450k, glioma
+  "GSE49393",   # Brain, Alcohol, n=48, 450k
   # "GSE50923",
   # "GSE56105",
   # "GSE60753",
