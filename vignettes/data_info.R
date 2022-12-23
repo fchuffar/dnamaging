@@ -12,9 +12,9 @@ data_info = lapply(gses, function(gse) {
   file_desc = paste0("info_desc_",gse,".rds") #tissue,n,cofactors,distribs,
   file_model = paste0("info_model_r0_ewas3000_",gse,".rds") #RMSE,nb_pb
   if (file.exists(file_build)) {
-    info_build = list(platform=readRDS(file_build))
+      info_build = readRDS(file_build)
   } else { 
-    info_build = lits()
+    info_build = list()
   }
   if (file.exists(file_desc)) {
     info_desc = as.list(readRDS(file_desc))
@@ -28,7 +28,8 @@ data_info = lapply(gses, function(gse) {
   }
   ret = list(
     GSE        = gse,
-    GPL        = info_build$platform ,
+    GPL        = info_build$platform      ,
+    gender     = info_build$gender        ,
     tissue          = info_desc$tissue    ,
     n               = info_desc$n,    
     n_preproc       = info_desc$n_preproc ,

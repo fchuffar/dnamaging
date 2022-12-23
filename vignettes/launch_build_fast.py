@@ -4,45 +4,42 @@ import os.path
 curdir = os.getcwd()
 
 gses = [
-  # "GSE20067",  best_model_bs   "incorrect number of dimensions" FCh: problem in selecting probes?
-  "GSE36278",   # 450k, primary glioblastoma
-  "GSE41037",   # **************27k***************
-  "GSE42861",   # 450k
-  # "GSE43976",   # 450k, PB, tobacco # error in gse='GSE43976' ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render('04_model.Rmd', output_file=paste0('04_model_r',run,'_ewas',nbewasprobes,'_',gse,'.html'));
-  "GSE50660",   # 450k, tobacco
-  # "GSE55763", # need to write wrappers (boths) n=2711, blood 450k
-  "GSE48461",   # 450k, glioma
-  "GSE49393",   # Brain, Alcohol, n=48, 450k
-  # "GSE50923",
-  # "GSE56105",
-  # "GSE60753",
-  # "GSE68838",
-  # "GSE72680",
-  
+  # "GSE20067", NO GO  best_model_bs   "incorrect number of dimensions" FCh: problem in selecting probes?
+  "GSE36278",           # 450k, primary glioblastoma
+  "GSE40279",           # Hannum
+  "GSE42861",           # 450k 
+  "GSE43976",   # NO GO gse='GSE43976' ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render('04_model.Rmd');       # 450k, PB, tobacco # error in 
+  # "GSE55763", NO GO # need to write wrappers (exp_grp and data, boths) n=2711, blood 450k
+  "GSE48461",   # NO GO gse="GSE48461" ; r=2 ;rmarkdown::render("04_model.Rmd") ;  # 450k, glioma
+  "GSE49393",   # NO GO gse="GSE49393" ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render('04_model.Rmd');               # Brain, Alcohol, n=48, 450k ; 50000 probes == NA
+  "GSE50660",           # 450k, tobacco
+  # "GSE50923", NO GO, gse="GSE50923"; rmarkdown::render("02_stat_preproc.Rmd")#no age covariate          # 27k glioma  # GBM vs. normal brain # 
+  # "GSE56105", NO GO # 450k, n=600 # MZ and DZ twin pairs, their siblings and their parents. # could not directly load beta matrix from GEO API for GSE56105
+  # "GSE60753",         # 450k # Alcohol # No age
+  # "GSE68838",         # TCGA COAD
+  # "GSE72680", NO GO gse="GSE72680" ; source(knitr::purl("01_build_study_generic.Rmd"))   # 450k #Trauma, # n= 422 
+    
   "GSE97362",
   
-  # "GSE85210",
-  # "GSE87571", 
-  # "GSE87648",
-  # "GSE89353",
-  # "GSE104293",
-  # "GSE106648",
-  # "GSE124413",
+  # "GSE85210",   NO GO gse="GSE85210" ; source(knitr::purl("01_build_study_generic.Rmd"))    # 450k # n=250 # tobacco # no age  
+  # "GSE87571",   NO GO gse="GSE87571" ; source(knitr::purl("01_build_study_generic.Rmd"))    # 450k # n=750 
+  # "GSE87648",   NO GO gse="GSE87648" ; source(knitr::purl("01_build_study_generic.Rmd"))    # 450k # n=350 # Bowel Disease
+  "GSE89353",         # n=600 # 450k # Epimutations as a novel cause of congenital disorders # Proband
+  "GSE104293",        # Glioma # n=130 # 450k
+  "GSE106648",        # 450k # n= 279 # Multiple Sclerosis
+  # "GSE124413",  NO GO # gse="GSE124413" ; source(knitr::purl("01_build_study_generic.Rmd"))    # Epic # n=500 # childhood acute myeloid leukemia (AML)
+  "GSE136296" ,       # Epic # Pan troglodytes # n=113
+  # "GSE140686",  NO GO  mixed 450k & EPIC # n=1500  sarcoma samples  
+  # "GSE147740",  NO GO gse="GSE147740"; rmarkdown::render("01_build_study_generic.Rmd")
+  "GSE151732",        # Epic # n=250 # Right versus the Left Colon
+  # "GSE152026",  NO GO #  could not directly load beta matrix from GEO API for GSE152026. # Epic, n=1000 # psychosis patients
+  # "GSE154566",  NO GO  could not directly load beta matrix from GEO API for GSE154566 # n=1000 # monozygotic twin sample
+  # "GSE156274",  NO GO  6 samples
+  # "GSE156374",  NO GO # GES Epilepto # few probes on GEO
+  # "GSE169156",  NO GO # could not directly load beta matrix from GEO API for GSE169156 # n=2000 # Childhood Cancer Survivors
+  # "GSE185090"   NO GO # no cofactor on GEO
   
-  "GSE136296" ,
-  
-  # "GSE140686", # Do not work
-  
-  "GSE147740",
-  
-  # "GSE151732", problem y_key var is "age" but not numeric
-  # "GSE152026",
-  # "GSE154566",
-  # "GSE156274",
-  # "GSE169156",
-  # "GSE185090"
-  
-  "GSE40279"
+  "GSE41037"   # **************27k***************
 ]
 
 
@@ -60,7 +57,7 @@ rule target:
     threads: 1
     message: "-- Rule target completed. --"
     input: 
-      # info_builds,
+      info_builds,
       # info_models,
       html_models,
     shell:"""
@@ -101,7 +98,7 @@ rule build_gse:
       df_rds =      "{prefix}/datashare/{gse}/df_{gse}.rds"    ,           
       html =        "{prefix}/01_build_study_{gse}.html"      ,           
       info_build =  "{prefix}/info_build_{gse}.rds"   ,
-    threads: 8
+    threads: 32
     shell:"""
 export PATH="/summer/epistorage/opt/bin:$PATH"
 export PATH="/summer/epistorage/miniconda3/envs/R3.6.1_env/bin:$PATH"

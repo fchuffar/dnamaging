@@ -30,7 +30,6 @@ knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, 
 #
 # gse = "GSE42861" ; rmarkdown::render("01_build_study_generic.Rmd", output_file=paste0("01_build_study_", gse, ".html"))
 # seed=1 ; gse = "GSE42861"; nb_core=12; rmarkdown::render('00_fullpipeline1.Rmd', output_file=paste0("00_fullpipeline1_", gse, ".html"))
-
 ```
 
 
@@ -64,6 +63,7 @@ dim(tmp_exp_grp)
 dim(s$data)
 tmp_data = s$get_data(dest_dir="~/projects/datashare")
 dim(tmp_data)
+if (exists("DEBUG")) { stop("stop here for debugging")}
 ```
 
 ```{r build exp_grp from EpiMedDB, eval=FALSE}
@@ -248,22 +248,29 @@ print(paste0("Writing ", df_filename, "..."))
 saveRDS(df, df_filename)
 dim(df)
 
-if (s$platform_name=="GPL8490") {
-	info_build = "27k"
-} else if (s$platform_name=="GPL13534"){
-	info_build = "450k"
-} else if (s$platform_name%in%c("GPL21145", "GPL23976")) {
-	info_build = "epic"
-}
-
-saveRDS(info_build,paste0("info_build_",gse,".rds"))
-
 log_filename = paste0("~/projects/datashare/", gse, "/info_", gse, ".log")
 cat(s_filename        , file=log_filename, sep="\n", append=FALSE)
 cat(" and "           , file=log_filename, sep="\n", append=TRUE)
 cat(df_filename       , file=log_filename, sep="\n", append=TRUE)
 cat(" built from:\n"  , file=log_filename, sep="\n", append=TRUE)
 cat(getwd()           , file=log_filename, sep="\n", append=TRUE)
+```
+
+# Process Information 
+
+```{r}
+info_build = list(
+  GPL = s$platform_name,
+  n   = nrow(s$data),
+  p   = ncol(s$data),
+  age     = ifelse("age"     %in% colnames(s$exp_grp), paste0(round(quantile(s$exp_grp$age)), collapse=", ")                                                            , NA),
+  gender  = ifelse("gender"  %in% colnames(s$exp_grp), paste0(sapply(levels(s$exp_grp$gender  ), function(x) {paste0(x, " (", table(s$exp_grp$gender  )[x], ")")}), collapse=" "), NA),
+  tissue  = ifelse("tissue"  %in% colnames(s$exp_grp), paste0(sapply(levels(s$exp_grp$tissue  ), function(x) {paste0(x, " (", table(s$exp_grp$tissue  )[x], ")")}), collapse=" "), NA),
+  tobacco = ifelse("tobacco" %in% colnames(s$exp_grp), paste0(sapply(levels(s$exp_grp$tobacco ), function(x) {paste0(x, " (", table(s$exp_grp$tobacco )[x], ")")}), collapse=" "), NA),
+  disease = ifelse("disease" %in% colnames(s$exp_grp), paste0(sapply(levels(s$exp_grp$disease ), function(x) {paste0(x, " (", table(s$exp_grp$disease )[x], ")")}), collapse=" "), NA)
+)
+
+saveRDS(info_build, paste0("info_build_",gse,".rds"))
 ```
 
 # Session Information
