@@ -4,28 +4,28 @@ import os.path
 curdir = os.getcwd()
 
 gses = [
-  # "GSE20067", NO GO  best_model_bs   "incorrect number of dimensions" FCh: problem in selecting probes?
-  "GSE36278",           # 450k, primary glioblastoma
-  "GSE40279",           # Hannum
-  "GSE42861",           # 450k 
-  "GSE43976",   # NO GO gse='GSE43976' ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render('04_model.Rmd');       # 450k, PB, tobacco # error in 
-  # "GSE55763", NO GO # need to write wrappers (exp_grp and data, boths) n=2711, blood 450k
-  "GSE48461",   # NO GO gse="GSE48461" ; r=2 ;rmarkdown::render("04_model.Rmd") ;  # 450k, glioma
-  "GSE49393",   # NO GO gse="GSE49393" ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render('04_model.Rmd');               # Brain, Alcohol, n=48, 450k ; 50000 probes == NA
-  "GSE50660",           # 450k, tobacco
-  # "GSE50923", NO GO, gse="GSE50923"; rmarkdown::render("02_stat_preproc.Rmd")#no age covariate          # 27k glioma  # GBM vs. normal brain # 
-  # "GSE56105", NO GO # 450k, n=600 # MZ and DZ twin pairs, their siblings and their parents. # could not directly load beta matrix from GEO API for GSE56105
-  # "GSE60753",         # 450k # Alcohol # No age
-  # "GSE68838",         # TCGA COAD
-  # "GSE72680", NO GO gse="GSE72680" ; source(knitr::purl("01_build_study_generic.Rmd"))   # 450k #Trauma, # n= 422 
-    
-  "GSE97362",
-  
-  # "GSE85210",   NO GO gse="GSE85210" ; source(knitr::purl("01_build_study_generic.Rmd"))    # 450k # n=250 # tobacco # no age  
+  # "GSE20067",   NO GO  best_model_bs   "incorrect number of dimensions" FCh: problem in selecting probes?
+  "GSE36278",         # 450k, primary glioblastoma
+  "GSE40279",         # Hannum
+  "GSE42861",         # 450k 
+  # "GSE43976",     # PROBLEM gse='GSE43976' ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render('04_model.Rmd');       # 450k, PB, tobacco # error in
+  # "GSE55763",   NO GO # need to write wrappers (exp_grp and data, boths) n=2711, blood 450k
+  # "GSE48461",     # PROBLEM gse="GSE48461" ; r=2 ;rmarkdown::render("04_model.Rmd") ;  # 450k, glioma
+  # "GSE49393",     # PROBLEM gse="GSE49393" ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render('04_model.Rmd');               # Brain, Alcohol, n=48, 450k ; 50000 probes == NA
+  "GSE50660",         # 450k, tobacco
+  # "GSE50923",   NO GO, gse="GSE50923"; rmarkdown::render("02_stat_preproc.Rmd")#no age covariate          # 27k glioma  # GBM vs. normal brain # 
+  # "GSE56105",   NO GO # 450k, n=600 # MZ and DZ twin pairs, their siblings and their parents. # could not directly load beta matrix from GEO API for GSE56105
+  # "GSE60753",       # 450k # Alcohol # No age
+  # "GSE68838",       # TCGA COAD
+  # "GSE72680",   NO GO gse="GSE72680" ; source(knitr::purl("01_build_study_generic.Rmd"))   # 450k #Trauma, # n= 422 
+                  
+  "GSE97362",     
+                  
+  # "GSE85210",   NO GO gse="GSE85210" ; source(knitr::pu         rl("01_build_study_generic.Rmd"))    # 450k # n=250 # tobacco # no age  
   # "GSE87571",   NO GO gse="GSE87571" ; source(knitr::purl("01_build_study_generic.Rmd"))    # 450k # n=750 
   # "GSE87648",   NO GO gse="GSE87648" ; source(knitr::purl("01_build_study_generic.Rmd"))    # 450k # n=350 # Bowel Disease
   "GSE89353",         # n=600 # 450k # Epimutations as a novel cause of congenital disorders # Proband
-  "GSE104293",        # Glioma # n=130 # 450k
+  # "GSE104293",    # PROBLEM gse="GSE104293" ; r=2 ;rmarkdown::render("04_model.Rmd") ;    # Glioma # n=130 # 450k
   "GSE106648",        # 450k # n= 279 # Multiple Sclerosis
   # "GSE124413",  NO GO # gse="GSE124413" ; source(knitr::purl("01_build_study_generic.Rmd"))    # Epic # n=500 # childhood acute myeloid leukemia (AML)
   "GSE136296" ,       # Epic # Pan troglodytes # n=113
