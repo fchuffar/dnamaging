@@ -61,6 +61,8 @@ rule target:
       # info_models,
       html_models,
     shell:"""
+export PATH="/summer/epistorage/opt/bin:$PATH"
+export PATH="/summer/epistorage/miniconda3/envs/R3.6.1_env/bin:$PATH"
 pwd
 RCODE="source('data_info.R')"
 echo $RCODE | Rscript - 2>&1 > data_info.Rout
