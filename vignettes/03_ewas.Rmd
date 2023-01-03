@@ -14,6 +14,7 @@ output:
 
 ```{r echo=FALSE}
 knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide")
+start_time = Sys.time()
 source("common.R")
 ```
 
@@ -129,3 +130,23 @@ if (nbewasprobes>0) {
  
 saveRDS(df, paste0("df_r0_ewas", nbewasprobes, "_", gse, ".rds"))
 ```
+
+
+# Process Information 
+
+```{r}
+stop_time = Sys.time()
+info = list(
+  exec_time = round(difftime(stop_time, start_time, units="mins"),1)
+)
+
+saveRDS(info, paste0("info_ewas", nbewasprobes, "_", gse, ".rds"))
+```
+
+# Session Information
+
+```{r, results="verbatim"}
+sessionInfo()
+```
+
+

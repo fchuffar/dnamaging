@@ -511,20 +511,16 @@ Ytest =  mget_df_preproc(gse)[idx_test, y_key]
 for (covariate in covariates) {
   layout(matrix(1:20, 5), respect=TRUE)
   # ADD
-  info_g = list()
-  for (m in models) {
-    # layout(matrix(1:5, 1), respect=TRUE)
-    info = dnamaging::plot_model_eval(m, df, covariate, Xtrain=Xtrain, Xtest=Xtest, Ytrain=Ytrain, Ytest=Ytest)
-    info_g[[length(info_g)+1]] = info
-  }
-  names(info_g) = c("ElasticNet","Bootstrap","Hannum","Horvath") 
-  info_g$ElasticNet$alpha  = best_model_cvaglmnet_params$alpha
-  info_g$ElasticNet$lambda = best_model_cvaglmnet_params$lambda 
+  info = lapply(models, function(m) {
+    dnamaging::plot_model_eval(m, df, covariate, Xtrain=Xtrain, Xtest=Xtest, Ytrain=Ytrain, Ytest=Ytest)
+  })
+  names(info) = c("ElasticNet", "Bootstrap", "Hannum", "Horvath") 
+  info$ElasticNet$alpha  = best_model_cvaglmnet_params$alpha
+  info$ElasticNet$lambda = best_model_cvaglmnet_params$lambda 
 }
 
 
 
-saveRDS(info_g, paste0("info_model_r", run, "_ewas", nbewasprobes, "_", gse, ".rds"))
 ```
  
 
@@ -695,6 +691,24 @@ saveRDS(df,paste0("df_r", run+1, "_ewas", nbewasprobes, "_", gse, ".rds"))
 
 
 
+
 https://github.com/fchuffar/dnamaging
 
+
+
+
+# Process Information 
+
+```{r}
+stop_time = Sys.time()
+info$exec_time = round(difftime(stop_time, start_time, units="mins"),1)
+
+saveRDS(info, paste0("info_model_r", run, "_ewas", nbewasprobes, "_", gse, ".rds"))
+```
+
+# Session Information
+
+```{r, results="verbatim"}
+sessionInfo()
+```
 

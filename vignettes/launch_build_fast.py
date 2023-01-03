@@ -1,65 +1,78 @@
 import os 
 import os.path
 
-curdir = os.getcwd()
+gses_descs = []
+gses_ewas = []
+gses_model = []
 
 gses = [
-  # "GSE20067",   NO GO  best_model_bs   "incorrect number of dimensions" FCh: problem in selecting probes?
-  "GSE36278",         # 450k, primary glioblastoma
-  "GSE40279",         # Hannum
-  "GSE42861",         # 450k 
-  # "GSE43976",     # PROBLEM gse='GSE43976' ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render('04_model.Rmd');       # 450k, PB, tobacco # error in
-  # "GSE55763",   NO GO # need to write wrappers (exp_grp and data, boths) n=2711, blood 450k
-  # "GSE48461",     # PROBLEM gse="GSE48461" ; r=2 ;rmarkdown::render("04_model.Rmd") ;  # 450k, glioma
-  # "GSE49393",     # PROBLEM gse="GSE49393" ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render('04_model.Rmd');               # Brain, Alcohol, n=48, 450k ; 50000 probes == NA
-  "GSE50660",         # 450k, tobacco
-  # "GSE50923",   NO GO, gse="GSE50923"; rmarkdown::render("02_stat_preproc.Rmd")#no age covariate          # 27k glioma  # GBM vs. normal brain # 
-  # "GSE56105",   NO GO # 450k, n=600 # MZ and DZ twin pairs, their siblings and their parents. # could not directly load beta matrix from GEO API for GSE56105
-  # "GSE60753",       # 450k # Alcohol # No age
+  # "GSE55763",   NO GO # need to write wrappers (exp_grp and data, boths) n=2711, blood 450k # https://ftp.ncbi.nlm.nih.gov/geo/series/GSE55nnn/GSE55763/suppl/
+  # "GSE56105",   NO GO # 450k, n=600 # MZ and DZ twin pairs, their siblings and their parents. # 450k n=335  https://ftp.ncbi.nlm.nih.gov/geo/series/GSE56nnn/GSE56105/suppl/
+  # "GSE72775",   NO GO gse="GSE72775" ; source(knitr::purl("01_build_study_generic.Rmd"))   # 450k, n=350 # https://ftp.ncbi.nlm.nih.gov/geo/series/GSE72nnn/GSE72775/suppl/
+  # "GSE72680",   NO GO gse="GSE72680" ; source(knitr::purl("01_build_study_generic.Rmd"))   # 450k #Trauma, # n= 422  ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE72nnn/GSE72680/suppl/
+  # "GSE140686",  NO GO  mixed 450k & EPIC # n=1500  sarcoma samples
+  # "GSE152026",  # NO GO #  could not directly load beta matrix from GEO API for GSE152026. # Epic, n=1000 # psychosis patients
+  # "GSE154566",  NO GO  mixed 450k & EPIC # could not directly load beta matrix from GEO API for GSE154566 # n=1000 # monozygotic twin sample
+  # "GSE156374",  NO GO # GSE Epilepto # TODO Fabien: few probes on GEO matrix need to used IDAT 
+  # "GSE197678",  NO GO # could not directly load beta matrix from GEO API for GSE169156 # n=2000 # Childhood Cancer Survivors
+  # "GSE185090"   NO GO # EPic # n=200  # no cofactor on GEO # MCD in the human brain, n=215
   # "GSE68838",       # TCGA COAD
-  # "GSE72680",   NO GO gse="GSE72680" ; source(knitr::purl("01_build_study_generic.Rmd"))   # 450k #Trauma, # n= 422 
-                  
-  "GSE97362",     
-                  
-  # "GSE85210",   NO GO gse="GSE85210" ; source(knitr::pu         rl("01_build_study_generic.Rmd"))    # 450k # n=250 # tobacco # no age  
-  # "GSE87571",   NO GO gse="GSE87571" ; source(knitr::purl("01_build_study_generic.Rmd"))    # 450k # n=750 
-  # "GSE87648",   NO GO gse="GSE87648" ; source(knitr::purl("01_build_study_generic.Rmd"))    # 450k # n=350 # Bowel Disease
-  "GSE89353",         # n=600 # 450k # Epimutations as a novel cause of congenital disorders # Proband
-  # "GSE104293",    # PROBLEM gse="GSE104293" ; r=2 ;rmarkdown::render("04_model.Rmd") ;    # Glioma # n=130 # 450k
-  "GSE106648",        # 450k # n= 279 # Multiple Sclerosis
-  # "GSE124413",  NO GO # gse="GSE124413" ; source(knitr::purl("01_build_study_generic.Rmd"))    # Epic # n=500 # childhood acute myeloid leukemia (AML)
-  "GSE136296" ,       # Epic # Pan troglodytes # n=113
-  # "GSE140686",  NO GO  mixed 450k & EPIC # n=1500  sarcoma samples  
-  # "GSE147740",  NO GO gse="GSE147740"; rmarkdown::render("01_build_study_generic.Rmd")
-  "GSE151732",        # Epic # n=250 # Right versus the Left Colon
-  # "GSE152026",  NO GO #  could not directly load beta matrix from GEO API for GSE152026. # Epic, n=1000 # psychosis patients
-  # "GSE154566",  NO GO  could not directly load beta matrix from GEO API for GSE154566 # n=1000 # monozygotic twin sample
-  # "GSE156274",  NO GO  6 samples
-  # "GSE156374",  NO GO # GES Epilepto # few probes on GEO
-  # "GSE169156",  NO GO # could not directly load beta matrix from GEO API for GSE169156 # n=2000 # Childhood Cancer Survivors
-  # "GSE185090"   NO GO # no cofactor on GEO
-  
+  "GSE41037"   # **************27k***************
+]
+
+gses_descs = [
+  "GSE50923",    # PROBLEM no age # 27k GBM vs. normal brain
+  "GSE60753",    # PROBLEM no age # 450k # Alcohol #
+  "GSE85210",    # PROBLEM no age # 450k # n=250 # tobacco
+  "GSE41037"   # **************27k***************
+]
+
+gses_ewas = [
+  "GSE20067",    # PROBLEM gse="GSE20067"  ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render('04_model.Rmd'); # "incorrect number of dimensions" FCh: problem in selecting probes?
+  "GSE43976",    # PROBLEM gse='GSE43976'  ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render('04_model.Rmd'); # 450k, PB, tobacco # error in
+  "GSE48461",    # PROBLEM gse="GSE48461"  ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render("04_model.Rmd"); # 450k, glioma
+  "GSE49393",    # PROBLEM gse="GSE49393"  ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render('04_model.Rmd'); # Brain, Alcohol, n=48, 450k ; 50000 probes == NA
+  "GSE104293",   # PROBLEM gse="GSE104293" ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render('04_model.Rmd'); # Glioma # n=130 # 450k
+  "GSE124413",   # PROBLEM gse="GSE124413" ; source(knitr::purl("04_model"))    # Epic # n=500 # childhood acute myeloid leukemia (AML)
+  "GSE41037"   # **************27k***************
+]
+
+gses_model = [
+  "GSE36278",         # 450k, primary glioblastoma
+  "GSE40279",         # 450k, Hannum
+  "GSE42861",         # 450k,
+  "GSE50660",         # 450k, tobacco
+  "GSE97362",         # 450k, n=235  # CHARGE and Kabuki syndromes
+  "GSE87571",         # 450k, n=750  # Continuous Aging of the Human DNA Methylome Throughout the Human Lifespan
+  "GSE87648",         # 450k, n=350  # Bowel Disease
+  "GSE89353",         # 450k, n=600  # Proband : Epimutations as a novel cause of congenital disorders
+  "GSE106648",        # 450k, n=279  # Multiple Sclerosis
+  "GSE136296" ,       # Epic, n=113  # Pan troglodytes 
+  "GSE147740",        # Epic, n=1129 # AIRWAVE study
+  "GSE151732",        # Epic, n=250  # Right versus the Left Colon
   "GSE41037"   # **************27k***************
 ]
 
 
 
+prefix = os.getcwd()
 nbewasprobes=3000
 runmax=2
-info_models = [f"{curdir}/info_model_ewas3000_{foo}.rds" for foo in gses]
-info_builds = [f"{curdir}/info_build_{gse}.rds" for gse in gses]
-html_models =  [f"{curdir}/04_model_r{runmax}_ewas{nbewasprobes}_{gse}.html" for gse in gses]
+html_models = [f"{prefix}/04_model_r{runmax}_ewas{nbewasprobes}_{gse}.html" for gse in gses]
+info_descs = [f"{prefix}/info_desc_{gse}.rds"                               for gse in gses_descs]
+info_ewas  = [f"{prefix}/info_ewas{nbewasprobes}_{gse}.rds"                 for gse in gses_ewas]
+info_model = [f"{prefix}/info_model_r{runmax}_ewas{nbewasprobes}_{gse}.rds" for gse in gses_model]
 
-
-localrules: target create_empty_expgrpwrapper create_empty_datawrapper info_gse
+localrules: target R00_create_empty_expgrpwrapper R00_create_empty_datawrapper
 
 rule target:
     threads: 1
     message: "-- Rule target completed. --"
     input: 
-      info_builds,
-      # info_models,
       html_models,
+      info_ewas,
+      info_descs,
+      info_model,
     shell:"""
 export PATH="/summer/epistorage/opt/bin:$PATH"
 export PATH="/summer/epistorage/miniconda3/envs/R3.6.1_env/bin:$PATH"
@@ -70,7 +83,7 @@ echo $RCODE | Rscript - 2>&1 > data_info.Rout
 
 
 
-rule create_empty_expgrpwrapper:
+rule R00_create_empty_expgrpwrapper:
     input: 
     output: 
       r_expgrpwrapper="{prefix}/01_expgrpwrapper_{gse}.R",
@@ -80,7 +93,7 @@ cd {wildcards.prefix}
 touch {output.r_expgrpwrapper}
 """
 
-rule create_empty_datawrapper:
+rule R00_create_empty_datawrapper:
     input: 
     output: 
       r_datawrapper="{prefix}/01_datawrapper_{gse}.R",
@@ -90,16 +103,16 @@ cd {wildcards.prefix}
 touch {output.r_datawrapper}
 """        
         
-rule build_gse:
+rule R01_build_study:
     input: 
-      rmd_build="{prefix}/01_build_study_generic.Rmd",
-      r_datawrapper="{prefix}/01_datawrapper_{gse}.R",
-      r_expgrpwrapper="{prefix}/01_expgrpwrapper_{gse}.R",
+      rmd = "{prefix}/01_build_study_generic.Rmd",
+      r_datawrapper   = "{prefix}/01_datawrapper_{gse}.R",
+      r_expgrpwrapper = "{prefix}/01_expgrpwrapper_{gse}.R",
     output: 
       study_rds =   "{prefix}/datashare/{gse}/study_{gse}.rds",
       df_rds =      "{prefix}/datashare/{gse}/df_{gse}.rds"    ,           
       html =        "{prefix}/01_build_study_{gse}.html"      ,           
-      info_build =  "{prefix}/info_build_{gse}.rds"   ,
+      info       =  "{prefix}/info_build_{gse}.rds"   ,
     threads: 32
     shell:"""
 export PATH="/summer/epistorage/opt/bin:$PATH"
@@ -109,7 +122,7 @@ cd {wildcards.prefix}
 rm -Rf /tmp/wd_{wildcards.gse}
 mkdir -p /tmp/wd_{wildcards.gse}
 cd /tmp/wd_{wildcards.gse}
-cp {input.rmd_build} {input.r_datawrapper} {input.r_expgrpwrapper} .
+cp {input.rmd} {input.r_datawrapper} {input.r_expgrpwrapper} .
 
 RCODE="gse='{wildcards.gse}'; rmarkdown::render('01_build_study_generic.Rmd', output_file=paste0('01_build_study_',gse,'.html'));"
 echo $RCODE | Rscript - 2>&1 > 01_build_study_{wildcards.gse}.Rout
@@ -119,14 +132,14 @@ cd {wildcards.prefix}
 rm -Rf /tmp/wd_{wildcards.gse}
 """
 
-rule stat_preproc: 
+rule R02_stat_preproc: 
     input: 
-      rmd_stat_preproc="{prefix}/02_stat_preproc.Rmd",   
-      df="{prefix}/datashare/{gse}/df_{gse}.rds",  
+      rmd = "{prefix}/02_stat_preproc.Rmd",   
+      df  = "{prefix}/datashare/{gse}/df_{gse}.rds",  
     output:           
       html =       "{prefix}/02_stat_preproc_{gse}.html"  ,         
-      info_desc  = "{prefix}/info_desc_{gse}.rds"      ,           
-      df_preproc = "{prefix}/df_preproc_{gse}.rds"      ,           
+      info =       "{prefix}/info_desc_{gse}.rds"         ,           
+      df_preproc = "{prefix}/df_preproc_{gse}.rds"        ,           
     threads: 32
     shell:"""
 export PATH="/summer/epistorage/opt/bin:$PATH"
@@ -148,14 +161,15 @@ cd {wildcards.prefix}
 rm -Rf /tmp/wd_{wildcards.gse}
 """
 
-rule run_ewas: 
+rule R03_ewas: 
     input: 
-      rmd_ewas="{prefix}/03_ewas.Rmd",     
-      df="{prefix}/df_preproc_{gse}.rds",
+      rmd = "{prefix}/03_ewas.Rmd",     
+      df  = "{prefix}/df_preproc_{gse}.rds",
     output:           
       html    = "{prefix}/03_ewas{nbewasprobes}_{gse}.html"    ,       
-      rout    = "{prefix}/03_ewas{nbewasprobes}_{gse}.Rout"      ,            
-      df_ewas = "{prefix}/df_r0_ewas{nbewasprobes}_{gse}.rds"      ,            
+      rout    = "{prefix}/03_ewas{nbewasprobes}_{gse}.Rout"    ,            
+      df_ewas = "{prefix}/df_r0_ewas{nbewasprobes}_{gse}.rds"  ,            
+      info    = "{prefix}/info_ewas{nbewasprobes}_{gse}.rds",
     threads: 32
     shell:"""
 export PATH="/summer/epistorage/opt/bin:$PATH"
@@ -172,18 +186,18 @@ cp {wildcards.prefix}/*.Rmd {wildcards.prefix}/*.R .
 RCODE="gse='{wildcards.gse}' ; nbewasprobes={wildcards.nbewasprobes}; rmarkdown::render('03_ewas.Rmd',output_file=paste0('03_ewas', nbewasprobes,'_',gse, '.html'));"
 echo $RCODE | Rscript - 2>&1 > 03_ewas{wildcards.nbewasprobes}_{wildcards.gse}.Rout
 
-cp 03_ewas{wildcards.nbewasprobes}_{wildcards.gse}.html 03_ewas{wildcards.nbewasprobes}_{wildcards.gse}.Rout df_r0_ewas{wildcards.nbewasprobes}_{wildcards.gse}.rds {wildcards.prefix}/. 
+cp 03_ewas{wildcards.nbewasprobes}_{wildcards.gse}.html 03_ewas{wildcards.nbewasprobes}_{wildcards.gse}.Rout df_r0_ewas{wildcards.nbewasprobes}_{wildcards.gse}.rds info_ewas{wildcards.nbewasprobes}_{wildcards.gse}.rds {wildcards.prefix}/. 
 cd {wildcards.prefix}
 rm -Rf /tmp/wd_{wildcards.gse}
 """
 
-rule model:
+rule R04_model:
     input: 
-      rmd_model="{prefix}/04_model.Rmd",
-      df="{prefix}/df_r0_ewas{nbewasprobes}_{gse}.rds",            
+      rmd = "{prefix}/04_model.Rmd",
+      df  = "{prefix}/df_r0_ewas{nbewasprobes}_{gse}.rds",            
     output:           
-      html =       "{prefix}/04_model_r{runmax}_ewas{nbewasprobes}_{gse}.html"      ,           
-      # info_model = "{prefix}/info_model_ewas{nbewasprobes}_{gse}.rds"      , #delete nbewasprobes or make 2 nbewasprobes
+      html = "{prefix}/04_model_r{runmax}_ewas{nbewasprobes}_{gse}.html"      ,           
+      info = "{prefix}/info_model_r{runmax}_ewas{nbewasprobes}_{gse}.rds"     , #delete nbewasprobes or make 2 nbewasprobes
     threads: 32
     shell:"""
 export PATH="/summer/epistorage/opt/bin:$PATH"

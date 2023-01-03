@@ -13,6 +13,7 @@ output:
 
 ```{r echo=FALSE}
 knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide")
+start_time = Sys.time()
 ```
 
 ```{r params}
@@ -63,7 +64,6 @@ dim(tmp_exp_grp)
 dim(s$data)
 tmp_data = s$get_data(dest_dir="~/projects/datashare")
 dim(tmp_data)
-if (exists("DEBUG")) { stop("stop here for debugging")}
 ```
 
 ```{r build exp_grp from EpiMedDB, eval=FALSE}
@@ -85,6 +85,7 @@ head(s$exp_grp)
 ```{r decorate_exp_grp}
 expgrpwrapper_file = paste0("01_expgrpwrapper_", gse, ".R")
 print(expgrpwrapper_file)
+if (exists("DEBUG")) { stop("stop here for debugging")}
 source(expgrpwrapper_file)
 
 for (fact in c("age")) {
@@ -113,6 +114,12 @@ if (nrow(tmp_data)==0) {
   datawrapper_file = paste0("01_datawrapper_", gse, ".R")
   print(datawrapper_file)
   source(datawrapper_file)    
+}
+gseidat_study_filename = paste0("~/projects/datashare/", gse, "/study_", gse, "_idat_rnbeads.rds")
+if (nrow(s$data)==0 & file.exists(gseidat_study_filename)) {
+  study_gseidat = readRDS(gseidat_study_filename)
+  s$data = study_gseidat$data
+  s$exp_grp = s$exp_grp[intersect(rownames(s$exp_grp), colnames(s$data)),]   
 }
 if (nrow(s$data)==0) {
   stop(paste0("could not directly load beta matrix from GEO API for ", gse, ". Need to customize by creating ", datawrapper_file, " script."))  
@@ -191,13 +198,6 @@ if (sum(!rownames(s$data) %in% rownames(s$platform)) !=0 ) {warning(paste0("prob
 s$platform = s$platform[intersect(rownames(s$data), rownames(s$platform)),]
 s$data = s$data[rownames(s$platform),]
 if (sum(rownames(s$data) != rownames(s$platform)) !=0 ) {stop(paste0("problem pf names ", gse))}
-
-# covariates
-for (cov in colnames(s$exp_grp)) {
-  if (is.character(s$exp_grp[[cov]])) {
-    s$exp_grp[[cov]] = as.factor(s$exp_grp[[cov]])
-  }
-}
 ```
 
 
@@ -258,11 +258,14 @@ cat(getwd()           , file=log_filename, sep="\n", append=TRUE)
 
 # Process Information 
 
+
 ```{r}
+stop_time = Sys.time()
 info_build = list(
+  exec_time = round(difftime(stop_time, start_time, units="mins"),1),
   GPL = s$platform_name,
-  n   = nrow(s$data),
-  p   = ncol(s$data),
+  n   = ncol(s$data),
+  p   = nrow(s$data),
   age     = ifelse("age"     %in% colnames(s$exp_grp), paste0(round(quantile(s$exp_grp$age)), collapse=", ")                                                            , NA),
   gender  = ifelse("gender"  %in% colnames(s$exp_grp), paste0(sapply(levels(s$exp_grp$gender  ), function(x) {paste0(x, " (", table(s$exp_grp$gender  )[x], ")")}), collapse=" "), NA),
   tissue  = ifelse("tissue"  %in% colnames(s$exp_grp), paste0(sapply(levels(s$exp_grp$tissue  ), function(x) {paste0(x, " (", table(s$exp_grp$tissue  )[x], ")")}), collapse=" "), NA),

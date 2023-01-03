@@ -28,8 +28,16 @@ data_info = lapply(gses, function(gse) {
   }
   ret = list(
     GSE        = gse,
-    GPL        = info_build$platform      ,
+    GPL        = info_build$GPL           ,
+    n          = info_build$n             ,
+    p          = info_build$p             ,
+    tissue     = info_build$tissue        ,
     gender     = info_build$gender        ,
+    age        = info_build$age           ,
+    tobacco    = info_build$tobacco       ,
+    disease    = info_build$disease       ,
+    gender     = info_build$gender        ,
+    exec_time  = info_build$exec_time     ,
     tissue          = info_desc$tissue    ,
     n               = info_desc$n,    
     n_preproc       = info_desc$n_preproc ,

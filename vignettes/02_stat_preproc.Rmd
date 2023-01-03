@@ -14,6 +14,7 @@ output:
 
 ```{r echo=FALSE}
 knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide")
+start_time = Sys.time()
 source("common.R")
 ```
 
@@ -30,11 +31,7 @@ if (gse != "dnamaging") {
   df = dnamaging::df_dnamaging  
 }
 
-for (new_factoi in c("tobacco", "disease", "gender")) {
-  if (new_factoi %in% colnames(df)) {
-    covariates = unique(c(covariates, new_factoi))  
-  }  
-}
+covariates = intersect(c("tobacco", "disease", "gender"), colnames(df))
 ```
 
 
@@ -50,9 +47,11 @@ tissue = paste(unique(df$tissue),collapse="/")
 ## Explained variable
 
 ```{r}
-layout(1, respect=TRUE)
-hist(df[[y_key]], prob=TRUE, xlab=y_key, main=paste0(y_key, " distribution (", nrow(df), " obs.)")) 
-lines(density(df[[y_key]]))
+if (y_key %in% colnames(df)) {
+  layout(1, respect=TRUE)
+  hist(df[[y_key]], prob=TRUE, xlab=y_key, main=paste0(y_key, " distribution (", nrow(df), " obs.)")) 
+  lines(density(df[[y_key]]))
+}
 # Norm_Age = shapiro.test(df[[y_key]])
 # text(60,0.03, paste0("SW Normality test p-val = ", round(Norm_Age$p.value,5)))
 ```
@@ -61,18 +60,20 @@ lines(density(df[[y_key]]))
 ## Covariates
 
 ```{r, fig.height=4.5}
-layout(matrix(1:2,1), respect=TRUE)
 for (cov in covariates) {
+  layout(matrix(1:2,1), respect=TRUE)
   tmp_tab = table(df[[cov]], useNA="ifany")
   # tmp_col = 1:dim(tmp_tab)
   tmp_col = RColorBrewer::brewer.pal(n=max(3,dim(tmp_tab)), name = "Set1")
   tmp_x = barplot(tmp_tab, col=tmp_col, ylim=c(0,max(tmp_tab)*1.2), main=cov, las=2)
   text(tmp_x, tmp_tab+max(tmp_tab)*.1, labels=tmp_tab)
 
-  f = paste0(y_key,"~",cov)
-  beanplot::beanplot(formula(f), data=df, border=tmp_col, col=adjustcolor(c(1,1,1,1), alpha.f=.1), method="jitter", log="", ylab=y_key, xlab="", las=2, main=f)
-  boxplot(formula(f), data=df, col=adjustcolor(tmp_col, alpha.f=.5), ylab=y_key, xlab="", las=2, main=f)
-  beeswarm::beeswarm(formula(f), data=df, ylab=y_key, xlab="", col=tmp_col, las=2, main=f)  
+  if (y_key %in% colnames(df)) {
+    f = paste0(y_key,"~",cov)
+    beanplot::beanplot(formula(f), data=df, border=tmp_col, col=adjustcolor(c(1,1,1,1), alpha.f=.1), method="jitter", log="", ylab=y_key, xlab="", las=2, main=f)
+    boxplot(formula(f), data=df, col=adjustcolor(tmp_col, alpha.f=.5), ylab=y_key, xlab="", las=2, main=f)
+    beeswarm::beeswarm(formula(f), data=df, ylab=y_key, xlab="", col=tmp_col, las=2, main=f)  
+  }
 }
 ```
 
@@ -261,17 +262,19 @@ names(cofactors_distrib) = all_cofactors
 ```
 
 
-```{r stock_info gse}
-info = c(
+# Process Information 
+
+```{r}
+stop_time = Sys.time()
+info = list(
+  exec_time = round(difftime(stop_time, start_time, units="mins"),1),
 	tissue = tissue,
 	n = n,
 	n_preproc = nrow(df),
 	cofactors = paste0(covariates,collapse="/")
 )
-info = c(info,cofactors_distrib)	
 
-saveRDS(info,paste0("info_desc_",gse,".rds"))
-
+saveRDS(info, paste0("info_desc_",gse,".rds"))
 ```
 
 # Session Information
