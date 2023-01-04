@@ -8,9 +8,10 @@ data_info = lapply(gses, function(gse) {
   # gse = "GSE42861"
   # gse = "GSE40279"
   # gse = "GSE43976"
-  file_build = paste0("info_build_",gse,".rds") #platform
-  file_desc = paste0("info_desc_",gse,".rds") #tissue,n,cofactors,distribs,
-  file_model = paste0("info_model_r0_ewas3000_",gse,".rds") #RMSE,nb_pb
+  file_build = paste0("info_build_",gse,".rds")
+  file_desc  = paste0("info_desc_",gse,".rds")
+  file_ewas  = paste0("info_ewas_ewas3000_",gse,".rds")
+  file_model = paste0("info_model_r0_ewas3000_",gse,".rds")
   if (file.exists(file_build)) {
       info_build = readRDS(file_build)
   } else { 
@@ -21,6 +22,11 @@ data_info = lapply(gses, function(gse) {
   } else { 
     info_desc = list()
   }
+  if (file.exists(file_ewas)) {
+    info_ewas = readRDS(file_ewas)
+  } else { 
+    info_ewas = list()
+  }
   if (file.exists(file_model)) {
     info_model = readRDS(file_model)
   } else { 
@@ -28,29 +34,35 @@ data_info = lapply(gses, function(gse) {
   }
   ret = list(
     GSE        = gse,
-    GPL        = info_build$GPL           ,
-    n          = info_build$n             ,
-    p          = info_build$p             ,
-    tissue     = info_build$tissue        ,
-    gender     = info_build$gender        ,
-    age        = info_build$age           ,
-    tobacco    = info_build$tobacco       ,
-    disease    = info_build$disease       ,
-    gender     = info_build$gender        ,
-    exec_time  = info_build$exec_time     ,
-    tissue          = info_desc$tissue    ,
-    n               = info_desc$n,    
-    n_preproc       = info_desc$n_preproc ,
-    cofactors       = info_desc$cofactors ,
-    disease         = info_desc$disease   ,
-    gender          = info_desc$gender    ,
-    tobacco         = info_desc$tobacco   ,
-    RMSE            = info_model$Bootstrap$RMSE           ,
-    nb_probes       = info_model$Bootstrap$nb_probes_mod
+    GPL        = info_build$GPL      ,
+    n          = info_build$n        ,
+    p          = info_build$p        ,
+    tissue     = info_build$tissue   ,
+    age        = info_build$age      ,
+    gender     = info_build$gender   ,
+    tobacco    = info_build$tobacco  ,
+    disease    = info_build$disease  ,
+    exec_time  = info_build$exec_time,
+
+    # tissue    = info_desc$tissue    ,
+    # n         = info_desc$n         ,
+    n_preproc = info_desc$n_preproc ,
+    # cofactors = info_desc$cofactors ,
+    # disease   = info_desc$disease   ,
+    # gender    = info_desc$gender    ,
+    # tobacco   = info_desc$tobacco   ,
+    exec_time = info_desc$exec_time ,
+
+    exec_time  = info_ewas$exec_time,
+
+    RMSE      = info_model$Bootstrap$RMSE         ,
+    nb_probes = info_model$Bootstrap$nb_probes_mod,
+    exec_time = info_model$exec_time     
   )
   ret
 })
 data_info = data.frame(do.call(rbind, data_info))
+data_info = data_info[order(substr(unlist(data_info$tissue), 1, 5), unlist(data_info$p)),]
 data_info
 WriteXLS::WriteXLS(data_info, "data_info.xlsx", verbose=TRUE, row.names=FALSE, AdjWidth=TRUE, BoldHeaderRow=TRUE, FreezeRow=1, FreezeCol=1)
 #      envir=          ExcelFileName=  perl=           Encoding=       col.names=      AutoFilter=     na=                   

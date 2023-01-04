@@ -11,7 +11,7 @@ gses = [
   # "GSE72775",   NO GO gse="GSE72775" ; source(knitr::purl("01_build_study_generic.Rmd"))   # 450k, n=350 # https://ftp.ncbi.nlm.nih.gov/geo/series/GSE72nnn/GSE72775/suppl/
   # "GSE72680",   NO GO gse="GSE72680" ; source(knitr::purl("01_build_study_generic.Rmd"))   # 450k #Trauma, # n= 422  ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE72nnn/GSE72680/suppl/
   # "GSE140686",  NO GO  mixed 450k & EPIC # n=1500  sarcoma samples
-  # "GSE152026",  NO GO #  could not directly load beta matrix from GEO API for GSE152026. # Epic, n=1000 # psychosis patients # GSE152026_EUGEI_processed_signals.csv.gz
+  # "GSE152026",  NO GO #  could not directly load beta matrix from GEO API for GSE152026. # Epic, n=1000 # psychosis patients # ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE152nnn/GSE152026/suppl/
   # "GSE154566",  NO GO  mixed 450k & EPIC # could not directly load beta matrix from GEO API for GSE154566 # n=1000 # monozygotic twin sample
   # "GSE156374",  NO GO # GSE Epilepto # TODO Fabien: few probes on GEO matrix need to used IDAT 
   # "GSE197678",  NO GO # could not directly load beta matrix from GEO API for GSE169156 # n=2000 # Childhood Cancer Survivors
@@ -24,7 +24,7 @@ gses_descs = [
   "GSE60753",    # PROBLEM no age # 450k # Alcohol #
   "GSE85210",    # PROBLEM no age # 450k # n=250 # tobacco
   "GSE185090",   # PROBLEM no age # EPic # n=215  # MCD in the human brain
-  "GSE41037"   # **************27k***************
+  ="GSE41037"   # **************27k***************
 ]
 
 gses_ewas = [
