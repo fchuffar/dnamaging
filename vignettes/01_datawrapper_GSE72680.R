@@ -2,9 +2,10 @@ s_betatabfile_filename = paste0("~/projects/datashare/", gse, "/study_", gse, "_
 if (!file.exists(s_betatabfile_filename)) {
   current_dir = getwd()
   setwd(paste0("~/projects/datashare/", gse))
-  if (!file.exists("GSE136296_eegoguevara.2019.08.23.data.beta.pdet.csv.gz")) {
+  postfix = "_beta_values.txt.gz"
+  if (!file.exists(paste0(gse, postfix))) {
     cmd = "wget"
-    args = "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE136nnn/GSE136296/suppl/GSE136296_eegoguevara.2019.08.23.data.beta.pdet.csv.gz"
+    args = paste0("https://ftp.ncbi.nlm.nih.gov/geo/series/", substr(gse, 1, nchar(gse)-3), "nnn/", gse, "/suppl/", gse, postfix)
     print(paste(cmd, args))
     system2(cmd, args)
   }
@@ -15,33 +16,35 @@ if (!file.exists(s_betatabfile_filename)) {
     }, cache = cachem::cache_mem(max_size = 10*1024 * 1024^2))  
   }
 
-  foo = mread.tablegz(paste0("~/projects/datashare/", gse, "/GSE136296_eegoguevara.2019.08.23.data.beta.pdet.csv.gz"), nrow=100, header=TRUE, row.names=1, sep=",")
+  normalized_betas_matrix_file = paste0("~/projects/datashare/", gse, "/", gse, postfix)
+  sep="\t"
+
+  foo = mread.tablegz(normalized_betas_matrix_file, nrow=100, header=TRUE, row.names=1, sep=sep)
   head(foo[,1:10])
   dim(foo)
 
-  foo = mread.tablegz(paste0("~/projects/datashare/", gse, "/GSE136296_eegoguevara.2019.08.23.data.beta.pdet.csv.gz"), header=TRUE, row.names=1, sep=",")
-
+  foo = mread.tablegz(normalized_betas_matrix_file, header=TRUE, row.names=1, sep=sep)
   head(foo[,1:10])
   dim(foo)
 
-  pdf()
-  layout(matrix(1:2, 1), respect=TRUE)
-  plot(density(foo[,1], na.rm=TRUE))
-  plot(density(foo[,2], na.rm=TRUE))
-  dev.off()
-  foo = foo[,-grep("detP", colnames(foo), fixed=TRUE)]
+  # pdf()
+  # layout(matrix(1:2, 1), respect=TRUE)
+  # plot(density(foo[,1], na.rm=TRUE))
+  # plot(density(foo[,2], na.rm=TRUE))
+  # dev.off()
+  foo = foo[,-grep("PVal", colnames(foo), fixed=TRUE)]
 
-  head(foo[,1:10])
-  dim(foo)
-
+  
   tmp_data = foo
+  head(tmp_data[,1:10])
   colnames(tmp_data)
 
-  s$exp_grp$key = paste0("X", gsub("\\*|-", ".", s$exp_grp[,1]), "_beta")
+  s$exp_grp$key = paste0("X", (as.character(s$exp_grp$"description.1")))
   s$exp_grp$key
-  colnames(tmp_data) %in% s$exp_grp$key
+  sum(!colnames(tmp_data) %in% s$exp_grp$key)
+  sum(!s$exp_grp$key %in% colnames(tmp_data))
   tmp_data = tmp_data[,s$exp_grp$key]
-  colnames(tmp_data) == s$exp_grp$key
+  sum(!colnames(tmp_data) == s$exp_grp$key)
   colnames(tmp_data) = rownames(s$exp_grp)
   colnames(tmp_data)
   tmp_data = as.matrix(tmp_data)
@@ -56,10 +59,15 @@ if (!file.exists(s_betatabfile_filename)) {
   print(paste0("Writing ", s_betatabfile_filename, "..."))
   s_betatabfile$save(s_betatabfile_filename)  
 } else {
-  print(paste0("Reading ", s_betatabfile_filename, "..."))
   s_betatabfile = readRDS(s_betatabfile_filename)  
 }
 
 
 s$data = s_betatabfile$data
+
+
+
+
+
+
 

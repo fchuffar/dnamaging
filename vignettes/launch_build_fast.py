@@ -6,12 +6,19 @@ gses_ewas = []
 gses_model = []
 
 gses = [
-  # "GSE55763",   NO GO # need to write wrappers (exp_grp and data, boths) n=2711, blood 450k # https://ftp.ncbi.nlm.nih.gov/geo/series/GSE55nnn/GSE55763/suppl/
-  # "GSE56105",   NO GO # 450k, n=600 # MZ and DZ twin pairs, their siblings and their parents. # 450k n=335  https://ftp.ncbi.nlm.nih.gov/geo/series/GSE56nnn/GSE56105/suppl/
-  # "GSE72775",   NO GO gse="GSE72775" ; source(knitr::purl("01_build_study_generic.Rmd"))   # 450k, n=350 # https://ftp.ncbi.nlm.nih.gov/geo/series/GSE72nnn/GSE72775/suppl/
-  # "GSE72680",   NO GO gse="GSE72680" ; source(knitr::purl("01_build_study_generic.Rmd"))   # 450k #Trauma, # n= 422  ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE72nnn/GSE72680/suppl/
+  # "GSE48472"    TO CHECK 450k, n=56  # Identification and systematic annotation of tissue-specific differentially methylated regions using the Illumina 450k array
+  # "GSE64495"    TO CHECK 450k, n=113 # DNA methylation profiles of human blood samples from a severe developmental disorder and controls
+  # "GSE72774"    TO CHECK 450k, n=508 # DNA methylation profiles of human blood samples from Caucasian subjects with Parkinson's disease
+  # "GSE72776"    TO CHECK 450k, n=84  # DNA methylation profiles of human blood samples from Hispanic subjects with Parkinson's disease
+  # "GSE61257"    TO CHECK 450k, n=32  # Genome wide DNA methylation profiles of human adipose tissue.
+  # "GSE61259"    TO CHECK 450k, n=26  # Genome wide DNA methylation profiles of human muscle tissue.
+    # "GSE146917"   TO CHECK 450k, n=76  # DNA methylation profiles of human buffy coat samples from Huntington's disease
+  # "GSE64490"    TO CHECK 450k, n=48  # DNA methylation profiles of human bone samples
+  # "GSE197719"   TO CHECK 450k, n=27  # In vitro methylation studies in multiple human cell types
+  # "GSE142439"   TO CHECK Epic, n=16  # Transient non-integrative nuclear reprogramming promotes multifaceted reversal of aging in human cells
+  "GSE72680",   # 450k, n=422 # DNA Methylation of African Americans from the Grady Trauma Project
   # "GSE140686",  NO GO  mixed 450k & EPIC # n=1500  sarcoma samples
-  # "GSE152026",  NO GO #  could not directly load beta matrix from GEO API for GSE152026. # Epic, n=1000 # psychosis patients # ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE152nnn/GSE152026/suppl/
+  "GSE152026",  # Epic, n=934 # Blood DNA methylation profiles from first episode psychosis patients and controls I
   # "GSE154566",  NO GO  mixed 450k & EPIC # could not directly load beta matrix from GEO API for GSE154566 # n=1000 # monozygotic twin sample
   # "GSE156374",  NO GO # GSE Epilepto # TODO Fabien: few probes on GEO matrix need to used IDAT 
   # "GSE197678",  NO GO # could not directly load beta matrix from GEO API for GSE169156 # n=2000 # Childhood Cancer Survivors
@@ -24,7 +31,7 @@ gses_descs = [
   "GSE60753",    # PROBLEM no age # 450k # Alcohol #
   "GSE85210",    # PROBLEM no age # 450k # n=250 # tobacco
   "GSE185090",   # PROBLEM no age # EPic # n=215  # MCD in the human brain
-  ="GSE41037"   # **************27k***************
+  "GSE41037"   # **************27k***************
 ]
 
 gses_ewas = [
@@ -38,19 +45,22 @@ gses_ewas = [
 ]
 
 gses_model = [
-  "GSE36278",         # 450k, primary glioblastoma
-  "GSE40279",         # 450k, Hannum
-  "GSE42861",         # 450k,
-  "GSE50660",         # 450k, tobacco
-  "GSE97362",         # 450k, n=235  # CHARGE and Kabuki syndromes
-  "GSE87571",         # 450k, n=750  # Continuous Aging of the Human DNA Methylome Throughout the Human Lifespan
-  "GSE87648",         # 450k, n=350  # Bowel Disease
-  "GSE89353",         # 450k, n=600  # Proband : Epimutations as a novel cause of congenital disorders
-  "GSE106648",        # 450k, n=279  # Multiple Sclerosis
-  "GSE136296" ,       # Epic, n=113  # Pan troglodytes 
-  "GSE147740",        # Epic, n=1129 # AIRWAVE study
-  "GSE151732",        # Epic, n=250  # Right versus the Left Colon
-  "GSE41037"   # **************27k***************
+  "GSE36278" , # 450k, n=142  # Methylation data from glioblastoma tumor samples
+  "GSE40279" , # 450k, n=656  # Genome-wide Methylation Profiles Reveal Quantitative Views of Human Aging Rates
+  "GSE42861" , # 450k, n=689  # Differential DNA methylation in Rheumatoid arthritis
+  "GSE50660" , # 450k, n=464  # Cigarette Smoking Reduces DNA Methylation Levels at Multiple Genomic Loci but the Effect is Partially Reversible upon Cessation
+  "GSE55763" , # 450k, n=2711 # A coherent approach for analysis of the Illumina HumanMethylation450 BeadChip improves data quality and performance in epigenome-wide association studies
+  "GSE56105" , # 450k, n=614  # Brisbane Systems Genetics Study – DNA methylation data, MZ and DZ twin pairs, their siblings and their parents.
+  "GSE72775" , # 450k, n=335  # DNA methylation profiles of human blood samples from Hispanics and Caucasians
+  "GSE97362" , # 450k, n=235  # CHARGE and Kabuki syndromes: Gene-specific DNA methylation signatures
+  "GSE87571" , # 450k, n=750  # Continuous Aging of the Human DNA Methylome Throughout the Human Lifespan
+  "GSE87648" , # 450k, n=350  # DNA Methylation May Mediate Genetic Risk In Inflammatory Bowel Disease
+  "GSE89353" , # 450k, n=600  # Proband : Epimutations as a novel cause of congenital disorders
+  "GSE106648", # 450k, n=279  # Differential DNA methylation in Multiple Sclerosis
+  "GSE136296", # Epic, n=113  # Age-Associated Epigenetic Change in Chimpanzees and Humans
+  "GSE147740", # Epic, n=1129 # DNA methylation analysis of human peripheral blood mononuclear cell collected in the AIRWAVE study
+  "GSE151732", # Epic, n=250  # Racial Disparities in Epigenetic Aging of the Right versus the Left Colon
+  "GSE41037"   # **************27k*************** Aging effects on DNA methylation modules in blood tissue
 ]
 
 

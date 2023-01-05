@@ -88,7 +88,7 @@ print(expgrpwrapper_file)
 if (exists("DEBUG")) { stop("stop here for debugging")}
 source(expgrpwrapper_file)
 
-for (fact in c("age")) {
+for (fact in c("age", "bmi")) {
   if (fact %in% colnames(s$exp_grp)) {
     if (!is.numeric(s$exp_grp[[fact]])) {
       stop(paste0("s$exp_grp$", fact, " must be numeric.")) 
@@ -96,14 +96,14 @@ for (fact in c("age")) {
   }
 }
 
-for (fact in c("gender", "tobacco", "disease")) {
+for (fact in c("gender", "tobacco", "disease", "ethnicity")) {
   if (fact %in% colnames(s$exp_grp)) {
     if (!is.factor(s$exp_grp[[fact]])) {
       stop(paste0("s$exp_grp$", fact, " must be factor")) 
     }  
   }
 }
-
+head(s$exp_grp)
 ```
 
 

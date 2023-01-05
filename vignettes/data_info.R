@@ -42,6 +42,8 @@ data_info = lapply(gses, function(gse) {
     gender     = info_build$gender   ,
     tobacco    = info_build$tobacco  ,
     disease    = info_build$disease  ,
+    bmi        = info_build$bmi      ,
+    ethnicity  = info_build$ethnicity,
     exec_time  = info_build$exec_time,
 
     # tissue    = info_desc$tissue    ,
@@ -57,6 +59,14 @@ data_info = lapply(gses, function(gse) {
 
     RMSE      = info_model$Bootstrap$RMSE         ,
     nb_probes = info_model$Bootstrap$nb_probes_mod,
+
+    pv_genre_elasticnet = info_model$ElasticNet$pvalRR, 
+    pv_genre_bootstrap  = info_model$Bootstrap$pvalRR , 
+    pv_genre_hannum     = info_model$Hannum$pvalRR    , 
+    pv_genre_horvath    = info_model$Horvath$pvalRR   , 
+    
+    # ...
+
     exec_time = info_model$exec_time     
   )
   ret

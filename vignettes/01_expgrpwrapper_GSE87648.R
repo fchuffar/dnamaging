@@ -2,12 +2,11 @@
 s$exp_grp$"age:ch1"
 s$exp_grp$age = as.numeric(as.character(s$exp_grp$"age:ch1"))
 sort(s$exp_grp$age)
-quantile(s$exp_grp$age)
 s$exp_grp = s$exp_grp[!is.na(s$exp_grp$age), ]
 
 # 2. gender
-s$exp_grp$"gender:ch1"
-s$exp_grp$gender = as.factor(s$exp_grp$"gender:ch1")
+s$exp_grp$"Sex:ch1"
+s$exp_grp$gender = as.factor(s$exp_grp$"Sex:ch1")
 levels(s$exp_grp$gender) = substr(toupper(levels(s$exp_grp$gender)), 1, 1)
 table(s$exp_grp$gender, useNA="always")
 s$exp_grp$gender01 = as.numeric(s$exp_grp$gender)-1
@@ -17,6 +16,7 @@ table(s$exp_grp$gender01, useNA="always")
 s$exp_grp$"tissue:ch1" = s$exp_grp$"cell type:ch1"
 s$exp_grp$tissue = as.factor(s$exp_grp$"tissue:ch1")
 table(s$exp_grp$tissue, useNA="always")
+s$exp_grp$tissue 
 s$exp_grp$tissue = as.factor("blood")  
 table(s$exp_grp$tissue, useNA="always")
 
@@ -24,9 +24,9 @@ table(s$exp_grp$tissue, useNA="always")
 s$exp_grp$smoking_status = as.factor(s$exp_grp$"smoking status:ch1")
 table(s$exp_grp$smoking_status, useNA="always")
 s$exp_grp$tobacco = NA
-s$exp_grp[s$exp_grp$smoking_status%in%"never"  ,]$tobacco = "never"
-s$exp_grp[s$exp_grp$smoking_status%in%"ex"     ,]$tobacco = "former"
-s$exp_grp[s$exp_grp$smoking_status%in%"current",]$tobacco = "current"
+s$exp_grp[s$exp_grp$smoking_status%in%"Never"  ,]$tobacco = "never"
+s$exp_grp[s$exp_grp$smoking_status%in%"Ex"     ,]$tobacco = "former"
+s$exp_grp[s$exp_grp$smoking_status%in%"Current",]$tobacco = "current"
 s$exp_grp$tobacco = as.factor(s$exp_grp$tobacco)
 s$exp_grp = s$exp_grp[!is.na(s$exp_grp$tobacco), ]
 table(s$exp_grp$tobacco, useNA="always")
@@ -40,18 +40,8 @@ s$exp_grp[s$exp_grp$tobacco%in%"never"  ,]$tobacco_never01   = 1
 head(s$exp_grp[, c("tobacco", "tobacco_never01", "tobacco_former01", "tobacco_current01")])
 
 # 5. disease
-s$exp_grp$disease = as.factor(s$exp_grp$"disease state:ch1")
-table(s$exp_grp$disease, useNA="always")
-levels(s$exp_grp$disease) = c("control", "rheumatoid arthritis")
+s$exp_grp$disease = as.factor(s$exp_grp$"simplified_diagnosis:ch1")
 table(s$exp_grp$disease, useNA="always")
 s$exp_grp = s$exp_grp[!is.na(s$exp_grp$disease), ]
-
-# 6. BMI
-# s$exp_grp$bmi =  as.numeric(as.character(s$exp_grp$"body mass index:ch1"))
-# sort(s$exp_grp$bmi)
-
-# 7. ethnicity
-# s$exp_grp$ethnicity = as.factor(s$exp_grp$"race/ethnicity:ch1")
-# table(s$exp_grp$ethnicity)
 
 
