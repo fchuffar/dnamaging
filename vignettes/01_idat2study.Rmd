@@ -1,0 +1,1661 @@
+---
+title: "Build Illumina methylation study from IDAT from NCBI GEO using RnBeads"
+author: "Florent Chuffart"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+
+```{r echo=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide")
+start_time = Sys.time()
+```
+
+```{r}
+wd_orig = getwd()
+```
+
+# Get IDAT from GEO
+
+```{r download_gse_raw_tar}
+epimedtools::download_gse_raw_tar(gse)
+```
+
+# Process IDAT
+
+```{r process_idat}
+library(RnBeads)
+library(grid)
+
+# Directory where iDAT are stored
+data.dir = paste0("~/projects/datashare/", gse, "/raw")
+
+# unzip idat.gz files
+setwd(data.dir)
+cmd = "gzip"
+args = ("-d *.idat.gz")
+print(paste(cmd, args))
+system2(cmd, args)
+setwd(wd_orig)
+
+
+# Design
+idat_red_files = list.files(data.dir, "*_Red.idat")
+idat_red_files = idat_red_files[substr(idat_red_files, 1, 3)=="GSM"]
+exp_grp = do.call(rbind, strsplit(idat_red_files, "_"))[,1:3]
+colnames(exp_grp) = c("Sample_ID", "Sentrix_ID", "Sentrix_Position")
+rownames(exp_grp) = exp_grp[,1]
+exp_grp = as.data.frame(exp_grp)
+# exp_grp = exp_grp[1:500,]
+head(exp_grp)
+dim(exp_grp)
+write.table(exp_grp, "exp_grp.csv", sep=",", row.names=FALSE, quote=FALSE)
+sample.sheet = "exp_grp.csv"
+
+# format idat file using symblink
+setwd(data.dir)
+foo = apply(exp_grp, 1, function (row) {
+  cmd = "ln"
+  args = paste0("-s ", row[[1]], "_", row[[2]], "_", row[[3]], "_Red.idat ", row[[2]], "_", row[[3]], "_Red.idat")
+  print(paste(cmd, args))
+  system2(cmd, args)
+  args = paste0("-s ", row[[1]], "_", row[[2]], "_", row[[3]], "_Grn.idat ", row[[2]], "_", row[[3]], "_Grn.idat")
+  print(paste(cmd, args))
+  system2(cmd, args)
+})
+setwd(wd_orig)
+
+# Directory where the output should be written to
+analysis.dir = paste0(wd_orig, "/", gse, "/analysis")
+
+# Directory where the report files should be written to
+dir.reports = file.path(analysis.dir, "reports")
+data.type="infinium.idat.dir"
+
+# Options, https://rdrr.io/bioc/RnBeads/man/rnb.options.html
+RnBeads::rnb.options(
+  analysis.name        = gse,
+  email = "florent.chuffart@univ-grenoble-alpes.fr",
+  filtering.sex.chromosomes.removal=FALSE, 
+  identifiers.column="Sample_ID",
+  export.to.csv=TRUE,
+  # import.idat.platform = "probesEPIC",
+  # replicate.id.column = "treatment",
+  # import.table.separator = ";",
+  # import.bed.style     = "bismarkCov",
+  # assembly             = version,
+  # region.types=c("promoters", "genes", "tiling", "cpgislands", "sites"),
+  region.types=c("sites"),
+  # region.aggregation="coverage.weighted",
+  gz.large.files=TRUE,
+  # differential.enrichment.go = TRUE
+  # differential.enrichment.lola = TRUE,
+
+  # qc.barplots=FALSE,
+  # qc.sample.batch.size = 50,
+
+  qc.boxplots	= FALSE        , 
+  qc.barplots	= FALSE        , 
+  qc.negative.boxplot	= FALSE, 
+  qc.snp.heatmap	= FALSE    , 
+  qc.snp.barplot	= FALSE    , 
+  qc.snp.boxplot	= FALSE    , 
+  qc.snp.distances	= FALSE  , 
+  qc.snp.purity	= FALSE      , 
+  qc.cnv	= FALSE            , 
+  qc.cnv.refbased	= FALSE    , 
+
+
+  
+  # export.to.csv        = "yes",
+  export.to.bed        = FALSE,
+  export.to.trackhub   = NULL,
+  # export.to.ewasher    = "no",
+
+
+  exploratory=FALSE,
+  differential=FALSE
+)
+# foo = RnBeads::rnb.options()
+# foo$export.to.trackhub
+
+
+
+
+
+
+
+dir.create(dir.reports, showWarnings=FALSE)
+num.cores = 32
+parallel.setup(num.cores)
+
+unlink(dir.reports, recursive=TRUE)
+RnBeads::rnb.run.analysis(
+  # GEO.acc = gse,
+  sample.sheet=sample.sheet,
+  data.dir=data.dir,
+  # data.source = list(data.dir = data.dir, sample.sheet = sample.sheet),
+  # GS.report = NULL,
+
+  dir.reports=dir.reports, 
+  # build.index = TRUE,
+  save.rdata = FALSE,
+  initialize.reports=TRUE
+)
+
+
+
+
+```
+
+
+```
+# cd ~/projects/datashare/GSE197678/raw
+
+dim(s$exp_grp)
+s$exp_grp$key = substr(s$exp_grp$title, 77, 79)
+tab = sort(table(s$exp_grp$key))
+tab
+thresh = 150
+sample_idx = rownames(s$exp_grp)[s$exp_grp$key %in% names(tab)[tab >= thresh]]
+# sample_idx = rownames(s$exp_grp)[s$exp_grp$key %in% names(tab)[tab < 10]]
+length(sample_idx)
+
+length(sample_idx) * 850000
+.Machine$integer.max
+
+for (gsm in sample_idx) {
+  print(gsm)
+  cmd = "mv"
+  args = paste0("~/projects/datashare/GSE197678/raw/back/", gsm, "*.idat ~/projects/datashare/GSE197678/raw/.")
+  print(paste(cmd, args))
+  system2(cmd, args)
+}
+```
+
+
+```
+unlink(dir.reports, recursive=TRUE)
+
+# GEO.acc = gse,
+sample.sheet=sample.sheet
+data.dir=data.dir
+# data.source = list(data.dir = data.dir, sample.sheet = sample.sheet),
+data.source = NULL
+GS.report = NULL
+GEO.acc = NULL
+dir.reports=dir.reports
+build.index = TRUE
+save.rdata = FALSE
+initialize.reports=TRUE
+
+
+
+# function (dir.reports, data.source = NULL, sample.sheet = NULL,
+#     data.dir = NULL, GS.report = NULL, GEO.acc = NULL, data.type = rnb.getOption("import.default.data.type"),
+#     initialize.reports = TRUE, build.index = TRUE, save.rdata = TRUE)
+# {
+    if (all(is.null(c(sample.sheet, data.dir, GS.report, GEO.acc,
+        data.source)))) {
+        stop("one of the sample.sheet, data.dir, GS.report, GEO.acc, data.source should be specified")
+    }
+    if (is.null(data.source)) {
+        if (!is.null(GS.report)) {
+            data.type <- "GS.report"
+            data.source <- GS.report
+        }
+        else if (!is.null(GEO.acc)) {
+            data.type <- "GEO"
+            data.source <- GEO.acc
+        }
+        else if (!is.null(sample.sheet) & !is.null(data.dir)) {
+            data.source <- list(data.dir = data.dir, sample.sheet = sample.sheet)
+        }
+        else if (!is.null(sample.sheet) & is.null(data.dir)) {
+            stop("data directory is missing")
+        }
+        else if (is.null(sample.sheet) & !is.null(data.dir)) {
+            stop("sample sheet is missing")
+        }
+    }
+    if (!(is.character(dir.reports) && length(dir.reports) ==
+        1 && (!is.na(dir.reports)))) {
+        stop("invalid value for dir.reports; expected one-element character")
+    }
+    if (!RnBeads:::parameter.is.flag(initialize.reports)) {
+        stop("invalid value for initialize.reports; expected TRUE or FALSE")
+    }
+    if (!RnBeads:::parameter.is.flag(build.index)) {
+        stop("invalid value for build.index; expected TRUE or FALSE")
+    }
+    if (initialize.reports) {
+        if (!rnb.initialize.reports(dir.reports)) {
+            stop(paste("Could not initialize reports in", dir.reports,
+                "; make sure this path does not exist."))
+        }
+    }    else if (!isTRUE(file.info(dir.reports)[1, "isdir"])) {
+        stop("invalid value for dir.reports; expected existing directory")
+    }
+    if (logger.isinitialized()) {
+        logfile <- NULL
+        log.file <- NULL
+    }  else {
+        log.file <- "analysis.log"
+        logfile <- c(file.path(dir.reports, log.file), NA)
+    }
+    logger.start("RnBeads Pipeline", fname = logfile)
+    aname <- rnb.getOption("analysis.name")
+    if (!(is.null(aname) || is.na(aname) || nchar(aname) == 0)) {
+        logger.info(c("Analysis Title:", aname))
+    }
+    rm(aname)
+    update.index <- function(dset, rname = "", skip.normalization = FALSE) {
+        if (build.index) {
+            if (is.null(dset)) {
+                export.enabled <- TRUE
+            }
+            else {
+                export.enabled <- rnb.getOption("export.to.csv") ||
+                  rnb.tracks.to.export(dset)
+            }
+            RnBeads:::rnb.build.index.internal(dir.reports, log.file = log.file,
+                export.enabled = export.enabled, current.report = rname,
+                open.index = (rname == ""))
+        }
+    }
+    cat(rnb.options2xml(), file = file.path(dir.reports, "analysis_options.xml"))
+    if (rnb.getOption("import")) {
+        if (is.character(data.source) || is.list(data.source) ||
+            inherits(data.source, "RnBSet")) {
+            update.index(NULL, "data_import", data.type == "bed.dir")
+            # result <- rnb.run.import(data.source, data.type, dir.reports)
+            # function (data.source, data.type = rnb.getOption("import.default.data.type"),
+            #     dir.reports, init.configuration = !file.exists(file.path(dir.reports,
+            #         "configuration")), close.report = TRUE, show.report = FALSE)
+            init.configuration = !file.exists(file.path(dir.reports, "configuration")) 
+            close.report = TRUE
+            show.report = FALSE
+            {
+                if (!RnBeads:::parameter.is.flag(close.report)) {
+                    stop("invalid value for close.report; expected TRUE or FALSE")
+                }
+                if (!RnBeads:::parameter.is.flag(show.report)) {
+                    stop("invalid value for show.report; expected TRUE or FALSE")
+                }
+                RnBeads:::module.start.log("Loading Data")
+                report <- RnBeads:::init.pipeline.report("data_import", dir.reports, init.configuration)
+                optionlist <- rnb.options("import.default.data.type", "import.table.separator", 
+                    "import.bed.style", "import.bed.columns", "import.bed.frame.shift")
+                report <- RnBeads:::rnb.add.optionlist(report, optionlist)
+                # result <- RnBeads:::rnb.step.import(data.source, data.type, report)
+                #
+                #
+                # function (data.source, data.type = rnb.getOption("import.default.data.type"),
+                #     report)
+                { 
+                    if (!(is.character(data.source) || is.list(data.source) ||
+                        inherits(data.source, "RnBSet"))) {
+                        stop("invalid value for data.source; expected list or character")
+                    }
+                    if (!(is.character(data.type) && length(data.type) == 1 &&
+                        (!is.na(data.type)))) {
+                        stop("invalid value for data.type; expected one-element character")
+                    }
+                    if (!(data.type %in% c("data.dir", "idat.dir", "GS.report",
+                        "GEO", "bed.dir", "rnb.set", "rnb.set.dir", "infinium.data.dir",
+                        "infinium.data.files", "infinium.idat.dir", "infinium.GS.report",
+                        "infinium.GEO", "bs.bed.dir", "bs.data.dir", "bs.data.files",
+                        "rnb.set"))) {
+                        stop("invalid value for data.type; expected one of data.dir, idat.dir, GS.report, GEO, bed.dir or rnb.set")
+                    }
+                    if (!inherits(report, "Report")) {
+                        stop("invalid value for report")
+                    }
+                    if (rnb.getOption("logging") && logger.isinitialized() ==
+                        FALSE) {
+                        logger.start(fname = NA)
+                    }
+                    logger.info(sprintf("Loading data of type \"%s\"", data.type))
+                    if (data.type %in% c("bed.dir", "bs.bed.dir") && rnb.getOption("import.bed.test")) {
+                        logger.start("Performing loading test")
+                        logger.info("The first 10000 rows will be read from each data file")
+                        object <- rnb.execute.import(data.source, data.type,
+                            dry.run = TRUE)
+                        logger.start("Checking the loaded object")
+                        valid <- check.rnb.biseq.set(object, verbose = TRUE)
+                        if (valid) {
+                            logger.info("The object loaded during the loading test is valid")
+                        }
+                        else {
+                            logger.warning(c("The object loaded during the loading test contains invalid information (see details above).", 
+                                "Please check the whether the data source arguments as well as the data import options, like table separator, BED style or BED column assignment, are set correctly"))
+                        }
+                        logger.completed()
+                        rnb.cleanMem()
+                        logger.completed()
+                    }
+                    if (!data.type %in% c("bed.dir", "bs.bed.dir") || !rnb.getOption("import.bed.test.only")) {
+                        # object <- rnb.execute.import(data.source, data.type)
+
+                        # function (data.source, data.type = rnb.getOption("import.default.data.type"),
+                        #     dry.run = FALSE, verbose = TRUE)
+                        dry.run = FALSE
+                        verbose = TRUE
+                        { 
+                            if (!((is.character(data.source) || is.list(data.source) ||
+                                inherits(data.source, "RnBSet")) && length(data.source) !=
+                                0)) {
+                                stop("invalid value for data.source; expected list or character")
+                            }
+                            if (!(is.character(data.type) && length(data.type) == 1 &&
+                                (!is.na(data.type)))) {
+                                stop("invalid value for data.type; expected one-element character")
+                            }
+                            if (!(data.type %in% c("data.dir", "data.files", "idat.dir",
+                                "GS.report", "GEO", "bed.dir", "rnb.set", "rnb.set.dir",
+                                "infinium.data.dir", "infinium.data.files", "infinium.idat.dir",
+                                "infinium.GS.report", "infinium.GEO", "bs.bed.dir", "bs.data.dir",
+                                "bs.data.files", "rnb.set"))) {
+                                stop("invalid value for data.type; expected one of data.dir, idat.dir, GS.report, GEO, bed.dir or rnb.set")
+                            }
+                            if (data.type %in% c("data.dir", "infinium.data.dir", "bs.data.dir")) {
+                                if (!(is.character(data.source) && length(data.source) ==
+                                    1 && (!any(is.na(data.source))))) {
+                                    stop("invalid value for data.source; expected character of length 1")
+                                }
+                                if (!file.exists(data.source) || !file.info(data.source)[1,
+                                    "isdir"]) {
+                                    rnb.error("invalid data.source parameter, data directory not found or is a file")
+                                }
+                                result <- read.data.dir(dir = data.source, sep = rnb.getOption("import.table.separator"))
+                            } else if (data.type %in% c("data.files", "infinium.data.files",
+                                "bs.data.files")) {
+                                if (!(is.character(data.source) && length(data.source) %in%
+                                    2L:4L && (!any(is.na(data.source))))) {
+                                    stop("invalid value for data.source; expected character of length from 2 to 4")
+                                }
+                                sapply(data.source, function(dsf) {
+                                    if (!file.exists(dsf) || file.info(dsf)[1, "isdir"]) {
+                                        msg <- sprintf("invalid data.source parameter, file %s not found, or is a directory",
+                                          dsf)
+                                        rnb.error(msg)
+                                    }
+                                })
+                                names(data.source) <- c("pheno", "betas", "p.values",
+                                    "bead.counts")[1:length(data.source)]
+                                result <- do.call(read.data.dir, c(as.list(data.source),
+                                    list(verbose = verbose)))
+                            } else if (data.type %in% c("idat.dir", "infinium.idat.dir")) {
+                                if (!(is.character(data.source) || is.list(data.source)) &&
+                                    !length(data.source) %in% 1L:2L) {
+                                    stop("invalid value for data.source; expected list or character of length 1 to 2")
+                                }
+                                data.source <- as.list(data.source)
+                                if (!file.exists(data.source[[1]]) || !file.info(data.source[[1]])[1,
+                                    "isdir"]) {
+                                    rnb.error("invalid data.source parameter, idat.dir is not found, or is not directory")
+                                }
+                                if (length(data.source) == 1L) {
+                                    result <- read.idat.files(base.dir = data.source[[1]],
+                                        useff = rnb.getOption("disk.dump.big.matrices"),
+                                        verbose = verbose)
+                                } else {
+                                    if (!is.data.frame(data.source[[2]])) {
+                                        if (!file.exists(data.source[[2]]) || file.info(data.source[[2]])[1,
+                                          "isdir"]) {
+                                          rnb.error("invalid data.source parameter, sample annotation file not found, or is a directory")
+                                        }
+                                      }
+                                      # result <- read.idat.files(base.dir = data.source[[1]],
+                                      #     sample.sheet = data.source[[2]], useff = rnb.getOption("disk.dump.big.matrices"),
+                                      #     verbose = verbose)
+                                      # function (base.dir, barcodes = NULL, sample.sheet = NULL, sep.samples = rnb.getOption("import.table.separator"),
+                                      #     useff = FALSE, verbose = TRUE)
+
+                                      base.dir = data.source[[1]]
+                                      sample.sheet = data.source[[2]] 
+                                      useff = rnb.getOption("disk.dump.big.matrices")
+                                      verbose = verbose
+                                      barcodes = NULL
+                                      sep.samples = rnb.getOption("import.table.separator")
+
+                                      { 
+                                          if (!(is.character(base.dir) && length(base.dir) == 1 &&
+                                              (!is.na(base.dir)))) {
+                                              stop("invalid value for base.dir")
+                                          }
+                                          if (!is.null(barcodes)) {
+                                              if (!is.character(barcodes) && length(barcodes) != 0 &&
+                                                  (!any(is.na(barcodes)))) {
+                                                  stop("invalid value for barcodes; expected non-empty character vector or NULL")
+                                              }
+                                          }
+                                          if (!RnBeads:::parameter.is.flag(verbose)) {
+                                              stop("invalid value for verbose; expected TRUE or FALSE")
+                                          }
+                                          if (verbose) {
+                                              RnBeads:::rnb.logger.start("Loading Data from IDAT Files")
+                                          }
+                                          if (is.null(barcodes) && is.null(sample.sheet)) {
+                                              sample.sheet <- list.files(base.dir, pattern = "[Ss]ample",
+                                                  full.names = TRUE)
+                                              sample.sheet <- sample.sheet[file.info(sample.sheet)[,
+                                                  "isdir"] == FALSE]
+                                              if (length(sample.sheet) > 1) {
+                                                  rnb.error(paste("No unique candidate for sample annotation found in",
+                                                      base.dir))
+                                              }
+                                              if (length(sample.sheet) == 0 || is.na(sample.sheet)) {
+                                                  rnb.error(paste("No candidate for sample information found in",
+                                                      base.dir))
+                                              }
+                                          }
+                                          if (!is.null(sample.sheet)) {
+                                              if (is.character(sample.sheet) && (!is.matrix(sample.sheet))) {
+                                                  if (length(sample.sheet) != 1) {
+                                                      stop("invalid value for sample.sheet")
+                                                  }
+                                                  sample.sheet <- read.sample.annotation(sample.sheet,
+                                                      sep = sep.samples)
+                                              } else if (is.matrix(sample.sheet)) {
+                                                  sample.sheet <- as.data.frame(sample.sheet, check.names = FALSE,
+                                                      stringsAsFactors = FALSE)
+                                              }
+                                              if (!is.data.frame(sample.sheet)) {
+                                                  stop("invalid value for sample.sheet")
+                                              }
+                                              if (!("barcode" %in% colnames(sample.sheet))) {
+                                                  sample.sheet <- RnBeads:::check.barcode(sample.sheet)
+                                                  if (is.null(sample.sheet)) {
+                                                      rnb.error("sample.sheet does not contain column barcode")
+                                                  }
+                                                  if (verbose) {
+                                                      RnBeads:::rnb.info("Added column barcode to the provided sample annotation table")
+                                                  }
+                                              }
+                                          }
+                                          if (is.null(barcodes) && is.null(sample.sheet)) {
+                                              stop("invalid value for barcodes and/or sample.sheet")
+                                          }
+                                          if (!is.null(barcodes) && any(is.na(barcodes))) {
+                                              stop("invalid value for barcodes: missing values")
+                                          }
+                                          if (ncol(sample.sheet) < 2) {
+                                              rnb.error("The sample annotation table has less than two columns. Check the \"default.table.separator\" option")
+                                          }
+                                          if (RnBeads:::check.idat.subdirs(base.dir)) {
+                                              if (verbose) {
+                                                rnb.info("Found subdirectores with idat files; creating symbolic links")
+                                            }
+                                            base.dir <- prepare.idat.dir(base.dir)
+                                            if (is.null(base.dir)) {
+                                                rnb.error("Could not create temporary directory or create links to idat files")
+                                            }
+                                            fn <- attr(base.dir, "failed")
+                                            if (fn != 0) {
+                                                rnb.warning(paste("Could not create links to", fn,
+                                                    "idat files; these files will be ignored"))
+                                            }
+                                            rm(fn)
+                                        }
+                                        if (!is.null(sample.sheet)) {
+                                            fn.base <- sample.sheet[, "barcode"]
+                                            nsamp <- nrow(sample.sheet)
+                                        } else {
+                                            fn.base <- barcodes
+                                            nsamp <- length(barcodes)
+                                        }
+                                        fn.expected <- unlist(lapply(fn.base, paste, c("Red.idat",
+                                            "Grn.idat"), sep = "_"))
+                                        fn.available <- list.files(base.dir, pattern = "idat", recursive = TRUE,
+                                            full.names = TRUE)
+                                        fn.available.short <- sapply(strsplit(fn.available, split = .Platform$file.sep),
+                                            function(x) x[length(x)])
+                                        fn.map <- match(fn.expected, fn.available.short)
+                                        fn.missing <- which(is.na(fn.map))
+                                        if (length(fn.missing) > 0) {
+                                            rnb.error(sprintf("Some IDAT files are not present in the supplied base directory, for instance %s",
+                                                paste(fn.expected[fn.missing[1:min(6, length(fn.missing))]],
+                                                    collapse = ", ")))
+                                        }
+                                        idat.fnames <- fn.available[fn.map]
+                                        idat.red.fnames <- idat.fnames[2 * (1:nsamp) - 1]
+                                        idat.grn.fnames <- idat.fnames[2 * (1:nsamp)]
+                                        platform <- RnBeads:::rnb.detect.infinium.platform(idat.fnames)
+                                        if (verbose) {
+                                            txt <- c(probes27 = "HumanMethylation27", probes450 = "HumanMethylation450",
+                                                probesEPIC = "MethylationEPIC")
+                                            RnBeads:::rnb.info(paste("Detected platform:", txt[platform]))
+                                            rm(txt)
+                                        }
+                                        annot <- rnb.annotation2data.frame(rnb.get.annotation(platform))
+                                        annot.ctrls <- rnb.get.annotation(gsub("probes", "controls",
+                                            platform))
+                                        nprobes <- sum(rnb.annotation.size(platform))
+                                        ncprobes <- nrow(annot.ctrls)
+                                        if (platform == "probesEPIC") {
+                                            ctrls.address.col <- "ID"
+                                            ctrls.target.col <- "Target"
+                                            neg.ctrl.indexes <- which(annot.ctrls[["Target"]] ==
+                                                "NEGATIVE")
+                                        }
+                                        else if (platform == "probes450") {
+                                            ctrls.address.col <- "ID"
+                                            ctrls.target.col <- "Target"
+                                            neg.ctrl.indexes <- which(annot.ctrls[["Target"]] ==
+                                                "NEGATIVE")
+                                        }
+                                        else if (platform == "probes27") {
+                                            ctrls.address.col <- "Address"
+                                            ctrls.target.col <- "Type"
+                                            neg.ctrl.indexes <- which(annot.ctrls[["Type"]] == "Negative")
+                                        }
+                                        tIred <- which(annot$Color == "Red")
+                                        tIgrn <- which(annot$Color == "Grn")
+                                        tII <- which(annot$Design == "II")
+                                        probes <- character(length = nprobes)
+                                        if (useff) {
+                                            dpvals <- ff(NA_real_, dim = c(nprobes, nsamp), dimnames = list(NULL,
+                                                NULL), vmode = "double")
+                                            M <- ff(NA_real_, dim = c(nprobes, nsamp), dimnames = list(NULL,
+                                                NULL), vmode = "double")
+                                            U <- ff(NA_real_, dim = c(nprobes, nsamp), dimnames = list(NULL,
+                                                NULL), vmode = "double")
+                                            M0 <- ff(NA_real_, dim = c(nprobes, nsamp), dimnames = list(NULL,
+                                                NULL), vmode = "double")
+                                            U0 <- ff(NA_real_, dim = c(nprobes, nsamp), dimnames = list(NULL,
+                                                NULL), vmode = "double")
+                                            beadsM <- ff(NA_integer_, dim = c(nprobes, nsamp), dimnames = list(NULL,
+                                                NULL))
+                                            beadsU <- ff(NA_integer_, dim = c(nprobes, nsamp), dimnames = list(NULL,
+                                                NULL))
+                                        }
+                                        else {
+                                            dpvals <- matrix(NA_real_, nrow = nprobes, ncol = nsamp)
+                                            M <- matrix(NA_real_, nrow = nprobes, ncol = nsamp)
+                                            U <- matrix(NA_real_, nrow = nprobes, ncol = nsamp)
+                                            M0 <- matrix(NA_real_, nrow = nprobes, ncol = nsamp)
+                                            U0 <- matrix(NA_real_, nrow = nprobes, ncol = nsamp)
+                                            beadsM <- matrix(NA_integer_, nrow = nprobes, ncol = nsamp)
+                                            beadsU <- matrix(NA_integer_, nrow = nprobes, ncol = nsamp)
+                                        }
+                                        qc.int <- list()
+                                        qc.int$Cy3 <- matrix(NA_real_, nrow = ncprobes, ncol = nsamp,
+                                            dimnames = list(annot.ctrls[[ctrls.address.col]], NULL))
+                                        qc.int$Cy5 <- matrix(NA_real_, nrow = ncprobes, ncol = nsamp,
+                                            dimnames = list(annot.ctrls[[ctrls.address.col]], NULL))
+                                        INTENSITY.SUMMARIZATION.INFO <- list(probesEPIC = list(typeIred = list(Design = "I",
+                                            Color = "Red", Msource = "Red", Usource = "Red", Maddress = "AddressB",
+                                            Uaddress = "AddressA"), typeIgrn = list(Design = "I",
+                                            Color = "Grn", Msource = "Grn", Usource = "Grn", Maddress = "AddressB",
+                                            Uaddress = "AddressA"), typeII = list(Design = "II",
+                                            Color = "Both", Msource = "Grn", Usource = "Red", Maddress = "AddressA",
+                                            Uaddress = "AddressA")), probes450 = list(typeIred = list(Design = "I",
+                                            Color = "Red", Msource = "Red", Usource = "Red", Maddress = "AddressB",
+                                            Uaddress = "AddressA"), typeIgrn = list(Design = "I",
+                                            Color = "Grn", Msource = "Grn", Usource = "Grn", Maddress = "AddressB",
+                                            Uaddress = "AddressA"), typeII = list(Design = "II",
+                                            Color = "Both", Msource = "Grn", Usource = "Red", Maddress = "AddressB",
+                                            Uaddress = "AddressA")), probes27 = list(typeIred = list(Design = "I",
+                                            Color = "red", Msource = "Red", Usource = "Red", Maddress = "AddressB",
+                                            Uaddress = "AddressA"), typeIgrn = list(Design = "I",
+                                            Color = "green", Msource = "Grn", Usource = "Grn", Maddress = "AddressB",
+                                            Uaddress = "AddressA")))
+                                        probe.categories <- INTENSITY.SUMMARIZATION.INFO[[platform]]
+                                        get.OOB.channel <- function(channel) {
+                                            if (channel == "Red") {
+                                                return("Grn")
+                                            }
+                                            else if (channel == "Grn") {
+                                                return("Red")
+                                            }
+                                            else {
+                                                stop("Wrong input for channel")
+                                            }
+                                        }
+                                        translate.channel.name <- function(channel) {
+                                            if (channel == "Red") {
+                                                return("Cy5")
+                                            }
+                                            else if (channel == "Cy5") {
+                                                return("Red")
+                                            }
+                                            else if (channel == "Grn") {
+                                                return("Cy3")
+                                              }
+                                              else if (channel == "Cy3") {
+                                                  return("Grn")
+                                              }
+                                              else {
+                                                  stop("Unrecognized channel")
+                                              }
+                                          }
+                                          probes <- annot[["ID"]]
+                                          for (pcind in 1:length(probe.categories)) {
+                                              probe.categories[[pcind]]$Indices <- which(annot$Design ==
+                                                  probe.categories[[pcind]]$Design & annot$Color ==
+                                                  probe.categories[[pcind]]$Color)
+                                              probe.categories[[pcind]]$Maddress <- annot[probe.categories[[pcind]]$Indices,
+                                                  probe.categories[[pcind]]$Maddress]
+                                              probe.categories[[pcind]]$Uaddress <- annot[probe.categories[[pcind]]$Indices,
+                                                  probe.categories[[pcind]]$Uaddress]
+                                          }
+                                          for (sid in 1:nsamp) {
+                                              idatfile.red <- idat.red.fnames[sid]
+                                              idatfile.grn <- idat.grn.fnames[sid]
+                                              if (!file.exists(idatfile.red)) {
+                                                  rnb.error(sprintf("IDAT file not found: %s", idatfile.red))
+                                              }
+                                              if (!file.exists(idatfile.grn)) {
+                                                  rnb.error(sprintf("IDAT file not found: %s", idatfile.grn))
+                                              }
+                                              int.files <- list()
+                                              int.files[["Red"]] <- readIDAT(idatfile.red)
+                                              # function (file, what = c("all", "IlluminaID", "nSNPsRead"))
+                                              file = idatfile.red
+                                              what = c("all", "IlluminaID", "nSNPsRead")
+                                              {
+                                                  stopifnot(is.character(file) || length(file) != 0)
+                                                  file <- path.expand(file)
+                                                  if (!file.exists(file)) {
+                                                      stop("Unable to find file ", file)
+                                                  }
+                                                  if (grepl("\\.gz", file)) {
+                                                    con <- gzfile(file, "rb")                                                    
+                                                  } else {                                                    
+                                                    con <- file(file, "rb")
+                                                  }
+                                                  on.exit({
+                                                      close(con)
+                                                  })
+                                                  what <- match.arg(what)
+                                                  magic <- readChar(con, nchars = 4)
+                                                  if (magic != "IDAT") {
+                                                      stop("Cannot read IDAT file. File format error. Unknown magic: ", 
+                                                          magic)
+                                                  }
+                                                  version <- readBin(con, what = "integer", size = 4, n = 1, 
+                                                      signed = TRUE, endian = "little")
+                                                  if (version == 1) {
+                                                      if (what != "all") 
+                                                          stop("This file is encrypted. For encrypted files we need `what` equal to `all`.")
+                                                      res <- readIDAT_enc(file)
+                                                  }
+                                                  else if (version == 3) {
+                                                      # res <-  illuminaio:::readIDAT_nonenc(file, what = c("all", "IlluminaID", "nSNPsRead"))
+                                                      # function (file, what = c("all", "IlluminaID", "nSNPsRead"))
+                                                      { 
+                                                          readByte <- function(con, n = 1, ...) {
+                                                              readBin(con, what = "integer", n = n, size = 1, endian = "little",
+                                                                  signed = FALSE)
+                                                          }
+                                                          readShort <- function(con, n = 1, ...) {
+                                                              readBin(con, what = "integer", n = n, size = 2, endian = "little",
+                                                                  signed = FALSE)
+                                                          }
+                                                          readInt <- function(con, n = 1, ...) {
+                                                              readBin(con, what = "integer", n = n, size = 4, endian = "little",
+                                                                  signed = TRUE)
+                                                          }
+                                                          readLong <- function(con, n = 1, ...) {
+                                                              readBin(con, what = "integer", n = n, size = 8, endian = "little",
+                                                                  signed = TRUE)
+                                                          }
+                                                          readString <- function(con, ...) {
+                                                              m <- readByte(con, n = 1)
+                                                              n <- m%%128
+                                                              shift <- 0L
+                                                              while (m%/%128 == 1) {
+                                                                  m <- readByte(con, n = 1)
+                                                                  shift <- shift + 7L
+                                                                  k <- (m%%128) * 2^shift
+                                                                  n <- n + k
+                                                              }
+                                                              readChar(con, nchars = n)
+                                                          }
+                                                          readField <- function(con, field) {
+                                                              switch(field, IlluminaID = readInt(con = con, n = nSNPsRead),
+                                                                  SD = readShort(con = con, n = nSNPsRead), Mean = readShort(con = con,
+                                                                      n = nSNPsRead), NBeads = readByte(con = con,
+                                                                      n = nSNPsRead), MidBlock = {
+                                                                      nMidBlockEntries <- readInt(con = con, n = 1)
+                                                                      MidBlock <- readInt(con = con, n = nMidBlockEntries)
+                                                                  }, RedGreen = readInt(con = con, n = 1), MostlyNull = readString(con = con),
+                                                                  Barcode = readString(con = con), ChipType = readString(con = con),
+                                                                  MostlyA = readString(con = con), Unknown.1 = readString(con = con),
+                                                                  Unknown.2 = readString(con = con), Unknown.3 = readString(con = con),
+                                                                  Unknown.4 = readString(con = con), Unknown.5 = readString(con = con),
+                                                                  Unknown.6 = readString(con = con), Unknown.7 = readString(con = con),
+                                                                  RunInfo = {
+                                                                      nRunInfoBlocks <- readInt(con = con, n = 1)
+                                                                      naValue <- as.character(NA)
+                                                                      RunInfo <- matrix(naValue, nrow = nRunInfoBlocks,
+                                                                        ncol = 5)
+                                                                      colnames(RunInfo) <- c("RunTime", "BlockType",
+                                                                        "BlockPars", "BlockCode", "CodeVersion")
+                                                                      for (ii in seq_len(nRunInfoBlocks)) {
+                                                                        for (jj in 1:5) {
+                                                                          RunInfo[ii, jj] <- readString(con = con)
+                                                                        }
+                                                                      }
+                                                                      RunInfo
+                                                                  }, stop("readIDAT_nonenc: unknown field"))
+                                                          }
+                                                          if (!(is.character(file) || try(isOpen(file))))
+                                                              stop("argument 'file' needs to be either a character or an open, seekable connection")
+                                                          what <- match.arg(what)
+                                                          if (is.character(file)) {
+                                                              stopifnot(length(file) == 1)
+                                                              file <- path.expand(file)
+                                                              stopifnot(file.exists(file))
+                                                              fileSize <- file.info(file)$size
+                                                              if (grepl("\\.gz$", file))
+                                                                  con <- gzfile(file, "rb")
+                                                              else con <- file(file, "rb")
+                                                              on.exit({
+                                                                  close(con)
+                                                              })
+                                                          } else {
+                                                              con <- file
+                                                              fileSize <- 0
+                                                          }
+                                                          if (!isSeekable(con))
+                                                              stop("The file connection needs to be seekable")
+                                                          magic <- readChar(con, nchars = 4)
+                                                          if (magic != "IDAT") {
+                                                              stop("Cannot read IDAT file. File format error. Unknown magic: ",
+                                                                  magic)
+                                                          }
+                                                          version <- readLong(con, n = 1)
+                                                          if (version < 3) {
+                                                              stop("Cannot read IDAT file. Unsupported IDAT file format version: ",
+                                                                  version)
+                                                          }
+                                                          nFields <- readInt(con, n = 1)
+                                                          fields <- matrix(0, nrow = nFields, ncol = 3)
+                                                          colnames(fields) <- c("fieldCode", "byteOffset", "Bytes")
+                                                          for (ii in 1:nFields) {
+                                                              fields[ii, "fieldCode"] <- readShort(con, n = 1)
+                                                              fields[ii, "byteOffset"] <- readLong(con, n = 1)
+                                                          }
+                                                          knownCodes <- c(nSNPsRead = 1000, IlluminaID = 102, SD = 103,
+                                                              Mean = 104, NBeads = 107, MidBlock = 200, RunInfo = 300,
+                                                              RedGreen = 400, MostlyNull = 401, Barcode = 402, ChipType = 403,
+                                                              MostlyA = 404, Unknown.1 = 405, Unknown.2 = 406, Unknown.3 = 407,
+                                                              Unknown.4 = 408, Unknown.5 = 409, Unknown.6 = 410, Unknown.7 = 510)
+                                                          nNewFields <- 1
+                                                          rownames(fields) <- paste("Null", 1:nFields)
+                                                          for (ii in 1:nFields) {
+                                                              temp <- match(fields[ii, "fieldCode"], knownCodes)
+                                                              if (!is.na(temp)) {
+                                                                  rownames(fields)[ii] <- names(knownCodes)[temp]
+                                                              }
+                                                              else {
+                                                                  rownames(fields)[ii] <- paste("newField", nNewFields,
+                                                                      sep = ".")
+                                                                  nNewFields <- nNewFields + 1
+                                                              }
+                                                          }
+                                                          stopifnot(min(fields[, "byteOffset"]) == fields["nSNPsRead",
+                                                              "byteOffset"])
+                                                          seek(con, where = fields["nSNPsRead", "byteOffset"], origin = "start")
+                                                          nSNPsRead <- readInt(con, n = 1)
+                                                          if (what == "nSNPsRead")
+                                                              return(nSNPsRead)
+                                                          if (what == "IlluminaID") {
+                                                              where <- fields["IlluminaID", "byteOffset"]
+                                                              seek(con, where = where, origin = "start")
+                                                              res <- readField(con = con, field = "IlluminaID")
+                                                              return(as.character(res))
+                                                          }
+                                                          res <- rownames(fields)
+                                                          names(res) <- res
+                                                          res <- res[order(fields[res, "byteOffset"])]
+                                                          res <- res[names(res) != "nSNPsRead"]
+                                                          res <- lapply(res, function(xx) {
+                                                              where <- fields[xx, "byteOffset"]
+                                                              seek(con, where = where, origin = "start")
+                                                              readField(con = con, field = xx)
+                                                          })
+                                                          Unknowns <- list(MostlyNull = res$MostlyNull, MostlyA = res$MostlyA,
+                                                              Unknown.1 = res$Unknown.1, Unknown.2 = res$Unknown.2,
+                                                              Unknown.3 = res$Unknown.3, Unknown.4 = res$Unknown.4,
+                                                              Unknown.5 = res$Unknown.5)
+                                                          Quants <- cbind(res$Mean, res$SD, res$NBeads)
+                                                          colnames(Quants) <- c("Mean", "SD", "NBeads")
+                                                          rownames(Quants) <- as.character(res$IlluminaID)
+                                                          res <- list(fileSize = fileSize, versionNumber = version,
+                                                              nFields = nFields, fields = fields, nSNPsRead = nSNPsRead,
+                                                              Quants = Quants, MidBlock = res$MidBlock, RedGreen = res$RedGreen,
+                                                              Barcode = res$Barcode, ChipType = res$ChipType, RunInfo = res$RunInfo,
+                                                              Unknowns = Unknowns)
+                                                          res
+                                                      } 
+                                                      
+                                                      
+                                                      
+                                                      
+                                                      
+                                                      
+                                                      
+                                                      
+                                                      
+                                                      
+                                                      
+                                                      
+                                                      
+                                                      
+                                                      
+                                                      
+                                                  }
+                                                  else {
+                                                      stop("Cannot read IDAT file. Unsupported IDAT file format version: ", 
+                                                          version)
+                                                  }
+                                                  return(res)
+                                              }
+                                              
+                                              
+                                              
+                                              int.files[["Grn"]] <- readIDAT(idatfile.grn)
+                                              ctrls.indexes <- match(annot.ctrls[[ctrls.address.col]],
+                                                  int.files[["Red"]]$MidBlock)
+                                              qc.int$Cy5[!is.na(ctrls.indexes), sid] <- int.files[["Red"]]$Quant[na.omit(ctrls.indexes),
+                                                  1L]
+                                              qc.int$Cy3[!is.na(ctrls.indexes), sid] <- int.files[["Grn"]]$Quant[na.omit(ctrls.indexes),
+                                                  1L]
+                                              for (pc in probe.categories) {
+                                                  Mmap <- match(pc$Maddress, int.files[[pc$Msource]]$MidBlock)
+                                                  Umap <- match(pc$Uaddress, int.files[[pc$Usource]]$MidBlock)
+                                                  M[pc$Indices, sid] <- int.files[[pc$Msource]]$Quant[Mmap,
+                                                      1L]
+                                                  U[pc$Indices, sid] <- int.files[[pc$Usource]]$Quant[Umap,
+                                                      1L]
+                                                  if (pc$Design == "I") {
+                                                      M0[pc$Indices, sid] <- int.files[[get.OOB.channel(pc$Msource)]]$Quant[Mmap,
+                                                        1L]
+                                                      U0[pc$Indices, sid] <- int.files[[get.OOB.channel(pc$Usource)]]$Quant[Umap,
+                                                        1L]
+                                                  }
+                                                  beadsM[pc$Indices, sid] <- int.files[[pc$Msource]]$Quant[Mmap,
+                                                      3L]
+                                                  beadsU[pc$Indices, sid] <- int.files[[pc$Usource]]$Quant[Umap,
+                                                      3L]
+                                                  Mdist.fun <- ecdf(qc.int[[translate.channel.name(pc$Msource)]][neg.ctrl.indexes,
+                                                      sid])
+                                                  Udist.fun <- ecdf(qc.int[[translate.channel.name(pc$Usource)]][neg.ctrl.indexes,
+                                                      sid])
+                                                  mpval <- 1 - Mdist.fun(M[pc$Indices, sid])
+                                                  upval <- 1 - Udist.fun(U[pc$Indices, sid])
+                                                  dpvals[pc$Indices, sid] <- rowMins(cbind(mpval, upval))
+                                              }
+                                          }
+                                          if (verbose) {
+                                              rnb.logger.completed()
+                                          }
+                                          if (platform %in% c("probes27", "probes450")) {
+                                              rnb.platform <- paste0(gsub("probes", "", platform),
+                                                  "k")
+                                          }
+                                          else {
+                                              rnb.platform <- "EPIC"
+                                          }
+                                          if (is.null(sample.sheet)) {
+                                              sample.sheet <- data.frame(barcodes = barcode)
+                                          }
+                                          object <- RnBeadRawSet(pheno = sample.sheet, probes = probes,
+                                              platform = rnb.platform, M = M, U = U, M0 = M0, U0 = U0,
+                                              bead.counts.M = beadsM, bead.counts.U = beadsU, p.values = dpvals,
+                                              qc = qc.int, region.types = rnb.region.types.for.analysis("hg19"),
+                                              useff = useff, summarize.bead.counts = TRUE, ffcleanup = rnb.getOption("enforce.destroy.disk.dumps"))
+                                          return(object)
+                                      } 
+                                          
+                                          
+                                          
+                                          
+                                          
+                                          
+                                          
+                                          
+                                          
+                                  }
+                                  gc()
+                                  rnb.cleanMem()
+                              } else if (data.type %in% c("GS.report", "infinium.GS.report")) {
+                                  if (!((is.character(data.source) || is.list(data.source)) &&
+                                      length(data.source) %in% c(1L, 2L) && (!is.na(data.source[1])))) {
+                                      stop("invalid value for data.source; expected one-element character")
+                                  }
+                                  if (!file.exists(data.source[[1]]) || file.info(data.source)[1,
+                                      "isdir"]) {
+                                      rnb.error("invalid data.source parameter, GS report file not found, or is a directory")
+                                  }
+                                  if (is.character(data.source) && length(data.source) ==
+                                      2) {
+                                      pd <- data.source[2]
+                                  }
+                                  else if (is.list(data.source) && length(data.source) ==
+                                      2) {
+                                      pd <- data.source[[2]]
+                                  }
+                                  else {
+                                      pd <- NULL
+                                  }
+                                  if (rnb.getOption("import.table.separator") != "\t") {
+                                      rnb.warning("The table separator is not tab: this is unusual for Genome Studio reports ")
+                                  }
+                                  result <- read.GS.report(data.source[1], pd = pd, verbose = verbose)
+                              } else if (data.type %in% c("GEO", "infinium.GEO")) {
+                                  if (!(is.character(data.source) && length(data.source) ==
+                                      1 && isTRUE(data.source != ""))) {
+                                      stop("invalid value for data.source; expected one-element character")
+                                  }
+                                  result <- rnb.read.geo(data.source)
+                              } else if (data.type %in% c("bed.dir", "bs.bed.dir")) {
+                                  if (!(is.character(data.source) || is.list(data.source)) &&
+                                      !length(data.source) %in% 1L:3L) {
+                                      stop("invalid value for data.source; expected list or character of length 1 to 3")
+                                  }
+                                  data.source <- as.list(data.source)
+                                  if (length(data.source) == 1L && is.null(data.source[[1]])) {
+                                      msg <- "invalid data.source parameter, data directory should be provided"
+                                      rnb.error(msg)
+                                  }
+                                  if (!is.null(data.source[[1L]]) && (!file.exists(data.source[[1]]) ||
+                                      !file.info(data.source[[1]])[1, "isdir"])) {
+                                      rnb.error("invalid data.source parameter, bed.dir is not found, or is not directory")
+                                  }
+                                  if (length(data.source) == 1L) {
+                                      data.source <- c(data.source, list(NULL))
+                                  }
+                                  else {
+                                      if (is.character(data.source[[2]])) {
+                                          if (!file.exists(data.source[[2]]) || file.info(data.source[[2]])[1,
+                                            "isdir"]) {
+                                            rnb.error("invalid data.source parameter, sample annotation file is not found, or is a directory")
+                                          }
+                                      }
+                                  }
+                                  msg <- "No column with file names specified: will try to find one"
+                                  if (length(data.source) < 3L) {
+                                      filename.column = NA
+                                      if (verbose) {
+                                        rnb.info(msg)
+                                    }
+                                }
+                                else {
+                                    filename.column = data.source[[3L]]
+                                }
+                                if (dry.run) {
+                                    nrows = 10000L
+                                }
+                                else {
+                                    nrows = -1L
+                                }
+                                if (rnb.getOption("import.bed.style") == "EPP") {
+                                    result <- read.bed.files(base.dir = data.source[[1]],
+                                        sample.sheet = data.source[[2]], file.names.col = filename.column,
+                                        verbose = verbose, skip.lines = 0, pos.coord.shift = 0,
+                                        is.epp.style = TRUE, mean.meth.col = NA, coverage.col = NA,
+                                        nrows = nrows)
+                                }
+                                else if (rnb.getOption("import.bed.style") == "Encode") {
+                                    result <- read.bed.files(base.dir = data.source[[1]],
+                                        sample.sheet = data.source[[2]], file.names.col = filename.column,
+                                        verbose = verbose, chr.col = rnb.getOption("import.bed.columns")["chr"],
+                                        start.col = rnb.getOption("import.bed.columns")["start"],
+                                        end.col = rnb.getOption("import.bed.columns")["end"],
+                                        strand.col = rnb.getOption("import.bed.columns")["strand"],
+                                        mean.meth.col = 11L, coverage.col = 10L, c.col = rnb.getOption("import.bed.columns")["c"],
+                                        t.col = rnb.getOption("import.bed.columns")["t"],
+                                        nrows = nrows)
+                                }
+                                else if (rnb.getOption("import.bed.style") == "bismarkCytosine") {
+                                    result <- read.bed.files(base.dir = data.source[[1]],
+                                        sample.sheet = data.source[[2]], file.names.col = filename.column,
+                                        verbose = verbose, pos.coord.shift = 1L, skip.lines = 0,
+                                        chr.col = 1L, start.col = 2L, end.col = NA, c.col = 4L,
+                                        t.col = 5L, strand.col = 3L, mean.meth.col = NA,
+                                        coverage.col = NA, coord.shift = 0L, nrows = nrows)
+                                }
+                                else if (rnb.getOption("import.bed.style") == "bismarkCov") {
+                                    result <- read.bed.files(base.dir = data.source[[1]],
+                                        sample.sheet = data.source[[2]], file.names.col = filename.column,
+                                        verbose = verbose, skip.lines = 0, chr.col = 1L,
+                                        start.col = 2L, end.col = NA, c.col = 5L, t.col = 6L,
+                                        strand.col = NA, mean.meth.col = NA, coverage.col = NA,
+                                        coord.shift = 0L, nrows = nrows)
+                                }
+                                else if (rnb.getOption("import.bed.style") == "BisSNP") {
+                                    result <- read.bed.files(base.dir = data.source[[1]],
+                                        sample.sheet = data.source[[2]], file.names.col = filename.column,
+                                        verbose = verbose, pos.coord.shift = 1L, skip.lines = 1L,
+                                        chr.col = 1L, start.col = 2L, end.col = NA, c.col = NA,
+                                        t.col = NA, strand.col = 6L, mean.meth.col = 4L,
+                                        coverage.col = 5L, coord.shift = 0L, nrows = nrows)
+                                }
+                                else {
+                                    skip.lines <- 1
+                                    pos.coord.shift <- 1
+                                    result <- read.bed.files(base.dir = data.source[[1]],
+                                        sample.sheet = data.source[[2]], file.names.col = filename.column,
+                                        verbose = verbose, pos.coord.shift = pos.coord.shift,
+                                        skip.lines = skip.lines, chr.col = rnb.getOption("import.bed.columns")["chr"],
+                                        start.col = rnb.getOption("import.bed.columns")["start"],
+                                        end.col = rnb.getOption("import.bed.columns")["end"],
+                                        strand.col = rnb.getOption("import.bed.columns")["strand"],
+                                        mean.meth.col = rnb.getOption("import.bed.columns")["meth"],
+                                        coverage.col = rnb.getOption("import.bed.columns")["coverage"],
+                                        c.col = rnb.getOption("import.bed.columns")["c"],
+                                        t.col = rnb.getOption("import.bed.columns")["t"],
+                                        coord.shift = rnb.getOption("import.bed.frame.shift"),
+                                        nrows = nrows)
+                                }
+                            }
+                            else if (data.type == "rnb.set") {
+                                if (!inherits(data.source, "RnBSet")) {
+                                    stop("invalid value for data.source: expected object of type RnBSet")
+                                }
+                                result <- data.source
+                            }
+                            else if (data.type == "rnb.set.dir") {
+                                data.source <- as.list(data.source)
+                                if (length(data.source) != 1 || !file.exists(data.source[[1]])) {
+                                    rnb.error("invalid data.source parameter, rnb.set.dir not found")
+                                }
+                                result <- load.rnb.set(data.source[[1L]])
+                            }
+                            else {
+                                stop("invalid value for data.type; expected one of data.dir, idat.dir, GS.report, GEO or rnb.set")
+                            }
+                            if (inherits(result, "MethyLumiSet")) {
+                                result <- as(result, "RnBeadRawSet")
+                            }
+                            return(result)
+                        } 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                        rnb.cleanMem()
+                        if (data.type == "bed.dir" && !rnb.getOption("import.skip.object.check")) {
+                            logger.start("Checking the loaded object")
+                            valid <- check.rnb.biseq.set(object, verbose = TRUE)
+                            if (valid) {
+                                logger.info("The loaded object is valid")
+                            }
+                            else {
+                                logger.warning(c("The loaded object contains invalid information (see details above).", 
+                                  "Please check the whether the data source arguments as well as the data import options, like table separator, BED style or BED column assignment, are set correctly"))
+                            }
+                            rnb.cleanMem()
+                            logger.completed()
+                        }
+                    }
+                    if (inherits(data.source, "RnBSet")) {
+                        d.source <- paste("object of type", class(data.source))
+                    }
+                    else {
+                        d.source <- as.character(data.source[1])
+                    }
+                    logger.status(c("Loaded data from", d.source))
+                    if (rnb.getOption("import.sex.prediction") && inherits(object, 
+                        c("RnBeadRawSet", "RnBiseqSet")) && object@target %in% 
+                        c("probes450", "probesEPIC", "CpG")) {
+                        object <- rnb.execute.sex.prediction(object)
+                        if (is.null(object@inferred.covariates$sex)) {
+                            object@inferred.covariates$sex <- FALSE
+                        }
+                        else {
+                            logger.status("Predicted sex for the loaded samples")
+                        }
+                    }
+                    report <- rnb.section.import(report, object, data.source, 
+                        data.type)
+                    logger.status("Added data loading section to the report")
+                    if (inherits(object, "RnBSet")) {
+                        d.source <- paste("object of type", class(data.source))
+                        nsamples <- length(samples(object))
+                        nsites <- nsites(object)
+                    }
+                    else {
+                        nsamples <- dim(phenoData(object))[1]
+                        nprobes <- dim(betas(object))[1]
+                    }
+                    logger.status(c("Loaded", nsamples, "samples and", nsites, 
+                        "sites"))
+                    logger.info(c("Output object is of type", class(object)))
+                    return(list(rnb.set = object, report = report))
+                }
+
+
+                
+
+
+
+
+                module.complete(result$report, close.report, show.report)
+                # return(result)
+            }
+
+
+
+
+            rnb.set <- result$rnb.set
+            rm(result)
+            RnBeads:::rnb.cleanMem()
+        } else {
+            stop("invalid value for data.source")
+        }
+    } else if (inherits(data.source, "RnBSet")) {
+        rnb.set <- data.source
+    } else if (inherits(data.source, "MethyLumiSet")) {
+        rnb.set <- as(data.source, "RnBeadSet")
+    } else {
+        logger.warning("Cannot proceed with the supplied data.source. Check the option import")
+        logger.completed()
+        if (!is.null(logfile)) {
+            logger.close()
+        }
+        return(invisible(NULL))
+    }
+    if (save.rdata) {
+        analysis.options <- rnb.options()
+        save.rnb.set(rnb.set, file.path(dir.reports, "rnbSet_unnormalized"),
+            archive = rnb.getOption("gz.large.files"))
+        save(analysis.options, file = file.path(dir.reports,
+            "analysis_options.RData"))
+    }
+    if (rnb.getOption("qc")) {
+        update.index(rnb.set, "quality_control")
+        RnBeads:::rnb.cleanMem()
+        rnb.run.qc(rnb.set, dir.reports)
+        
+        
+        
+        
+        # function (rnb.set, dir.reports, init.configuration = !file.exists(file.path(dir.reports,  "configuration")), close.report = TRUE, show.report = FALSE) 
+
+        # rnb.set, dir.reports
+        init.configuration = FALSE#!file.exists(file.path(dir.reports,  "configuration"))
+        close.report = TRUE
+        show.report = FALSE
+        {
+            RnBeads:::validate.module.parameters(rnb.set, dir.reports, close.report, show.report)
+            RnBeads:::module.start.log("Quality Control")
+            report <- RnBeads:::init.pipeline.report("quality_control", dir.reports, init.configuration)
+            optionlist <- rnb.options("qc.boxplots", "qc.barplots", "qc.negative.boxplot")
+            if (inherits(rnb.set, "RnBeadSet")) {
+                snp.options <- list("qc.snp.heatmap", "qc.snp.barplot", 
+                    "qc.snp.boxplot", "qc.snp.distances", "qc.snp.purity", 
+                    "qc.cnv", "qc.cnv.refbased")
+                snp.options <- do.call(rnb.options, snp.options)
+                optionlist <- c(optionlist, snp.options)
+                snp.options <- any(unlist(snp.options, use.names = FALSE))
+            } else {
+                snp.options <- FALSE
+            }
+            report <- RnBeads:::rnb.add.optionlist(report, optionlist)
+            # report <- RnBeads:::rnb.step.quality(rnb.set, report)
+
+
+            # > RnBeads:::rnb.step.quality
+            # function (rnb.set, report)
+            {
+                if (!inherits(rnb.set, "RnBSet")) {
+                    stop("invalid value for rnb.set")
+                }
+                if (!inherits(report, "Report")) {
+                    stop("invalid value for report")
+                }
+                if (inherits(rnb.set, "RnBeadSet")) {
+                    covg.lists <- NULL
+                } else {
+                    covg.lists <- rnb.execute.quality(rnb.set)
+                }
+                # report <- RnBeads:::rnb.section.quality(report, rnb.set, covg.lists = covg.lists)
+                # function (report, rnb.set, qc.boxplots = rnb.getOption("qc.boxplots"),
+                #     qc.barplots = rnb.getOption("qc.barplots"), qc.negative.boxplot = rnb.getOption("qc.negative.boxplot"),
+                #     qc.coverage.plots = rnb.getOption("qc.coverage.plots"), qc.coverage.histograms = rnb.getOption("qc.coverage.histograms"),
+                #     qc.coverage.violins = rnb.getOption("qc.coverage.violins"),
+                #     qc.coverage.threshold.plot = rnb.getOption("qc.coverage.threshold.plot"),
+                #     covg.lists = NULL)
+
+                  qc.boxplots = rnb.getOption("qc.boxplots")
+                  qc.barplots = rnb.getOption("qc.barplots")
+                  qc.negative.boxplot = rnb.getOption("qc.negative.boxplot")
+                  qc.coverage.plots = rnb.getOption("qc.coverage.plots")
+                  qc.coverage.histograms = rnb.getOption("qc.coverage.histograms")
+                  qc.coverage.violins = rnb.getOption("qc.coverage.violins")
+                  qc.coverage.threshold.plot = rnb.getOption("qc.coverage.threshold.plot")
+                  # covg.lists = NULL
+
+                { 
+                    if (!inherits(report, "Report")) {
+                        stop("invalid value for report")
+                    }
+                    if (!inherits(rnb.set, "RnBSet")) {
+                        stop("invalid value for rnb.set")
+                    }
+                    if (!RnBeads:::parameter.is.flag(qc.boxplots)) {
+                        stop("invalid value for qc.boxplots; expected TRUE or FALSE")
+                    }
+                    if (!RnBeads:::parameter.is.flag(qc.barplots)) {
+                        stop("invalid value for qc.barplots; expected TRUE or FALSE")
+                    }
+                    if (!RnBeads:::parameter.is.flag(qc.negative.boxplot)) {
+                        stop("invalid value for qc.negative.boxplots; expected TRUE or FALSE")
+                    }
+                    if (!RnBeads:::parameter.is.flag(qc.coverage.plots)) {
+                        stop("invalid value for qc.coverage.plots; expected TRUE or FALSE")
+                    }
+                    if (!RnBeads:::parameter.is.flag(qc.coverage.histograms)) {
+                        stop("invalid value for qc.coverage.histograms; expected TRUE or FALSE")
+                    }
+                    if (!RnBeads:::parameter.is.flag(qc.coverage.violins)) {
+                        stop("invalid value for qc.coverage.violins; expected TRUE or FALSE")
+                    }
+                    logger.start("Quality Control Section")
+                    report <- rnb.add.section(report, "Quality Control", NULL)
+                    txt <- NULL
+                    if (inherits(rnb.set, "RnBeadSet")) {
+                        if (is.null(qc(rnb.set))) {
+                            txt <- c("The supplied dataset contains no quality information, therefore, quality control graphics could ",
+                                "not be generated.")
+                            rnb.add.paragraph(report, txt)
+                            logger.info("No quality information present in the dataset")
+                        } else {
+                            txt <- "This section contains quality control plots and statistics for the methylation data."
+                            rnb.add.paragraph(report, txt)
+                            if (qc.boxplots) {
+                                txt <- c("Each box plot below shows the signal distribution of quality control probes across all ",
+                                  "samples. The control box plots are separated by control types. Detailed description of the ",
+                                  "control probes is given in the RnBeads vignette.")
+                                report <- rnb.add.section(report, "Quality Control Box Plots",
+                                  txt, level = 2)
+                                report <- RnBeads:::add.qc.boxplots(report, rnb.set)
+                                logger.status("Added quality control box plots")
+                            }
+                            if (qc.barplots) {
+                                txt <- c("The plots below visualize the exact signal levels at each quality control probe. Note that ",
+                                  "the scale is not standardized. Background signal is usualy at the level of 1000 to 2000.")
+                                report <- rnb.add.section(report, "Quality Control Bar Plots",
+                                  txt, level = 2)
+                                # report <- RnBeads:::add.qc.barplots(report, rnb.set, sample.batch.size = rnb.getOption("qc.sample.batch.size"))
+                                # function (report, object, sample.batch.size = 50)
+                                sample.batch.size = rnb.getOption("qc.sample.batch.size")  
+                                object = rnb.set
+                                { 
+                                    descr = "Quality control bar plots."
+                                    if (object@target == "probesEPIC") {
+                                        cmd <- rnb.get.annotation("controlsEPIC")
+                                        ctypes <- unique(cmd$Target)[unique(cmd$Target) %in%
+                                            rnb.infinium.control.targets("probesEPIC")[c(14,
+                                                4, 3, 15, 1:2, 12:13, 6, 11)]]
+                                    } else if (object@target == "probes450") {
+                                        cmd <- rnb.get.annotation("controls450")
+                                        ctypes <- unique(cmd$Target)[unique(cmd$Target) %in% 
+                                            rnb.infinium.control.targets("probes450")[c(13, 4, 
+                                                14, 3, 1:2, 11:12, 6)]]
+                                    } else if (object@target == "probes27") {
+                                        cmd <- rnb.get.annotation("controls27")
+                                        ctypes <- unique(cmd$Type)[unique(cmd$Type) %in% rnb.infinium.control.targets("probes27")[c(10, 
+                                            3, 2, 11, 1, 9, 6)]]
+                                    }
+                                    nsamp <- length(samples(object))
+                                    plot.names <- NULL
+                                    if (nsamp%%sample.batch.size == 1) {
+                                        sample.batch.size <- sample.batch.size - 5
+                                    }
+                                    portion.starts <- 0:(nsamp%/%sample.batch.size) * sample.batch.size + 
+                                        1
+                                    portion.ends <- portion.starts + sample.batch.size - 1
+                                    portion.ends[length(portion.ends)] <- nsamp
+                                    portions <- paste(portion.starts, portion.ends, sep = "-")
+                                    plots <- lapply(1:length(portions), function(portion.id) {
+                                        cplots <- lapply(ctypes, function(type) {
+                                            if (object@target == "probes450" || object@target == 
+                                                "probesEPIC") {
+                                                cmdt <- cmd[cmd[["Target"]] == type, ]
+                                                pn <- paste(type, 1:(dim(cmdt)[1]), sep = ".")
+                                            }
+                                            else if (object@target == "probes27") {
+                                                cmdt <- cmd[cmd[["Type"]] == type, ]
+                                                pn <- as.character(cmdt$Name)
+                                            }
+                                            if (portion.id == 1) 
+                                                plot.names <<- c(plot.names, pn)
+                                            plots <- lapply(pn, rnb.plot.control.barplot, rnb.set = object, 
+                                                sample.subset = portion.starts[portion.id]:portion.ends[portion.id], 
+                                                report = report, writeToFile = TRUE, numeric.names = TRUE, 
+                                                width = 8, height = 6, low.png = 100, high.png = 300, 
+                                                verbose = TRUE, name.prefix = portions[portion.id])
+                                            if (object@target == "probes450" || object@target == 
+                                                "probesEPIC") {
+                                                names(plots) <- paste(type, 1:(dim(cmdt)[1]))
+                                            }
+                                            else if (object@target == "probes27") {
+                                                names(plots) <- as.character(cmdt$Name)
+                                            }
+                                            plots
+                                        })
+                                        names(cplots) <- NULL
+                                        cplots <- unlist(cplots)
+                                        names(cplots) <- 1:length(plot.names)
+                                        cplots
+                                    })
+                                    plots <- unlist(plots)
+                                    sn <- list(`Samples #: ` = portions, `Control probe ID` = plot.names)
+                                    names(sn[[1]]) <- portions
+                                    if (object@target == "probes450" || object@target == "probesEPIC") {
+                                        names(sn[[2]]) <- 1:length(plot.names)
+                                    }
+                                    else if (object@target == "probes27") {
+                                        names(sn[[2]]) <- match(plot.names, cmd$Name[cmd$Type %in%
+                                            rnb.infinium.control.targets("probes27")[c(10, 3,
+                                                2, 11, 1, 9, 6)]])
+                                    }
+                                    report <- rnb.add.figure(report, description = descr, report.plots = plots,
+                                        setting.names = sn)
+                                } 
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                logger.status("Added quality control bar plots")
+                            }
+                            if (qc.negative.boxplot) {
+                                txt <- c("Negative control box plots visualize background intensity distributions of all analyzed ",
+                                  "samples. Samples with skewed distributions and high medians are likely to be of low quality and ",
+                                  "should be discarded from the analysis.")
+                                report <- rnb.add.section(report, "Negative Control Box Plots",
+                                  txt, level = 2)
+                                  report <- RnBeads:::add.negative.control.boxplot(report,
+                                    rnb.set, sample.batch.size = rnb.getOption("qc.sample.batch.size"))
+                                  logger.status("Added negative control boxplots")
+                              }
+                          }
+                      } else {
+                          if (qc.coverage.plots) {
+                              txt <- c("The sequencing coverage plots visualized effective read coverage at all CpGs in the sequenced ",
+                                  "genome. In case certain samples seem to have significantly decreased coverage, they should be excluded ",
+                                  "from the analysis.")
+                              report <- rnb.add.section(report, "Sequencing Coverage Plots",
+                                  txt, level = 2)
+                              report <- add.seq.coverage.plot(report, rnb.set,
+                                  covg.lists)
+                              logger.status("Added sequencing coverage boxplots")
+                          }
+                          if (qc.coverage.histograms) {
+                              txt <- c("The sequencing coverage histograms show distribution of coverage across all chromosomes. In case ",
+                                  "certain samples seem to have significantly decreased coverage, they should be excluded from the analysis.")
+                              report <- rnb.add.section(report, "Sequencing Coverage Histograms",
+                                  txt, level = 2)
+                              report <- add.seq.coverage.histograms(report, rnb.set)
+                              logger.status("Added sequencing coverage histograms")
+                          }
+                          report <- add.seq.coverage.num.sites.covg.tabs(report,
+                              rnb.set)
+                          logger.status("Added sample coverage section")
+                          if (qc.coverage.violins) {
+                              txt <- c("The plots below show an alternative approach to visualizing the coverage distribution.")
+                              report <- rnb.add.section(report, "Sequencing Coverage Violin Plots",
+                                  txt, level = 2)
+                              report <- add.seq.coverage.violins(report, rnb.set)
+                              logger.status("Added sequencing coverage violin plots")
+                          }
+                          rnb.cleanMem()
+                          if (length(qc.coverage.threshold.plot) != 0) {
+                              rplot <- rnb.plot.coverage.thresholds(rnb.set, qc.coverage.threshold.plot,
+                                  fname = "coverage_interrogated", report = report)
+                              dframe.coverages <- attr(rplot, "data")
+                              fname <- "coverage_interrogated.csv"
+                              write.csv(dframe.coverages, file = file.path(rnb.get.directory(report,
+                                  "data", TRUE), fname), row.names = FALSE)
+                              txt <- sprintf("%1.1f", range(dframe.coverages[dframe.coverages[,
+                                  2] == max(dframe.coverages[, 2]), 3]))
+                              txt <- c("In total, between ", txt[1], " and ", txt[2],
+                                  " million sites are covered in all samples of the ",
+                                  "dataset. The figure below shows the change in supports for different coverage thresholds. The exact ",
+                                  "values are available in a dedicated <a href=\"",
+                                  rnb.get.directory(report, "data"), "/", fname,
+                                  "\">comma-separated file</a> accompanying this report.")
+                              report <- rnb.add.section(report, "Sequencing Coverage Thresholds",
+                                  txt, level = 2)
+                              txt <- c("Line plot showing the number of CpG sites with a given support for different thresholds of ",
+                                  "minimal coverage. The support of a CpG site is the minimal number of samples that interrogate it.")
+                              report <- rnb.add.figure(report, txt, rplot)
+                              rm(rplot, dframe.coverages, fname)
+                          }
+                      }
+                      if (is.null(txt)) {
+                          txt <- "No quality control plots are generated because all respective options are disabled."
+                          rnb.add.paragraph(report, txt)
+                      }
+                      logger.completed()
+                      return(report)
+                  } 
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                # return(report)
+            }
+
+
+
+
+
+            if (snp.options) {
+                report <- rnb.step.snp.probes(rnb.set, report)
+            }
+            if (.hasSlot(rnb.set, "inferred.covariates") && isTRUE(rnb.set@inferred.covariates$sex)) {
+                if (inherits(rnb.set, "RnBeadRawSet")) {
+                    signal.increases <- rnb.get.XY.shifts(rnb.set)
+                }
+                else if (inherits(rnb.set, "RnBiseqSet")) {
+                    signal.increases <- rnb.get.XY.shifts.biseq(rnb.set)
+                }
+                report <- rnb.section.sex.prediction(rnb.set, signal.increases, 
+                    report)
+            }
+            if (rnb.getOption("qc.cnv")) {
+                if (inherits(rnb.set, "RnBeadRawSet")) {
+                    report <- rnb.step.cnv(rnb.set, report)
+                }
+                else {
+                    logger.info("CNV estimation only applicable for RnBeadRawSet objects")
+                    txt <- "CNV estimation can only be performed for Illumina BeadChip data sets with signal intensity values available (RnBeadRawSet)"
+                    report <- rnb.add.section(report, "Copy number variation analysis", 
+                        description = txt)
+                }
+            }
+            module.complete(report, close.report, show.report)
+            invisible(report)
+        }
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    }
+    if (rnb.getOption("preprocessing")) {
+        update.index(rnb.set, "preprocessing")
+        RnBeads:::rnb.cleanMem()
+        result <- rnb.run.preprocessing(rnb.set, dir.reports)
+        rnb.set <- result$rnb.set
+        rm(result)
+        RnBeads:::rnb.cleanMem()
+        if (save.rdata) {
+            save.rnb.set(rnb.set, file.path(dir.reports, "rnbSet_preprocessed"),
+                archive = rnb.getOption("gz.large.files"))
+        }
+    }
+    sample.count <- nrow(pheno(rnb.set))
+    if (nsites(rnb.set) * sample.count != 0) {
+        if (rnb.getOption("export.to.csv") || rnb.tracks.to.export(rnb.set)) {
+            update.index(rnb.set, "tracks_and_tables")
+            RnBeads:::rnb.cleanMem()
+            rnb.run.tnt(rnb.set, dir.reports)
+        }
+        if (rnb.getOption("inference")) {
+            update.index(rnb.set, "covariate_inference")
+            rnb.set <- rnb.run.inference(rnb.set, dir.reports)$rnb.set
+            if (save.rdata) {
+                save.rnb.set(rnb.set, file.path(dir.reports,
+                  "rnbSet_inference"), archive = rnb.getOption("gz.large.files"))
+            }
+        }
+        if (rnb.getOption("exploratory")) {
+             update.index(rnb.set, "exploratory_analysis")
+             RnBeads:::rnb.cleanMem()
+             rnb.run.exploratory(rnb.set, dir.reports)
+         }
+         if (rnb.getOption("differential")) {
+             update.index(rnb.set, "differential_methylation")
+             RnBeads:::rnb.cleanMem()
+             result.diffmeth <- rnb.run.differential(rnb.set,
+                 dir.reports)
+         }
+     }
+     update.index(rnb.set)
+     if (save.rdata) {
+         RnBeads:::rnb.cleanMem()
+         logger.start("Saving RData")
+         if (exists("result.diffmeth")) {
+             if (!is.null(result.diffmeth) && !is.null(result.diffmeth$diffmeth)) {
+                 diffmeth.path <- file.path(dir.reports, "differential_rnbDiffMeth")
+                 save.rnb.diffmeth(result.diffmeth$diffmeth, diffmeth.path)
+                 diffmeth.go.enrichment <- result.diffmeth$dm.go.enrich
+                 if (!is.null(diffmeth.go.enrichment)) {
+                   save(diffmeth.go.enrichment, file = file.path(diffmeth.path,
+                     "enrichment_go.RData"))
+                 }
+                 diffmeth.lola.enrichment <- result.diffmeth$dm.lola.enrich
+                 if (!is.null(diffmeth.lola.enrichment)) {
+                   save(diffmeth.lola.enrichment, file = file.path(diffmeth.path,
+                     "enrichment_lola.RData"))
+                 }
+             }
+             else {
+                 logger.warning("Differential methylation object not saved")
+             }
+         }
+         logger.completed()
+     }
+     RnBeads:::rnb.cleanMem()
+     logger.completed()
+     if (!is.null(logfile)) {
+         logger.close()
+     }
+     invisible(rnb.set)
+
+
+
+
+
+
+
+```
+
+
+# Save
+
+```{r save}
+beta_matrixcsv_file = paste0(analysis.dir, "/reports/tracks_and_tables_data/csv/betas_1.csv.gz")
+print(beta_matrixcsv_file)
+df = read.table(beta_matrixcsv_file, sep=",", row.names=1, header=TRUE)
+head(df[,1:10])
+dim(df)
+
+pf = df[,1:4]
+head(pf)
+dim(pf)
+
+data = as.matrix(df[,-(1:4)])
+head(data[,1:6])
+dim(data)
+
+exp_grp = exp_grp[colnames(data),]
+head(exp_grp)
+dim(exp_grp)
+
+
+
+
+s = epimedtools::create_study()
+s$data     = data
+s$exp_grp  = exp_grp
+s$platform = pf
+s_filename = paste0("~/projects/datashare/", gse, "/study_idat_", gse, ".rds")
+print(paste0("Writing ", s_filename, "..."))
+s$save(s_filename)
+```
+
+# Process Information 
+
+```{r info}
+stop_time = Sys.time()
+info = list(
+  n   = nrow(s$data),
+  p   = ncol(s$data),
+  exec_time = round(difftime(stop_time, start_time, units="mins"),1)
+)
+saveRDS(info, paste0("info_idat2study_",gse,".rds"))
+```
+
+# Session Information
+
+```{r, results="verbatim"}
+sessionInfo()
+```
+
+
+
+
+
+
+

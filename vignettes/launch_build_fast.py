@@ -6,6 +6,7 @@ gses_ewas = []
 gses_model = []
 
 gses = [
+  # "GSE62640"    To CHECK 450k, n=87  # Analysis of sex differences in DNA methylation in human pancreatic islets
   # "GSE48472"    TO CHECK 450k, n=56  # Identification and systematic annotation of tissue-specific differentially methylated regions using the Illumina 450k array
   # "GSE64495"    TO CHECK 450k, n=113 # DNA methylation profiles of human blood samples from a severe developmental disorder and controls
   # "GSE72774"    TO CHECK 450k, n=508 # DNA methylation profiles of human blood samples from Caucasian subjects with Parkinson's disease
@@ -16,9 +17,7 @@ gses = [
   # "GSE64490"    TO CHECK 450k, n=48  # DNA methylation profiles of human bone samples
   # "GSE197719"   TO CHECK 450k, n=27  # In vitro methylation studies in multiple human cell types
   # "GSE142439"   TO CHECK Epic, n=16  # Transient non-integrative nuclear reprogramming promotes multifaceted reversal of aging in human cells
-  "GSE72680",   # 450k, n=422 # DNA Methylation of African Americans from the Grady Trauma Project
   # "GSE140686",  NO GO  mixed 450k & EPIC # n=1500  sarcoma samples
-  "GSE152026",  # Epic, n=934 # Blood DNA methylation profiles from first episode psychosis patients and controls I
   # "GSE154566",  NO GO  mixed 450k & EPIC # could not directly load beta matrix from GEO API for GSE154566 # n=1000 # monozygotic twin sample
   # "GSE156374",  NO GO # GSE Epilepto # TODO Fabien: few probes on GEO matrix need to used IDAT 
   # "GSE197678",  NO GO # could not directly load beta matrix from GEO API for GSE169156 # n=2000 # Childhood Cancer Survivors
@@ -51,6 +50,7 @@ gses_model = [
   "GSE50660" , # 450k, n=464  # Cigarette Smoking Reduces DNA Methylation Levels at Multiple Genomic Loci but the Effect is Partially Reversible upon Cessation
   "GSE55763" , # 450k, n=2711 # A coherent approach for analysis of the Illumina HumanMethylation450 BeadChip improves data quality and performance in epigenome-wide association studies
   "GSE56105" , # 450k, n=614  # Brisbane Systems Genetics Study – DNA methylation data, MZ and DZ twin pairs, their siblings and their parents.
+  "GSE72680",   # 450k, n=422 # DNA Methylation of African Americans from the Grady Trauma Project
   "GSE72775" , # 450k, n=335  # DNA methylation profiles of human blood samples from Hispanics and Caucasians
   "GSE97362" , # 450k, n=235  # CHARGE and Kabuki syndromes: Gene-specific DNA methylation signatures
   "GSE87571" , # 450k, n=750  # Continuous Aging of the Human DNA Methylome Throughout the Human Lifespan
@@ -60,7 +60,8 @@ gses_model = [
   "GSE136296", # Epic, n=113  # Age-Associated Epigenetic Change in Chimpanzees and Humans
   "GSE147740", # Epic, n=1129 # DNA methylation analysis of human peripheral blood mononuclear cell collected in the AIRWAVE study
   "GSE151732", # Epic, n=250  # Racial Disparities in Epigenetic Aging of the Right versus the Left Colon
-  "GSE41037"   # **************27k*************** Aging effects on DNA methylation modules in blood tissue
+  "GSE152026",  # Epic, n=934 # Blood DNA methylation profiles from first episode psychosis patients and controls I
+    "GSE41037"   # **************27k*************** Aging effects on DNA methylation modules in blood tissue
 ]
 
 
