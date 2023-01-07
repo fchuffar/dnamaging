@@ -6,7 +6,9 @@ gses_ewas = []
 gses_model = []
 
 gses = [
-  # "GSE62640"    To CHECK 450k, n=87  # Analysis of sex differences in DNA methylation in human pancreatic islets
+  # "GSE90496"    TO CHECK 450k, n=2801 # DNA methylation-based classification of human central nervous system tumors [reference set]
+  # "GSE109379"   TO CHECK 450k, n=1104 # DNA methylation-based classification of human central nervous system tumors [validation set]
+  # "GSE62640"    TO CHECK 450k, n=87  # Analysis of sex differences in DNA methylation in human pancreatic islets
   # "GSE48472"    TO CHECK 450k, n=56  # Identification and systematic annotation of tissue-specific differentially methylated regions using the Illumina 450k array
   # "GSE64495"    TO CHECK 450k, n=113 # DNA methylation profiles of human blood samples from a severe developmental disorder and controls
   # "GSE72774"    TO CHECK 450k, n=508 # DNA methylation profiles of human blood samples from Caucasian subjects with Parkinson's disease
@@ -20,7 +22,6 @@ gses = [
   # "GSE140686",  NO GO  mixed 450k & EPIC # n=1500  sarcoma samples
   # "GSE154566",  NO GO  mixed 450k & EPIC # could not directly load beta matrix from GEO API for GSE154566 # n=1000 # monozygotic twin sample
   # "GSE156374",  NO GO # GSE Epilepto # TODO Fabien: few probes on GEO matrix need to used IDAT 
-  # "GSE197678",  NO GO # could not directly load beta matrix from GEO API for GSE169156 # n=2000 # Childhood Cancer Survivors
   # "GSE68838",       # TCGA COAD
   "GSE41037"   # **************27k***************
 ]
@@ -40,6 +41,7 @@ gses_ewas = [
   "GSE49393",    # PROBLEM gse="GSE49393"  ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render('04_model.Rmd'); # Brain, Alcohol, n=48, 450k ; 50000 probes == NA
   "GSE104293",   # PROBLEM gse="GSE104293" ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render('04_model.Rmd'); # Glioma # n=130 # 450k
   "GSE124413",   # PROBLEM gse="GSE124413" ; source(knitr::purl("04_model"))    # Epic # n=500 # childhood acute myeloid leukemia (AML)
+  "GSE197678",  # Epic, n=2922 # Genome-wide association studies identify novel genetic loci for epigenetic age acceleration among survivors of childhood cancer
   "GSE41037"   # **************27k***************
 ]
 
