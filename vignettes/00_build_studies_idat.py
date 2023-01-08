@@ -2,6 +2,8 @@ import os
 import os.path
 
 gses = [
+  "GSE90496"  , # TO CHECK 450k, n=2801 # DNA methylation-based classification of human central nervous system tumors [reference set]
+  "GSE109379" ,#  TO CHECK 450k, n=1104 # DNA methylation-based classification of human central nervous system tumors [validation set]
   # "GSE48472"    TO CHECK 450k, n=56  # Identification and systematic annotation of tissue-specific differentially methylated regions using the Illumina 450k array
   # "GSE64495"    TO CHECK 450k, n=113 # DNA methylation profiles of human blood samples from a severe developmental disorder and controls
   # "GSE72774"    TO CHECK 450k, n=508 # DNA methylation profiles of human blood samples from Caucasian subjects with Parkinson's disease

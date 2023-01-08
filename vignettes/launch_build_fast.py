@@ -6,8 +6,6 @@ gses_ewas = []
 gses_model = []
 
 gses = [
-  # "GSE90496"    TO CHECK 450k, n=2801 # DNA methylation-based classification of human central nervous system tumors [reference set]
-  # "GSE109379"   TO CHECK 450k, n=1104 # DNA methylation-based classification of human central nervous system tumors [validation set]
   # "GSE62640"    TO CHECK 450k, n=87  # Analysis of sex differences in DNA methylation in human pancreatic islets
   # "GSE48472"    TO CHECK 450k, n=56  # Identification and systematic annotation of tissue-specific differentially methylated regions using the Illumina 450k array
   # "GSE64495"    TO CHECK 450k, n=113 # DNA methylation profiles of human blood samples from a severe developmental disorder and controls
@@ -30,6 +28,8 @@ gses_descs = [
   "GSE50923",    # PROBLEM no age # 27k GBM vs. normal brain
   "GSE60753",    # PROBLEM no age # 450k # Alcohol #
   "GSE85210",    # PROBLEM no age # 450k # n=250 # tobacco
+  "GSE90496" ,   # PROBLEM no age # 450k, n=2801 # DNA methylation-based classification of human central nervous system tumors [reference set]
+  "GSE109379",   # PROBLEM no age # 450k, n=1104 # DNA methylation-based classification of human central nervous system tumors [validation set]
   "GSE185090",   # PROBLEM no age # EPic # n=215  # MCD in the human brain
   "GSE41037"   # **************27k***************
 ]
