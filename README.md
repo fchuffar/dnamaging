@@ -21,7 +21,7 @@ echo "devtools::install();" | Rscript -
 echo "rmarkdown::render('00_fullpipeline1.Rmd')" | Rscript -
 ```
 
-# Build study from IDAT
+# Build studies from IDAT
 
 ```
 snakemake -k -s 00_build_studies_idat.py --cores 50 --cluster "oarsub --project epimed -l /nodes=1,walltime=6:00:00"  --latency-wait 60 -pn
