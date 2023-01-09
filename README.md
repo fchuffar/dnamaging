@@ -18,7 +18,9 @@ wget http://epimed.univ-grenoble-alpes.fr/downloads/dmzfch/dnamaging/data/litter
 # Launch pipeline with default dataset
 cd ../vignettes
 echo "devtools::install();" | Rscript -
-echo "rmarkdown::render('00_fullpipeline1.Rmd')" | Rscript -
+echo "rmarkdown::render('02_stat_preproc.Rmd')" | Rscript -       
+echo "rmarkdown::render('03_ewas.Rmd')"         | Rscript -               
+echo "rmarkdown::render('04_model.Rmd')"        | Rscript -              
 ```
 
 # Build IDAT studies
