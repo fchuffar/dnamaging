@@ -34,7 +34,7 @@ data_info = lapply(gses, function(gse) {
   }
   
   cofactors = strsplit(info_desc$cofactors,"/")
-  models = list("elasticNet","bootstrap","hannum","horvath")
+  models = list("elasticnet","bootstrap","hannum","horvath")
   all_cofactors = list("gender","tobacco","disease","ethnicity")
   list = list()
   pval = lapply(all_cofactors, function(cof){ 
