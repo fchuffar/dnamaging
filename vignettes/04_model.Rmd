@@ -335,7 +335,7 @@ bs_func = function(i, idx_train, best_model_cvaglmnet_params, gse, idx_cpg, conf
   # print(best_model_cvaglmnet_params)
   alpha = best_model_cvaglmnet_params$alpha
   lambda = best_model_cvaglmnet_params$lambda
-  # print(length(idx_cpg))
+  # print(length(idx_cpg))modifier nom variable r
   if (USE_PARAPPLY) {
     models_bs = dnamaging::model_factory_glmnet(idx_train=idx_bstrain, y_key=y_key, alpha=alpha, lambda=lambda, gse=gse, idx_cpg=idx_cpg, confounders=confounders, MEMOISATION=FALSE) 
   } else {
@@ -508,18 +508,20 @@ Ytest =  mget_df_preproc(gse)[idx_test, y_key]
 
 # df$qAge = cut(df[,y_key], quantile(df[,y_key]), include.lowest=TRUE)
 # if (!"qAge" %in% covariates) covariates = c(covariates, "qAge")
+info = list()
 for (covariate in covariates) {
   layout(matrix(1:20, 5), respect=TRUE)
   # ADD
-  info = lapply(models, function(m) {
+  info_cov = lapply(models, function(m) {
     dnamaging::plot_model_eval(m, df, covariate, Xtrain=Xtrain, Xtest=Xtest, Ytrain=Ytrain, Ytest=Ytest)
   })
-  names(info) = c("ElasticNet", "Bootstrap", "Hannum", "Horvath") 
-  info$ElasticNet$alpha  = best_model_cvaglmnet_params$alpha
-  info$ElasticNet$lambda = best_model_cvaglmnet_params$lambda 
+  names(info_cov) = c("elasticnet", "bootstrap", "hannum", "horvath")
+  info_cov$ElasticNet$alpha  = best_model_cvaglmnet_params$alpha
+  info_cov$ElasticNet$lambda = best_model_cvaglmnet_params$lambda
+  info[[length(info)+1]] = info_cov 
 }
-
-
+names(info) = covariates
+info = as.list(unlist(info))
 
 ```
  
