@@ -60,7 +60,7 @@ gses = [
 prefix = os.getcwd()
 info_idat  = [f"{prefix}/01_idat2study_{gse}.html" for gse in gses]
 
-localrules: target R00_create_empty_expgrpwrapper R00_create_empty_datawrapper
+localrules: target 
 
 rule target:
     threads: 1
