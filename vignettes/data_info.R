@@ -30,8 +30,24 @@ data_info = lapply(gses, function(gse) {
   if (file.exists(file_model)) {
     info_model = readRDS(file_model)
   } else { 
-    info_model = list(Bootstrap=list())
+    info_model = list()
   }
+  
+  cofactors = strsplit(info_desc$cofactors,"/")
+  models = list("elasticnet","bootstrap","hannum","horvath")
+  all_cofactors = list("gender","tobacco","disease","ethnicity")
+  list = list()
+  pval = lapply(all_cofactors, function(cof){ 
+  	list_tmp = list()
+  	pval_tmp = lapply(models, function(m){
+  		list_tmp[[length(list_tmp)+1]] = eval(parse(text = paste0("info_model$",cof,".",m,".pvalRR")))
+  	})
+  	names(pval_tmp) = paste0(models,".pvalRR")
+  	pval_tmp[sapply(pval_tmp, is.null)] <- NA
+  	list[[length(list)+1]] = pval_tmp
+  })
+  names(pval) = all_cofactors
+  pval = as.list(unlist(pval))
   ret = list(
     GSE        = gse,
     GPL        = info_build$GPL      ,
@@ -57,18 +73,15 @@ data_info = lapply(gses, function(gse) {
 
     exec_time  = info_ewas$exec_time,
 
-    RMSE      = info_model$Bootstrap$RMSE         ,
-    nb_probes = info_model$Bootstrap$nb_probes_mod,
-
-    pv_genre_elasticnet = info_model$ElasticNet$pvalRR, 
-    pv_genre_bootstrap  = info_model$Bootstrap$pvalRR , 
-    pv_genre_hannum     = info_model$Hannum$pvalRR    , 
-    pv_genre_horvath    = info_model$Horvath$pvalRR   , 
+    RMSE       = eval(parse(text = paste0("info_model$",cofactors[[1]][1],".bootstrap.RMSE"))),
+    nb_probes  = eval(parse(text = paste0("info_model$",cofactors[[1]][1],".bootstrap.nb_probes_mod"))),
+  
     
     # ...
 
     exec_time = info_model$exec_time     
   )
+  ret = c(ret,pval)
   ret
 })
 data_info = data.frame(do.call(rbind, data_info))

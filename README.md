@@ -18,7 +18,21 @@ wget http://epimed.univ-grenoble-alpes.fr/downloads/dmzfch/dnamaging/data/litter
 # Launch pipeline with default dataset
 cd ../vignettes
 echo "devtools::install();" | Rscript -
-echo "rmarkdown::render('00_fullpipeline1.Rmd')" | Rscript -
+echo "rmarkdown::render('02_stat_preproc.Rmd')" | Rscript -       
+echo "rmarkdown::render('03_ewas.Rmd')"         | Rscript -               
+echo "rmarkdown::render('04_model.Rmd')"        | Rscript -              
+```
+
+# Build IDAT studies
+
+```
+snakemake -k -s 00_build_idat_studies.py --cores 50 --cluster "oarsub --project epimed -l /nodes=1,walltime=6:00:00 -fat"  --latency-wait 60 -pn
+```
+
+# Launch epiclock pipeline
+
+```
+snakemake -k -s 00_launch_epiclock_pipeline.py --jobs 50 --cluster "oarsub --project epimed -l nodes=1,walltime=6:00:00"  --latency-wait 60 -pn
 ```
 
 
