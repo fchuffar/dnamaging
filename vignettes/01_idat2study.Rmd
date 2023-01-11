@@ -33,7 +33,7 @@ library(RnBeads)
 library(grid)
 
 # Directory where iDAT are stored
-data.dir = paste0("~/projects/datashare/", gse, "/raw")
+data.dir = paste0("datashare/", gse, "/raw")
 
 # unzip idat.gz files
 setwd(data.dir)
@@ -155,7 +155,7 @@ RnBeads::rnb.run.analysis(
 
 
 ```
-# cd ~/projects/datashare/GSE197678/raw
+# cd datashare/GSE197678/raw
 
 dim(s$exp_grp)
 s$exp_grp$key = substr(s$exp_grp$title, 77, 79)
@@ -172,7 +172,7 @@ length(sample_idx) * 850000
 for (gsm in sample_idx) {
   print(gsm)
   cmd = "mv"
-  args = paste0("~/projects/datashare/GSE197678/raw/back/", gsm, "*.idat ~/projects/datashare/GSE197678/raw/.")
+  args = paste0("datashare/GSE197678/raw/back/", gsm, "*.idat datashare/GSE197678/raw/.")
   print(paste(cmd, args))
   system2(cmd, args)
 }
@@ -1630,7 +1630,7 @@ s = epimedtools::create_study()
 s$data     = data
 s$exp_grp  = exp_grp
 s$platform = pf
-s_filename = paste0("~/projects/datashare/", gse, "/study_idat_", gse, ".rds")
+s_filename = paste0("datashare/", gse, "/study_idat_", gse, ".rds")
 print(paste0("Writing ", s_filename, "..."))
 s$save(s_filename)
 ```
