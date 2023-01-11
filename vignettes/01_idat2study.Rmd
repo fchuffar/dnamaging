@@ -23,7 +23,7 @@ wd_orig = getwd()
 # Get IDAT from GEO
 
 ```{r download_gse_raw_tar}
-epimedtools::download_gse_raw_tar(gse)
+epimedtools::download_gse_raw_tar(gse, datashare_dir="datashare")
 ```
 
 # Process IDAT
