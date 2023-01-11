@@ -51,6 +51,7 @@ data_info = lapply(gses, function(gse) {
   ret = list(
     GSE        = gse,
     GPL        = info_build$GPL      ,
+    orig       = info_build$orig     ,
     n          = info_build$n        ,
     p          = info_build$p        ,
     tissue     = info_build$tissue   ,

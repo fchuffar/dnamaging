@@ -89,6 +89,7 @@ rule R01_idat2study:
     shell:"""
 export PATH="/summer/epistorage/opt/bin:$PATH"
 export PATH="/summer/epistorage/miniconda3/envs/R3.6.1_env/bin:$PATH"
+export OMP_NUM_THREADS=1
 cd {wildcards.prefix}
 
 rm -Rf /tmp/wd2study_{wildcards.gse}

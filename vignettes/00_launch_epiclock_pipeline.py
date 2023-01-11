@@ -76,7 +76,9 @@ info_descs = [f"{prefix}/info_desc_{gse}.rds"                               for 
 info_ewas  = [f"{prefix}/info_ewas{nbewasprobes}_{gse}.rds"                 for gse in gses_ewas]
 info_model = [f"{prefix}/info_model_r{runmax}_ewas{nbewasprobes}_{gse}.rds" for gse in gses_model]
 
-localrules: target R00_create_empty_expgrpwrapper R00_create_empty_datawrapper
+
+
+localrules: target, R00_create_empty_expgrpwrapper, R00_create_empty_datawrapper
 
 rule target:
     threads: 1
@@ -130,6 +132,7 @@ rule R01_build_study:
     shell:"""
 export PATH="/summer/epistorage/opt/bin:$PATH"
 export PATH="/summer/epistorage/miniconda3/envs/R3.6.1_env/bin:$PATH"
+export OMP_NUM_THREADS=1
 cd {wildcards.prefix}
 
 rm -Rf /tmp/wd_{wildcards.gse}
@@ -157,6 +160,7 @@ rule R02_stat_preproc:
     shell:"""
 export PATH="/summer/epistorage/opt/bin:$PATH"
 export PATH="/summer/epistorage/miniconda3/envs/R3.6.1_env/bin:$PATH"
+export OMP_NUM_THREADS=1
 cd {wildcards.prefix}
 
 rm -Rf /tmp/wd_{wildcards.gse}
@@ -187,6 +191,7 @@ rule R03_ewas:
     shell:"""
 export PATH="/summer/epistorage/opt/bin:$PATH"
 export PATH="/summer/epistorage/miniconda3/envs/R3.6.1_env/bin:$PATH"
+export OMP_NUM_THREADS=1
 cd {wildcards.prefix}
 
 rm -Rf /tmp/wd_{wildcards.gse}
@@ -215,6 +220,7 @@ rule R04_model:
     shell:"""
 export PATH="/summer/epistorage/opt/bin:$PATH"
 export PATH="/summer/epistorage/miniconda3/envs/R3.6.1_env/bin:$PATH"
+export OMP_NUM_THREADS=1
 cd {wildcards.prefix}
 
 rm -Rf /tmp/wd_{wildcards.gse}
@@ -237,3 +243,6 @@ cp 04_model_r*_ewas{wildcards.nbewasprobes}_{wildcards.gse}.html 04_model_r*_ewa
 cd {wildcards.prefix}
 rm -Rf /tmp/wd_{wildcards.gse}
 """
+
+
+
