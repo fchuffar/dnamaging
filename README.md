@@ -15,9 +15,12 @@ mkdir dnamaging/data/
 cd dnamaging/data/
 wget http://epimed.univ-grenoble-alpes.fr/downloads/dmzfch/dnamaging/data/df_dnamaging.RData
 wget http://epimed.univ-grenoble-alpes.fr/downloads/dmzfch/dnamaging/data/litterature_models.RData
-# Launch pipeline with default dataset
-cd ../vignettes
+# install package
+cd ..
+echo "devtools::document();" | Rscript -
 echo "devtools::install();" | Rscript -
+# Launch pipeline with default dataset
+cd vignettes
 echo "rmarkdown::render('02_stat_preproc.Rmd')" | Rscript -       
 echo "rmarkdown::render('03_ewas.Rmd')"         | Rscript -               
 echo "rmarkdown::render('04_model.Rmd')"        | Rscript -              
@@ -26,7 +29,7 @@ echo "rmarkdown::render('04_model.Rmd')"        | Rscript -
 # Build IDAT studies
 
 ```
-snakemake -k -s 00_build_idat_studies.py --cores 50 --cluster "oarsub --project epimed -l /nodes=1,walltime=6:00:00 -fat"  --latency-wait 60 -pn
+snakemake -k -s 00_build_idat_studies.py --cores 50 --cluster "oarsub --project epimed -l /nodes=1,walltime=6:00:00 -t fat"  --latency-wait 60 -pn
 ```
 
 # Launch epiclock pipeline
