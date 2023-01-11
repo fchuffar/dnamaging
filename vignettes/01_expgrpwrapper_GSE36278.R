@@ -14,6 +14,8 @@ table(s$exp_grp$gender01, useNA="always")
 # 3. tissue
 s$exp_grp$tissue = as.factor(as.character(s$exp_grp$"tissue:ch1"))
 table(s$exp_grp$tissue, useNA="always")
+s$exp_grp$tissue = as.factor("brain glioblastoma")
+table(s$exp_grp$tissue, useNA="always")
 s$exp_grp$tissue 
 
 # 4. tobacco

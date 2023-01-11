@@ -13,7 +13,8 @@ table(s$exp_grp$gender01, useNA="always")
 # 3. tissue
 s$exp_grp$tissue = as.factor(s$exp_grp$"tissue:ch1")
 table(s$exp_grp$tissue, useNA="always")
-s$exp_grp$tissue 
+s$exp_grp$tissue = as.factor("brain")
+table(s$exp_grp$tissue, useNA="always")
 
 # 4. tobacco
 

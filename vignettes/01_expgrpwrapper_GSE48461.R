@@ -11,7 +11,7 @@ s$exp_grp$gender01 = as.numeric(s$exp_grp$gender)-1
 table(s$exp_grp$gender01, useNA="always")
 
 # 3. tissue
-s$exp_grp$tissue = as.factor("Glioma")
+s$exp_grp$tissue = as.factor("brain glioma")
 table(s$exp_grp$tissue, useNA="always")
 s$exp_grp$tissue 
 

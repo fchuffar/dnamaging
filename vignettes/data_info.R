@@ -10,7 +10,7 @@ data_info = lapply(gses, function(gse) {
   # gse = "GSE43976"
   file_build = paste0("info_build_",gse,".rds")
   file_desc  = paste0("info_desc_",gse,".rds")
-  file_ewas  = paste0("info_ewas_ewas3000_",gse,".rds")
+  file_ewas  = paste0("info_ewas3000_",gse,".rds")
   file_model = paste0("info_model_r0_ewas3000_",gse,".rds")
   if (file.exists(file_build)) {
       info_build = readRDS(file_build)

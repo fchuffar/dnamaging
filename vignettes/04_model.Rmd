@@ -21,6 +21,7 @@ source("common.R")
 ```{r params_default, echo=FALSE}
 source("params_default.R")
 if (!exists("seed")) seed = 1
+if (!exists("run")) run = 0
 if (!exists("scenario")) scenario = "A"
 ```
 

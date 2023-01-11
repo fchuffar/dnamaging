@@ -64,6 +64,9 @@ dim(tmp_exp_grp)
 dim(s$data)
 tmp_data = s$get_data(dest_dir="~/projects/datashare")
 dim(tmp_data)
+
+# data orig
+s$stuffs$orig = "series_matrix"
 ```
 
 ```{r build exp_grp from EpiMedDB, eval=FALSE}
@@ -114,12 +117,14 @@ if (nrow(tmp_data)==0) {
   datawrapper_file = paste0("01_datawrapper_", gse, ".R")
   print(datawrapper_file)
   source(datawrapper_file)    
+  s$stuffs$orig = "datawrapper"
 }
-gseidat_study_filename = paste0("~/projects/datashare/", gse, "/study_", gse, "_idat_rnbeads.rds")
+gseidat_study_filename = paste0("~/projects/datashare/", gse, "/study_idat_", gse, ".rds")
 if (nrow(s$data)==0 & file.exists(gseidat_study_filename)) {
   study_gseidat = readRDS(gseidat_study_filename)
   s$data = study_gseidat$data
   s$exp_grp = s$exp_grp[intersect(rownames(s$exp_grp), colnames(s$data)),]   
+  s$stuffs$orig = "idat"
 }
 if (nrow(s$data)==0) {
   stop(paste0("could not directly load beta matrix from GEO API for ", gse, ". Need to customize by creating ", datawrapper_file, " script."))  
@@ -263,9 +268,10 @@ cat(getwd()           , file=log_filename, sep="\n", append=TRUE)
 stop_time = Sys.time()
 info_build = list(
   exec_time = round(difftime(stop_time, start_time, units="mins"),1),
-  GPL = s$platform_name,
-  n   = ncol(s$data),
-  p   = nrow(s$data),
+  GPL  = s$platform_name,
+  orig = s$stuffs$orig,
+  n    = ncol(s$data),
+  p    = nrow(s$data),
   age     = ifelse("age"     %in% colnames(s$exp_grp), paste0(round(quantile(s$exp_grp$age)), collapse=", ")                                                            , NA),
   gender  = ifelse("gender"  %in% colnames(s$exp_grp), paste0(sapply(levels(s$exp_grp$gender  ), function(x) {paste0(x, " (", table(s$exp_grp$gender  )[x], ")")}), collapse=" "), NA),
   tissue  = ifelse("tissue"  %in% colnames(s$exp_grp), paste0(sapply(levels(s$exp_grp$tissue  ), function(x) {paste0(x, " (", table(s$exp_grp$tissue  )[x], ")")}), collapse=" "), NA),
