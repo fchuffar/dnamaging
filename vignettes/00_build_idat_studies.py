@@ -95,6 +95,7 @@ cd {wildcards.prefix}
 rm -Rf /tmp/wd2study_{wildcards.gse}
 mkdir -p /tmp/wdidat2study_{wildcards.gse}
 cd /tmp/wdidat2study_{wildcards.gse}
+ln -s {wildcards.prefix}/datashare 
 cp {input.rmd} .
 
 RCODE="gse='{wildcards.gse}'; rmarkdown::render('01_idat2study.Rmd', output_file=paste0('01_idat2study_',gse,'.html'));"
