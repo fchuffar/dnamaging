@@ -57,12 +57,12 @@ s$gse = gse
 
 # get exp_grp df from NCBI/GEO
 dim(s$exp_grp)
-tmp_exp_grp = s$get_exp_grp(dest_dir="~/projects/datashare")
+tmp_exp_grp = s$get_exp_grp(dest_dir="./datashare")
 dim(tmp_exp_grp)
 
 # get data matrix from NCBI/GEO
 dim(s$data)
-tmp_data = s$get_data(dest_dir="~/projects/datashare")
+tmp_data = s$get_data(dest_dir="./datashare")
 dim(tmp_data)
 
 # data orig
@@ -119,7 +119,7 @@ if (nrow(tmp_data)==0) {
   source(datawrapper_file)    
   s$stuffs$orig = "datawrapper"
 }
-gseidat_study_filename = paste0("~/projects/datashare/", gse, "/study_idat_", gse, ".rds")
+gseidat_study_filename = paste0("./datashare/", gse, "/study_idat_", gse, ".rds")
 if (nrow(s$data)==0 & file.exists(gseidat_study_filename)) {
   study_gseidat = readRDS(gseidat_study_filename)
   s$data = study_gseidat$data
@@ -240,7 +240,7 @@ for (exp_grp_key in colnames(s$exp_grp)) {
 # Save
 
 ```{r save, results="verbatim"}
-s_filename = paste0("~/projects/datashare/", gse, "/study_", gse, ".rds")
+s_filename = paste0("./datashare/", gse, "/study_", gse, ".rds")
 print(paste0("Writing ", s_filename, "..."))
 s$save(s_filename)
 dim(s$data)
@@ -248,12 +248,12 @@ dim(s$exp_grp)
 dim(s$platform)
 
 df = cbind(s$exp_grp, t(s$data[,rownames(s$exp_grp)]))
-df_filename = paste0("~/projects/datashare/", gse, "/df_", gse, ".rds")
+df_filename = paste0("./datashare/", gse, "/df_", gse, ".rds")
 print(paste0("Writing ", df_filename, "..."))
 saveRDS(df, df_filename)
 dim(df)
 
-log_filename = paste0("~/projects/datashare/", gse, "/info_", gse, ".log")
+log_filename = paste0("./datashare/", gse, "/info_", gse, ".log")
 cat(s_filename        , file=log_filename, sep="\n", append=FALSE)
 cat(" and "           , file=log_filename, sep="\n", append=TRUE)
 cat(df_filename       , file=log_filename, sep="\n", append=TRUE)
