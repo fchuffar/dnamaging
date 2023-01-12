@@ -29,7 +29,7 @@ echo "rmarkdown::render('04_model.Rmd')"        | Rscript -
 # Build IDAT studies
 
 ```
-snakemake -k -s 00_build_idat_studies.py --jobs 50 --cluster "oarsub --project epimed -l /nodes=1,walltime=6:00:00 -t fat"  --latency-wait 60 -pn
+snakemake -k -s 00_build_idat_studies.py --jobs 2 --cluster "oarsub --project epimed -l /nodes=1,walltime=6:00:00 -t fat"  --latency-wait 60 -pn
 ```
 
 # Launch epiclock pipeline
