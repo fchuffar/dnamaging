@@ -17,8 +17,8 @@ gses = [
   # "GSE64490"    TO CHECK 450k, n=48  # DNA methylation profiles of human bone samples
   # "GSE197719"   TO CHECK 450k, n=27  # In vitro methylation studies in multiple human cell types
   # "GSE142439"   TO CHECK Epic, n=16  # Transient non-integrative nuclear reprogramming promotes multifaceted reversal of aging in human cells
-  # "GSE140686",  NO GO  mixed 450k & EPIC # n=1500  sarcoma samples
-  # "GSE154566",  NO GO  mixed 450k & EPIC # could not directly load beta matrix from GEO API for GSE154566 # n=1000 # monozygotic twin sample
+  # "GSE140686",  NO GO mixed 450k & EPIC # n=1500  sarcoma samples
+  "GSE154566" # WARNING mixed 450k & EPIC (n=1177) only keep EPIC (n=944) # NA methylation signatures of adolescent victimization: Analysis of a longitudinal monozygotic twin sample.
   # "GSE156374",  NO GO # GSE Epilepto # TODO Fabien: few probes on GEO matrix need to used IDAT 
   # "GSE68838",       # TCGA COAD
   "GSE41037"   # **************27k***************
