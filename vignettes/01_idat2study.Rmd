@@ -88,8 +88,8 @@ bar = sapply(idat_red_files, detect_infinium_platform)
 tab = table(bar)
 if (length(tab) > 1) {
   pf_idx = names(rev(sort(tab)))[1]
+  idat_red_files = idat_red_files[bar==pf_idx]
 }
-idat_red_files = idat_red_files[bar==pf_idx]
 sentrix_idx = unique(do.call(rbind, strsplit(idat_red_files, "_"))[,2])
 setwd(wd_orig)
 
