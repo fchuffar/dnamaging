@@ -25,7 +25,7 @@ source("params_default.R")
 
 ```{r loading_data}
 if (gse != "dnamaging") {
-  df_filename = paste0("~/projects/datashare/", gse, "/df_", gse, ".rds")
+  df_filename = paste0("./datashare/", gse, "/df_", gse, ".rds")
   df = mreadRDS(df_filename)
 } else {
   df = dnamaging::df_dnamaging  

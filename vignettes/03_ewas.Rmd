@@ -123,7 +123,7 @@ if (nbewasprobes>0) {
   # df_dnamaging = df
   # colnames(df_dnamaging)[2] = "age"
   # head(df_dnamaging[,1:20])
-  # save(df_dnamaging, file='~/projects/dnamaging/data/df_dnamaging.RData' , compress='xz')
+  # save(df_dnamaging, file='./dnamaging/data/df_dnamaging.RData' , compress='xz')
 } else {
   # Nothing to do for idx_cpg
 }
