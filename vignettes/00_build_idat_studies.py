@@ -17,7 +17,7 @@ gses = [
   # NOIDAT "GSE72680",   # 450k, n=422 # DNA Methylation of African Americans from the Grady Trauma Project
   # "GSE140686",  NO GO  mixed 450k & EPIC # n=1500  sarcoma samples
   # NOIDAT "GSE152026",  # Epic, n=934 # Blood DNA methylation profiles from first episode psychosis patients and controls I
-  "GSE154566" # WARNING mixed 450k & EPIC (n=1177) only keep EPIC (n=944) # NA methylation signatures of adolescent victimization: Analysis of a longitudinal monozygotic twin sample.
+  "GSE154566", # WARNING mixed 450k & EPIC (n=1177) only keep EPIC (n=944) # NA methylation signatures of adolescent victimization: Analysis of a longitudinal monozygotic twin sample.
   # "GSE156374",  NO GO # GSE Epilepto # TODO Fabien: few probes on GEO matrix need to used IDAT
   # "GSE197678",  NO GO # could not directly load beta matrix from GEO API for GSE169156 # n=2000 # Childhood Cancer Survivors
   # "GSE68838",       # TCGA COAD
