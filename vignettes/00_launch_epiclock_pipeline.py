@@ -6,6 +6,7 @@ gses_ewas = []
 gses_model = []
 
 gses = [
+  # "GSE221864"   TO CHECK Epic, n=72 # Alterations of DNA Methylation Profile in Peripheral Blood of Children with Simple Obesity
   # "GSE62640"    TO CHECK 450k, n=87  # Analysis of sex differences in DNA methylation in human pancreatic islets
   # "GSE48472"    TO CHECK 450k, n=56  # Identification and systematic annotation of tissue-specific differentially methylated regions using the Illumina 450k array
   # "GSE64495"    TO CHECK 450k, n=113 # DNA methylation profiles of human blood samples from a severe developmental disorder and controls
@@ -17,8 +18,8 @@ gses = [
   # "GSE64490"    TO CHECK 450k, n=48  # DNA methylation profiles of human bone samples
   # "GSE197719"   TO CHECK 450k, n=27  # In vitro methylation studies in multiple human cell types
   # "GSE142439"   TO CHECK Epic, n=16  # Transient non-integrative nuclear reprogramming promotes multifaceted reversal of aging in human cells
-  # "GSE140686",  NO GO mixed 450k & EPIC # n=1500  sarcoma samples
-  "GSE154566" # WARNING mixed 450k & EPIC (n=1177) only keep EPIC (n=944) # NA methylation signatures of adolescent victimization: Analysis of a longitudinal monozygotic twin sample.
+  "GSE140686", # WARNING mixed 450k & Epic (n=1505) only keep Epic (n=1020) # Sarcoma Classification by DNA-methylation profiling
+  "GSE154566", # WARNING mixed 450k & Epic (n=1177) only keep Epic (n=944) # DNA methylation signatures of adolescent victimization: Analysis of a longitudinal monozygotic twin sample.
   # "GSE156374",  NO GO # GSE Epilepto # TODO Fabien: few probes on GEO matrix need to used IDAT 
   # "GSE68838",       # TCGA COAD
   "GSE41037"   # **************27k***************
