@@ -139,6 +139,7 @@ cd {wildcards.prefix}
 rm -Rf /tmp/wd_{wildcards.gse}
 mkdir -p /tmp/wd_{wildcards.gse}
 cd /tmp/wd_{wildcards.gse}
+ln -s {wildcards.prefix}/datashare 
 cp {input.rmd} {input.r_datawrapper} {input.r_expgrpwrapper} .
 
 RCODE="gse='{wildcards.gse}'; rmarkdown::render('01_build_study_generic.Rmd', output_file=paste0('01_build_study_',gse,'.html'));"
@@ -167,6 +168,7 @@ cd {wildcards.prefix}
 rm -Rf /tmp/wd_{wildcards.gse}
 mkdir -p /tmp/wd_{wildcards.gse}
 cd /tmp/wd_{wildcards.gse}
+ln -s {wildcards.prefix}/datashare 
 ln -s {wildcards.prefix}/df_{wildcards.gse}.rds
 ln -s {wildcards.prefix}/litterature_models.rds
 cp {wildcards.prefix}/*.Rmd {wildcards.prefix}/*.R .
@@ -198,6 +200,7 @@ cd {wildcards.prefix}
 rm -Rf /tmp/wd_{wildcards.gse}
 mkdir -p /tmp/wd_{wildcards.gse}
 cd /tmp/wd_{wildcards.gse}
+ln -s {wildcards.prefix}/datashare 
 ln -s {wildcards.prefix}/df_preproc_{wildcards.gse}.rds
 ln -s {wildcards.prefix}/litterature_models.rds
 cp {wildcards.prefix}/*.Rmd {wildcards.prefix}/*.R .
@@ -227,6 +230,7 @@ cd {wildcards.prefix}
 rm -Rf /tmp/wd_{wildcards.gse}
 mkdir -p /tmp/wd_{wildcards.gse}
 cd /tmp/wd_{wildcards.gse}
+ln -s {wildcards.prefix}/datashare 
 ln -s {input.df}
 ln -s {wildcards.prefix}/df_preproc_{wildcards.gse}.rds
 ln -s {wildcards.prefix}/litterature_models.rds
