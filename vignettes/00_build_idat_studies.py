@@ -30,7 +30,7 @@ gses = [
   # NOIDAT "GSE72775" , # 450k, n=335  # DNA methylation profiles of human blood samples from Hispanics and Caucasians
   # NOIDAT "GSE72680",   # 450k, n=422 # DNA Methylation of African Americans from the Grady Trauma Project
   # NOIDAT "GSE152026",  # Epic, n=934 # Blood DNA methylation profiles from first episode psychosis patients and controls I
-  # "GSE156374",  NO GO # GSE Epilepto # TODO Fabien: few probes on GEO matrix need to used IDAT
+   "GSE156374",  # NO GO # GSE Epilepto # TODO Fabien: few probes on GEO matrix need to used IDAT
   # "GSE197678",  NO GO # could not directly load beta matrix from GEO API for GSE169156 # n=2000 # Childhood Cancer Survivors
   # "GSE68838",       # TCGA COAD
 

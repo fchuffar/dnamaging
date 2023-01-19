@@ -36,7 +36,6 @@ gses_descs = [
 ]
 
 gses_ewas = [
-  "GSE20067",    # PROBLEM gse="GSE20067"  ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render('04_model.Rmd'); # "incorrect number of dimensions" FCh: problem in selecting probes?
   "GSE43976",    # PROBLEM gse='GSE43976'  ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render('04_model.Rmd'); # 450k, PB, tobacco # error in
   "GSE48461",    # PROBLEM gse="GSE48461"  ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render("04_model.Rmd"); # 450k, glioma
   "GSE49393",    # PROBLEM gse="GSE49393"  ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render('04_model.Rmd'); # Brain, Alcohol, n=48, 450k ; 50000 probes == NA
@@ -47,6 +46,7 @@ gses_ewas = [
 ]
 
 gses_model = [
+  "GSE20067",    # PROBLEM gse="GSE20067" correct?  ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render('04_model.Rmd'); # "incorrect number of dimensions" FCh: problem in selecting probes?
   "GSE36278" , # 450k, n=142  # Methylation data from glioblastoma tumor samples
   "GSE40279" , # 450k, n=656  # Genome-wide Methylation Profiles Reveal Quantitative Views of Human Aging Rates
   "GSE42861" , # 450k, n=689  # Differential DNA methylation in Rheumatoid arthritis
