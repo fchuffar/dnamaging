@@ -112,6 +112,15 @@ head(s$exp_grp)
 
 
 ```{r decorate data}
+gseidat_study_filename = paste0("./datashare/", gse, "/study_idat_", gse, ".rds")
+if (file.exists(gseidat_study_filename)) {
+  study_gseidat = readRDS(gseidat_study_filename)
+  s$data = study_gseidat$data
+  s$exp_grp = s$exp_grp[intersect(rownames(s$exp_grp), colnames(s$data)),]   
+  s$stuffs$orig = "idat"
+  tmp_data = s$data
+}
+
 # get data matrix from wrapper
 if (nrow(tmp_data)==0) {
   datawrapper_file = paste0("01_datawrapper_", gse, ".R")
@@ -119,13 +128,7 @@ if (nrow(tmp_data)==0) {
   source(datawrapper_file)    
   s$stuffs$orig = "datawrapper"
 }
-gseidat_study_filename = paste0("./datashare/", gse, "/study_idat_", gse, ".rds")
-if (nrow(s$data)==0 & file.exists(gseidat_study_filename)) {
-  study_gseidat = readRDS(gseidat_study_filename)
-  s$data = study_gseidat$data
-  s$exp_grp = s$exp_grp[intersect(rownames(s$exp_grp), colnames(s$data)),]   
-  s$stuffs$orig = "idat"
-}
+
 if (nrow(s$data)==0) {
   stop(paste0("could not directly load beta matrix from GEO API for ", gse, ". Need to customize by creating ", datawrapper_file, " script."))  
 } 

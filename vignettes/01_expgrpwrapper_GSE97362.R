@@ -21,4 +21,7 @@ table(s$exp_grp$tissue, useNA="always")
 # 4. tobacco
 
 # 5. disease
+s$exp_grp$"disease state:ch1" 
+s$exp_grp$disease = as.factor(as.character(s$exp_grp$"disease state:ch1"))  
+table(s$exp_grp$disease, useNA="always")
 
