@@ -2,6 +2,12 @@ import os
 import os.path
 
 gses = [
+  # "GSE62969"    TO CHECK 450k, n=-100# Predicting genome-wide DNA methylation
+  # "GSE197305"   TO CHECK Epic, n=1221# Cortex DNA methylation profiles for the Brains for Dementia research cohort
+  # "GSE117859"   TO CHECK 450k, n=608 # Smoking-associated DNA methylation features link to HIV outcomes [HumanMethylation450 BeadChip]
+  # "GSE117860"   TO CHECK Epic, n=529 # Smoking-associated DNA methylation features link to HIV outcomes [Infinium MethylationEPIC]
+  # "GSE213478"   TO CHECK Epic, n=987 # Methylation data from nine tissues from GTEx samples profiled with Infinium HumanMethylationEPIC BeadChip
+  # "GSE158063"   TO CHECK Epic, n=915 # Smaller stature in childhood following assisted reproductive technologies (ART) is not explained by... 
   # "GSE48472"    TO CHECK 450k, n=56  # Identification and systematic annotation of tissue-specific differentially methylated regions using the Illumina 450k array
   # "GSE64495"    TO CHECK 450k, n=113 # DNA methylation profiles of human blood samples from a severe developmental disorder and controls
   # "GSE72774"    TO CHECK 450k, n=508 # DNA methylation profiles of human blood samples from Caucasian subjects with Parkinson's disease
@@ -90,7 +96,7 @@ export PATH="/summer/epistorage/miniconda3/envs/R3.6.1_env/bin:$PATH"
 export OMP_NUM_THREADS=1
 cd {wildcards.prefix}
 
-rm -Rf /tmp/wd2study_{wildcards.gse}
+rm -Rf /tmp/wdidat2study_{wildcards.gse}
 mkdir -p /tmp/wdidat2study_{wildcards.gse}
 cd /tmp/wdidat2study_{wildcards.gse}
 ln -s {wildcards.prefix}/datashare 
