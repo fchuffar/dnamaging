@@ -265,7 +265,57 @@ dim(df)
 
 
 
+
+
+# Save
+
+```{r save}
+pf = df[,1:4]
+head(pf)
+dim(pf)
+
+exp_grp = exp_grp[intersect(rownames(exp_grp), colnames(df)),]
+head(exp_grp)
+dim(exp_grp)
+
+data = as.matrix(df[,rownames(exp_grp)])
+head(data[,1:6])
+dim(data)
+
+s = epimedtools::create_study()
+s$data     = data
+s$exp_grp  = exp_grp
+s$platform = pf
+s_filename = paste0("datashare/", gse, "/study_idat_", gse, ".rds")
+print(paste0("Writing ", s_filename, "..."))
+s$save(s_filename)
 ```
+
+# Process Information 
+
+```{r info}
+stop_time = Sys.time()
+info = list(
+  n   = nrow(s$data),
+  p   = ncol(s$data),
+  exec_time = round(difftime(stop_time, start_time, units="mins"),1)
+)
+saveRDS(info, paste0("info_idat2study_",gse,".rds"))
+```
+
+
+# Session Information
+
+```{r, results="verbatim"}
+sessionInfo()
+```
+
+
+
+
+
+
+```{r eval=FALSE}
 # cd datashare/GSE197678/raw
 
 dim(s$exp_grp)
@@ -321,55 +371,6 @@ for (i in 2480:2000) {
   }
 }
 ```
-
-
-
-
-# Save
-
-```{r save}
-pf = df[,1:4]
-head(pf)
-dim(pf)
-
-exp_grp = exp_grp[intersect(rownames(exp_grp), colnames(data)),]
-head(exp_grp)
-dim(exp_grp)
-
-data = as.matrix(df[,rownames(exp_grp)])
-head(data[,1:6])
-dim(data)
-
-s = epimedtools::create_study()
-s$data     = data
-s$exp_grp  = exp_grp
-s$platform = pf
-s_filename = paste0("datashare/", gse, "/study_idat_", gse, ".rds")
-print(paste0("Writing ", s_filename, "..."))
-s$save(s_filename)
-```
-
-# Process Information 
-
-```{r info}
-stop_time = Sys.time()
-info = list(
-  n   = nrow(s$data),
-  p   = ncol(s$data),
-  exec_time = round(difftime(stop_time, start_time, units="mins"),1)
-)
-saveRDS(info, paste0("info_idat2study_",gse,".rds"))
-```
-
-# Session Information
-
-```{r, results="verbatim"}
-sessionInfo()
-```
-
-
-
-
 
 
 
