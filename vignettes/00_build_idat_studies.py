@@ -106,7 +106,7 @@ RCODE="gse='{wildcards.gse}'; rmarkdown::render('01_idat2study.Rmd', output_file
 echo $RCODE | Rscript - 2>&1 > 01_idat2study_{wildcards.gse}.Rout
 
 cp 01_idat2study_{wildcards.gse}.Rout info_idat2study_{wildcards.gse}.rds 01_idat2study_{wildcards.gse}.html {wildcards.prefix}/.
-cp -r {wildcards.gse}/analysis {wildcards.prefix}/datashare/{wildcards.gse}/raw/.
+cp -r {wildcards.gse}/analysis_* {wildcards.prefix}/datashare/{wildcards.gse}/raw/.
 cp -r {wildcards.gse} {wildcards.prefix}/.
 cd {wildcards.prefix}
 rm -Rf /tmp/wdidat2study_{wildcards.gse}
