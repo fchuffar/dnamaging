@@ -221,8 +221,10 @@ table(s$platform[,1])
 
 ```{r visualize, }
 # layout(matrix(1:2, 1), respect=TRUE)
-layout(1, respect=TRUE)
-plot(density(s$data, na.rm=TRUE), main=paste0(gse, " beta value dist."))
+if (as.numeric(nrow(s$data))*as.numeric(ncol(s$data)) < .Machine$integer.max) {
+  layout(1, respect=TRUE)
+  plot(density(s$data, na.rm=TRUE), main=paste0(gse, " beta value dist."))  
+}
 ```
 
 ```{r, echo=TRUE, results="verbatim"}
