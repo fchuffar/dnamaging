@@ -46,7 +46,7 @@ gses_ewas = [
 ]
 
 gses_model = [
-  "GSE20067",    # PROBLEM gse="GSE20067" correct?  ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render('04_model.Rmd'); # "incorrect number of dimensions" FCh: problem in selecting probes?
+  # "GSE20067",    # PROBLEM gse="GSE20067" correct?  ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render('04_model.Rmd'); # "incorrect number of dimensions" FCh: problem in selecting probes?
   "GSE36278" , # 450k, n=142  # Methylation data from glioblastoma tumor samples
   "GSE40279" , # 450k, n=656  # Genome-wide Methylation Profiles Reveal Quantitative Views of Human Aging Rates
   "GSE42861" , # 450k, n=689  # Differential DNA methylation in Rheumatoid arthritis
