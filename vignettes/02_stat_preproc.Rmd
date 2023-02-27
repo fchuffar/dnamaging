@@ -1,6 +1,5 @@
-
 ---
-title: "Descriptive statistics"
+title: "Descriptive Statistics"
 author: "Fabien Jossaud, Florent Chuffart"
 date: "`r Sys.Date()`"
 output: 
@@ -44,7 +43,7 @@ n = nrow(df)
 tissue = paste(unique(df$tissue),collapse="/")
 ```
 
-## Explained variable
+# Explained variable
 
 ```{r}
 if (y_key %in% colnames(df)) {
@@ -57,7 +56,7 @@ if (y_key %in% colnames(df)) {
 ```
 
 
-## Covariates
+# Covariates
 
 ```{r, fig.height=4.5}
 for (cov in covariates) {
@@ -78,7 +77,7 @@ for (cov in covariates) {
 ```
 
 
-## Missing values
+# Missing values
 
 **TODO**, adding description, what appends there?
 
@@ -114,7 +113,7 @@ if (sum(is.na(df[,idx_cpg]))>0) {
 }
 ```
 
-## sd distribution before filtering
+# sd distribution before filtering
 
 
 ```{r filter_sd1, fig.height=4.5}
@@ -141,7 +140,7 @@ legend("topright", c("all", paste0("sd>", sd_thresh), paste0("sd<=", sd_thresh))
 ```
 
 
-## Outliers 
+# Outliers (PCA)
 
 **TODO**, adding description, what appends there?
 
@@ -196,7 +195,7 @@ print(paste0("end of iterations."))
 
 
 
-## sd distribution after filtering
+# sd distribution after filtering
 
 
  
@@ -239,9 +238,9 @@ saveRDS(df, paste0("df_preproc_",gse,".rds"))
 
 
 
-# Process Information 
 
 ```{r}
+######## Metadata ##############
 all_cofactors = c("disease","gender","tobacco")
 distrib = list()
 for (cov in covariates) {
@@ -260,9 +259,6 @@ for (i in all_cofactors){
 }
 names(cofactors_distrib) = all_cofactors
 ```
-
-
-# Process Information 
 
 ```{r}
 stop_time = Sys.time()
