@@ -102,6 +102,17 @@ if (sum(is.na(df[,idx_cpg]))>0) {
 
   df = df[idx_samples, c(idx_clinicals, idx_cpg)]
 
+  if (as.numeric(length(idx_cpg))*as.numeric(ncol(df)) > .Machine$integer.max) {
+    # stop("Machine$integer.max problem")
+    sds = apply(df[, idx_cpg], 2, sd, na.rm=TRUE)
+    sds_tresh = sort(sds, decreasing=TRUE)[floor(.Machine$integer.max / nrow(dknn))]
+    plot(density(sds))
+    abline(v=sds_tresh)
+    tmp_idx = idx_cpg[sds > sds_tresh]
+    length(tmp_idx)
+    idx_cpg = tmp_idx
+  }
+
   ## KNN - We use the function impute.knn of the package impute to replace remaining missing values with KNN method. 
   dknn = as.matrix(df[,idx_cpg])
   dknnf = impute::impute.knn(dknn, k=10, maxp=5000, rng.seed=1)
