@@ -105,7 +105,7 @@ if (sum(is.na(df[,idx_cpg]))>0) {
   if (as.numeric(length(idx_cpg))*as.numeric(ncol(df)) > .Machine$integer.max) {
     # stop("Machine$integer.max problem")
     sds = apply(df[, idx_cpg], 2, sd, na.rm=TRUE)
-    sds_tresh = sort(sds, decreasing=TRUE)[floor(.Machine$integer.max / nrow(dknn))]
+    sds_tresh = sort(sds, decreasing=TRUE)[floor(.Machine$integer.max / nrow(df))]
     plot(density(sds))
     abline(v=sds_tresh)
     tmp_idx = idx_cpg[sds > sds_tresh]
