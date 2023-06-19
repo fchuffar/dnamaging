@@ -1,0 +1,107 @@
+---
+title: "Visu for poster"
+author: "Jossaud Fabien"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+
+
+```{r, echo=FALSE, eval=TRUE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide", warning=FALSE)
+source("common.R")
+```
+
+```{r data}
+
+df_grim = mreadRDS("../../datashare/GRIMEC001/df_GRIMEC001.rds") # Grimec data
+df_grim = t(df_grim)
+
+df_test = mreadRDS("df_preproc_testGBMgrimec.rds") # Test data
+
+df_train = mreadRDS("df_preproc_trainGBMtest.rds") # Train data
+```
+
+```{r predictions}
+
+# meth_class 
+
+## RF model 
+
+rf_disease = mreadRDS("rf_model_pred_disease.rds")
+
+## Train prediction
+
+disease_train =  predict(rf_disease, newdata = df_train, nodes = TRUE)
+names(disease_train) = rownames(df_train)
+saveRDS(disease_train,"pred_disease_train.rds")
+
+## Test prediction
+
+disease_test =  predict(rf_disease, newdata = df_test, nodes = TRUE)
+names(disease_test) = rownames(df_test)
+saveRDS(disease_test,"pred_disease_test.rds")
+
+## Grimec prediction
+
+disease_grimec = predict(rf_disease,newdata=df_grim)
+names(disease_grimec) = rownames(df_grim)
+disease_grimec = as.character(disease_grimec)
+saveRDS(disease_grimec,"pred_disease_grimec.rds")
+
+# meth_family 
+
+## RF model 
+
+rf_family = mreadRDS("rf_model_pred_family.rds")
+
+## Train prediction
+
+family_train =  predict(rf_family, newdata = df_train, nodes = TRUE)
+names(family_train) = rownames(df_train)
+saveRDS(family_train,"pred_family_train.rds")
+
+## Test prediction
+
+family_test =  predict(rf_family, newdata = df_test, nodes = TRUE)
+names(family_test) = rownames(df_test)
+saveRDS(family_test,"pred_family_test.rds")
+
+## Grimec prediction
+
+family_grimec = predict(rf_family,newdata=df_grim)
+names(family_grimec) = rownames(df_grim)
+family_grimec = as.character(family_grimec)
+saveRDS(family_grimec,"pred_family_grimec.rds")
+
+# super_family 
+
+## RF model
+
+rf_super_f = mreadRDS("rf_model_pred_super_f.rds")
+
+## Train prediction
+
+sf_train =  predict(rf_super_f, newdata = df_train, nodes = TRUE)
+names(sf_train) = rownames(df_train)
+saveRDS(sf_train,"pred_super_f_train.rds")
+
+## Test prediction
+
+sf_test =  predict(rf_super_f, newdata = df_test, nodes = TRUE)
+names(sf_test) = rownames(df_test)
+saveRDS(sf_test,"pred_super_f_test.rds")
+
+## Grimec prediction
+
+sf_grimec = predict(rf_super_f,newdata=df_grim)
+names(sf_grimec) = rownames(df_grim)
+sf_grimec = as.character(sf_grimec)
+saveRDS(sf_grimec,"pred_super_f_grimec.rds")
+
+```
