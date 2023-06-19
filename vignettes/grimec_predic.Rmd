@@ -25,15 +25,22 @@ df_grim = t(df_grim)
 df_test = mreadRDS("df_preproc_testGBMgrimec.rds") # Test data
 
 df_train = mreadRDS("df_preproc_trainGBMtest.rds") # Train data
+
+if(!exists("nbewasprobes")){
+	nbewasprobes = 10000
+}
+
 ```
 
 ```{r predictions}
 
 # meth_class 
 
+y_key = "meth_class"
+
 ## RF model 
 
-rf_disease = mreadRDS("rf_model_pred_disease.rds")
+rf_disease = mreadRDS(paste0("rf_model",nbewasprobes,"_",y_key,".rds"))
 
 ## Train prediction
 
@@ -56,9 +63,11 @@ saveRDS(disease_grimec,"pred_disease_grimec.rds")
 
 # meth_family 
 
+y_key = "meth_family"
+
 ## RF model 
 
-rf_family = mreadRDS("rf_model_pred_family.rds")
+rf_family = mreadRDS(paste0("rf_model",nbewasprobes,"_",y_key,".rds"))
 
 ## Train prediction
 
@@ -81,9 +90,11 @@ saveRDS(family_grimec,"pred_family_grimec.rds")
 
 # super_family 
 
+y_key = "super_family"
+
 ## RF model
 
-rf_super_f = mreadRDS("rf_model_pred_super_f.rds")
+rf_super_f = mreadRDS(paste0("rf_model",nbewasprobes,"_",y_key,".rds"))
 
 ## Train prediction
 
