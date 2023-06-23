@@ -18,16 +18,203 @@ source("common.R")
 ```
 
 
+```{r create global database}
+
+df_grim = mreadRDS("../../datashare/GRIMEC001/df_GRIMEC001.rds") # Grimec data
+df_grim = t(df_grim)
+
+df_test = mreadRDS("df_preproc_testGBMgrimec.rds") # Test data
+
+
+# disease dataset
+
+df_train_disease = mreadRDS("df_r0_ewas10000_trainGBMtest_meth_class.rds")
+markers_start = grep("cg",colnames(df_train_disease))[1]
+idx_cpg = colnames(df_train_disease)[markers_start:ncol(df_train_disease)]
+
+df_train_disease = df_train_disease[,c("meth_class",idx_cpg)]
+df_test_disease = df_test[,idx_cpg]
+df_grimec_disease = df_grim[,idx_cpg]
+df_grimec_disease = as.data.frame(df_grimec_disease)
+
+## add ID
+ 
+df_train_disease$ID = rep("train",nrow(df_train_disease))
+df_test_disease$ID = rep("test",nrow(df_test_disease))
+df_grimec_disease$ID = rep("grimec",nrow(df_grimec_disease))
+
+## add meth_class prediction
+
+pred_disease = mreadRDS("pred_disease_test.rds")
+pred_disease_grimec = mreadRDS("pred_disease_grimec.rds")
+
+df_test_disease$meth_class = pred_disease
+df_grimec_disease$meth_class = pred_disease_grimec
+
+## Merge all datas
+
+order_col = c("ID","meth_class",idx_cpg)
+df_train_disease = df_train_disease[,order_col]
+df_test_disease = df_test_disease[,order_col]
+df_grimec_disease = df_grimec_disease[,order_col]
+
+df_disease = rbind.data.frame(df_train_disease,df_test_disease,df_grimec_disease)
+
+## add color 
+
+df_disease$col = as.numeric(as.factor(df_disease$meth_class))
+order_col = c("ID","meth_class","col",idx_cpg)
+df_disease = df_disease[,order_col]
+
+# family dataset
+
+df_train_family = mreadRDS("df_r0_ewas10000_trainGBMtest_meth_family.rds")
+markers_start = grep("cg",colnames(df_train_family))[1]
+idx_cpg = colnames(df_train_family)[markers_start:ncol(df_train_family)]
+
+df_train_family = df_train_family[,c("meth_family",idx_cpg)]
+df_test_family = df_test[,idx_cpg]
+df_grimec_family = df_grim[,idx_cpg]
+df_grimec_family = as.data.frame(df_grimec_family)
+
+## add ID
+ 
+df_train_family$ID = rep("train",nrow(df_train_family))
+df_test_family$ID = rep("test",nrow(df_test_family))
+df_grimec_family$ID = rep("grimec",nrow(df_grimec_family))
+
+## add meth_family prediction
+
+pred_family = mreadRDS("pred_family_test.rds")
+pred_family_grimec = mreadRDS("pred_family_grimec.rds")
+
+df_test_family$meth_family = pred_family
+df_grimec_family$meth_family = pred_family_grimec
+
+## Merge all datas
+
+order_col = c("ID","meth_family",idx_cpg)
+df_train_family = df_train_family[,order_col]
+df_test_family = df_test_family[,order_col]
+df_grimec_family = df_grimec_family[,order_col]
+
+df_family = rbind.data.frame(df_train_family,df_test_family,df_grimec_family)
+
+## add color 
+
+df_family$col = as.numeric(as.factor(df_family$meth_family))
+order_col = c("ID","meth_family","col",idx_cpg)
+df_family = df_family[,order_col]
+
+# sf dataset
+
+df_train_sf = mreadRDS("df_r0_ewas10000_trainGBMtest_super_family.rds")
+markers_start = grep("cg",colnames(df_train_sf))[1]
+idx_cpg = colnames(df_train_sf)[markers_start:ncol(df_train_sf)]
+
+df_train_sf = df_train_sf[,c("super_family",idx_cpg)]
+df_test_sf = df_test[,idx_cpg]
+df_grimec_sf = df_grim[,idx_cpg]
+df_grimec_sf = as.data.frame(df_grimec_sf)
+
+## add ID
+ 
+df_train_sf$ID = rep("train",nrow(df_train_sf))
+df_test_sf$ID = rep("test",nrow(df_test_sf))
+df_grimec_sf$ID = rep("grimec",nrow(df_grimec_sf))
+
+## add super_family prediction
+
+pred_super_family = mreadRDS("pred_super_f_test.rds")
+pred_super_family_grimec = mreadRDS("pred_super_f_grimec.rds")
+
+df_test_sf$super_family = pred_super_family
+df_grimec_sf$super_family = pred_super_family_grimec
+
+## Merge all datas
+
+order_col = c("ID","super_family",idx_cpg)
+df_train_sf = df_train_sf[,order_col]
+df_test_sf = df_test_sf[,order_col]
+df_grimec_sf = df_grimec_sf[,order_col]
+
+df_sf = rbind.data.frame(df_train_sf,df_test_sf,df_grimec_sf)
+
+## add color 
+
+df_sf$col = as.numeric(as.factor(df_sf$super_family))
+order_col = c("ID","super_family","col",idx_cpg)
+df_sf = df_sf[,order_col]
+
+```
+
 ```{r prediction score}
+
+# 1 model by y_key
+
+reality_grim = readxl::read_xlsx("reality_grimec_DKFZ.xlsx")
+reality_grim = as.data.frame(reality_grim)
+rownames(reality_grim) = reality_grim[,"TD-GENET NUMBER"]
+reality_grim = reality_grim[,-1]
+
 disease_train = mreadRDS("pred_disease_train.rds")
+family_train = mreadRDS("pred_family_train.rds")
+sf_train = mreadRDS("pred_super_f_train.rds")
 
-acc_train = c(sum(disease_train == df_train$meth_class)/length(disease_train), sum(family_train == df_train$meth_family)/length(family_train), sum(sf_train == df_train$super_family)/length(sf_train))
-acc_test = c(sum(disease_test == df_test$meth_class)/length(disease_test), sum(family_test == df_test$meth_family)/length(family_test), sum(sf_test == df_test$super_family)/length(sf_test))
+acc_train = c(sum(disease_train == df_disease[df_disease$ID == "train","meth_class"])/length(disease_train), sum(family_train == df_family[df_family$ID == "train","meth_family"])/length(family_train), sum(sf_train == df_sf[df_sf$ID == "train","super_family"])/length(sf_train))
+acc_test = c(sum(df_test$meth_class == df_disease[df_disease$ID == "test","meth_class"])/length(df_test$meth_class), sum(df_test$meth_family == df_family[df_family$ID == "test","meth_family"])/length(df_test$meth_family), sum(df_test$super_family == df_sf[df_sf$ID == "test","super_family"])/length(df_test$super_family))
+acc_grimec = c(sum(df_disease[df_disease$ID == "grimec","meth_class"] == reality_grim$meth_class)/length(df_disease[df_disease$ID == "grimec","meth_class"]), sum(df_family[df_family$ID == "grimec","meth_family"] == reality_grim$meth_family)/length(df_family[df_family$ID == "grimec","meth_family"]), sum(df_sf[df_sf$ID == "grimec","super_family"] == reality_grim$super_family)/length(df_sf[df_sf$ID == "grimec","super_family"]))
 
-accuracy = rbind(acc_train,acc_test)
-rownames(accuracy) = c("train","test")
+accuracy = rbind(acc_train,acc_test,acc_grimec)
+rownames(accuracy) = c("train","test","grimec")
 colnames(accuracy) = c("disease","family","super_family") 
-saveRDS(accuracy,"accuracy_rf.rds")
+saveRDS(accuracy,"accuracy_3rf.rds")
+
+# 1 model for meth_class and conversion
+
+link = readxl::read_xlsx("link_sf.xlsx")
+link = as.data.frame(link)
+
+# Train conversion predictions 
+
+disease_train = as.data.frame(disease_train)
+disease_train$ID = rownames(disease_train)
+ID = rownames(disease_train)
+pred_train = merge(disease_train,link,by.x = "disease_train",by.y = "meth_class")
+rownames(pred_train) = pred_train$ID
+pred_train = pred_train[,-2]
+pred_train = pred_train[ID,]
+colnames(pred_train) = c("meth_class","meth_family","super_family")
+
+acc_train = c(sum(pred_train$meth_class == df_train$meth_class)/nrow(pred_train), sum(pred_train$meth_family == df_train$meth_family)/nrow(pred_train), sum(pred_train$super_family == df_train$super_family)/nrow(pred_train))
+
+# Test conversion predictions 
+
+disease_test = df_disease[df_disease$ID == "test","meth_class"]
+disease_test = as.data.frame(disease_test)
+disease_test$ID = rownames(disease_test)
+ID = rownames(disease_test)
+pred_test = merge(disease_test,link,by.x = "disease_test",by.y = "meth_class")
+rownames(pred_test) = pred_test$ID
+pred_test = pred_test[,-2]
+pred_test = pred_test[ID,]
+colnames(pred_test) = c("meth_class","meth_family","super_family")
+
+acc_test = c(sum(pred_test$meth_class == df_test$meth_class)/nrow(pred_test), sum(pred_test$meth_family == df_test$meth_family)/nrow(pred_test), sum(pred_test$super_family == df_test$super_family)/nrow(pred_test))
+
+# Grimec conversion predictions
+
+all_grim = readxl::read_xlsx("DKFZ_us_grimec.xlsx") 
+all_grim = as.data.frame(all_grim)
+rownames(all_grim) = all_grim$ID
+all_grim = all_grim[,-1]
+
+acc_grimec = c(sum(all_grim$Self_meth_class == all_grim$DKFZ_meth_class)/nrow(all_grim), sum(all_grim$Self_family == all_grim$DKFZ_family)/nrow(all_grim), sum(all_grim$Self_super_family == all_grim$DKFZ_super_family)/nrow(all_grim))
+
+accuracy = rbind(acc_train,acc_test,acc_grimec)
+rownames(accuracy) = c("train","test","grimec")
+colnames(accuracy) = c("disease","family","super_family") 
+saveRDS(accuracy,"accuracy_conversion.rds")
 
 ```
 
@@ -35,218 +222,178 @@ saveRDS(accuracy,"accuracy_rf.rds")
 
 # meth_class
 
-pred_disease = mreadRDS("pred_disease_test.rds")
-pred_disease_grimec = mreadRDS("pred_disease_grimec.rds")
-df = mreadRDS("df_r0_ewas10000_trainGBMtest_meth_class.rds")
+palette(pals::polychrome())
+df = df_disease[df_disease$ID == "train",]
 markers_start = grep("cg",colnames(df))[1]
 idx_cpg = colnames(df)[markers_start:ncol(df)]
 
 x <- df[,idx_cpg]
 pca = prcomp(x, scale=FALSE)
-test_acp = df_test[,colnames(df_test) %in% colnames(x)]
-test_acp = test_acp[,colnames(x)]
+test_acp = df_disease[df_disease$ID == "test",colnames(x)]
 pca_test = t(t(test_acp)-pca$center) %*% pca$rotation[,1:6]
-grimec_acp = df_grim[,colnames(df_grim) %in% colnames(x)]
-grimec_acp = grimec_acp[,colnames(x)]
+grimec_acp = df_disease[df_disease$ID == "grimec",colnames(x)]
 pca_grimec = t(t(grimec_acp)-pca$center) %*% pca$rotation[,1:6]
 v = pca$sdev * pca$sdev
 p = v / sum(v) * 100
 layout(matrix(1:6,3), respect=TRUE)
 barplot(p[1:6], ylab="% of variance explained", xlab="components")
-legend("topright", col=unique(as.factor(df$meth_class)), legend=unique(df$meth_class),pch=16,cex = 0.2)
+legend("topright", col=unique(as.factor(df_disease$meth_class)), legend=unique(df_disease$meth_class),pch=16,cex = 0.2)
 for (i in 1:5) {
     j = i+1
     plot(pca$x[,i], pca$x[,j], 
     	xlab=paste0("PC", i, "(", signif(p[i], 3), "%)"), 
     	ylab=paste0("PC", j, "(", signif(p[j], 3), "%)"), 
-    	col=adjustcolor(as.numeric(as.factor(df$meth_class)),alpha.f=0.3),
+    	col=adjustcolor(df$col,alpha.f=0.3),
     	pch=16)  
-    # scale_factor = min(abs(c(min(c(pca$x[,i], pca$x[,j])), max(c(pca$x[,i], pca$x[,j])))))
-    # scale_factor = min(abs(c(max(min(pca$x[,i]), min(pca$x[,j])), min(max(pca$x[,i]), max(pca$x[,j])))))
-    # arrows(0,0,pca$rotation[,i]*scale_factor, pca$rotation[,j]*scale_factor, col="grey")
-    # text(pca$rotation[,i]*scale_factor, pca$rotation[,j]*scale_factor, rownames(pca$rotation))
-    points(pca_test[,i],pca_test[,j],col=adjustcolor(as.numeric(as.factor(pred_disease)),alpha.f=1),pch=".")
-    points(pca_grimec[,i],pca_grimec[,j],col=adjustcolor(as.numeric(as.factor(pred_disease_grimec)),alpha.f=1),pch=17)
+    points(pca_test[,i],pca_test[,j],col=adjustcolor(df_disease[df_disease$ID == "test","col"],alpha.f=1),pch=".")
+    points(pca_grimec[,i],pca_grimec[,j],col=adjustcolor(df_disease[df_disease$ID == "grimec","col"],alpha.f=1),pch=17)
   }
 
 # family 
 
-pred_family = mreadRDS("pred_family_test.rds")
-pred_family_grimec = mreadRDS("pred_family_grimec.rds")
-df = mreadRDS("df_r0_ewas10000_trainGBMtest_meth_family.rds")
+palette(pals::polychrome())
+df = df_family[df_family$ID == "train",]
 markers_start = grep("cg",colnames(df))[1]
 idx_cpg = colnames(df)[markers_start:ncol(df)]
 
 x <- df[,idx_cpg]
 pca = prcomp(x, scale=FALSE)
-test_acp = df_test[,colnames(df_test) %in% colnames(x)]
-test_acp = test_acp[,colnames(x)]
+test_acp = df_family[df_family$ID == "test",colnames(x)]
 pca_test = t(t(test_acp)-pca$center) %*% pca$rotation[,1:6]
-grimec_acp = df_grim[,colnames(df_grim) %in% colnames(x)]
-grimec_acp = grimec_acp[,colnames(x)]
+grimec_acp = df_family[df_family$ID == "grimec",colnames(x)]
 pca_grimec = t(t(grimec_acp)-pca$center) %*% pca$rotation[,1:6]
 v = pca$sdev * pca$sdev
 p = v / sum(v) * 100
 layout(matrix(1:6,3), respect=TRUE)
 barplot(p[1:6], ylab="% of variance explained", xlab="components")
-legend("topright", col=unique(as.factor(df$meth_family)), legend=unique(df$meth_family),pch=16,cex = 0.3)
+legend("topright", col=unique(as.factor(df_family$meth_family)), legend=unique(df_family$meth_family),pch=16,cex = 1)
 for (i in 1:5) {
     j = i+1
     plot(pca$x[,i], pca$x[,j], 
     	xlab=paste0("PC", i, "(", signif(p[i], 3), "%)"), 
     	ylab=paste0("PC", j, "(", signif(p[j], 3), "%)"), 
-    	col=adjustcolor(as.numeric(as.factor(df$meth_family)),alpha.f=0.3),
-    	pch=16,cex = 0.5)  
-    # scale_factor = min(abs(c(min(c(pca$x[,i], pca$x[,j])), max(c(pca$x[,i], pca$x[,j])))))
-    # scale_factor = min(abs(c(max(min(pca$x[,i]), min(pca$x[,j])), min(max(pca$x[,i]), max(pca$x[,j])))))
-    # arrows(0,0,pca$rotation[,i]*scale_factor, pca$rotation[,j]*scale_factor, col="grey")
-    # text(pca$rotation[,i]*scale_factor, pca$rotation[,j]*scale_factor, rownames(pca$rotation))
-    points(pca_test[,i],pca_test[,j],col=adjustcolor(as.numeric(as.factor(pred_family)),alpha.f=1),pch=".")
-    points(pca_grimec[,i],pca_grimec[,j],col=adjustcolor(as.numeric(as.factor(pred_family_grimec)),alpha.f=1),pch=17)
+    	col=adjustcolor(df$col,alpha.f=0.3),
+    	pch=16)  
+    points(pca_test[,i],pca_test[,j],col=adjustcolor(df_family[df_family$ID == "test","col"],alpha.f=1),pch=".")
+    points(pca_grimec[,i],pca_grimec[,j],col=adjustcolor(df_family[df_family$ID == "grimec","col"],alpha.f=1),pch=17)
   }
 
 # super_family
 
-pred_super_family = mreadRDS("pred_super_f_test.rds")
-pred_super_family_grimec = mreadRDS("pred_super_f_grimec.rds")
-df = mreadRDS("df_r0_ewas10000_trainGBMtest_super_family.rds")
+palette(pals::watlington())
+df = df_sf[df_sf$ID == "train",]
 markers_start = grep("cg",colnames(df))[1]
 idx_cpg = colnames(df)[markers_start:ncol(df)]
 
 x <- df[,idx_cpg]
 pca = prcomp(x, scale=FALSE)
-test_acp = df_test[,colnames(df_test) %in% colnames(x)]
-test_acp = test_acp[,colnames(x)]
+test_acp = df_sf[df_sf$ID == "test",colnames(x)]
 pca_test = t(t(test_acp)-pca$center) %*% pca$rotation[,1:6]
-grimec_acp = df_grim[,colnames(df_grim) %in% colnames(x)]
-grimec_acp = grimec_acp[,colnames(x)]
+grimec_acp = df_sf[df_sf$ID == "grimec",colnames(x)]
 pca_grimec = t(t(grimec_acp)-pca$center) %*% pca$rotation[,1:6]
 v = pca$sdev * pca$sdev
 p = v / sum(v) * 100
 layout(matrix(1:6,3), respect=TRUE)
 barplot(p[1:6], ylab="% of variance explained", xlab="components")
-legend("topright", col=unique(as.factor(df$super_family)), legend=unique(df$super_family),pch=16,cex = 0.5)
+legend("topright", col=unique(as.factor(df_sf$super_family)), legend=unique(df_sf$super_family),pch=16,cex = 1.5)
 for (i in 1:5) {
     j = i+1
     plot(pca$x[,i], pca$x[,j], 
     	xlab=paste0("PC", i, "(", signif(p[i], 3), "%)"), 
     	ylab=paste0("PC", j, "(", signif(p[j], 3), "%)"), 
-    	col=adjustcolor(as.numeric(as.factor(df$super_family)),alpha.f=0.3),
-    	pch=16,cex = 0.5)  
-    # scale_factor = min(abs(c(min(c(pca$x[,i], pca$x[,j])), max(c(pca$x[,i], pca$x[,j])))))
-    # scale_factor = min(abs(c(max(min(pca$x[,i]), min(pca$x[,j])), min(max(pca$x[,i]), max(pca$x[,j])))))
-    # arrows(0,0,pca$rotation[,i]*scale_factor, pca$rotation[,j]*scale_factor, col="grey")
-    # text(pca$rotation[,i]*scale_factor, pca$rotation[,j]*scale_factor, rownames(pca$rotation))
-    points(pca_test[,i],pca_test[,j],col=adjustcolor(as.numeric(as.factor(pred_super_family)),alpha.f=1),pch=".")
-    points(pca_grimec[,i],pca_grimec[,j],col=adjustcolor(as.numeric(as.factor(pred_super_family_grimec)),alpha.f=1),pch=17)
+    	col=adjustcolor(df$col,alpha.f=0.3),
+    	pch=16)  
+    points(pca_test[,i],pca_test[,j],col=adjustcolor(df_sf[df_sf$ID == "test","col"],alpha.f=1),pch=".")
+    points(pca_grimec[,i],pca_grimec[,j],col=adjustcolor(df_sf[df_sf$ID == "grimec","col"],alpha.f=1),pch=17)
   }
 
 ```
 
 ```{r ACP 1/2}
 
-# Meth_class
-
-df = mreadRDS("df_r0_ewas10000_trainGBMtest_meth_class.rds")
-markers_start = grep("cg",colnames(df))[1]
-idx_cpg = colnames(df)[markers_start:ncol(df)]
-
-x <- df[,idx_cpg]
-pca = prcomp(x, scale=FALSE)
-test_acp = df_test[,colnames(df_test) %in% colnames(x)]
-test_acp = test_acp[,colnames(x)]
-pca_test = t(t(test_acp)-pca$center) %*% pca$rotation[,1:6]
-grimec_acp = df_grim[,colnames(df_grim) %in% colnames(x)]
-grimec_acp = grimec_acp[,colnames(x)]
-pca_grimec = t(t(grimec_acp)-pca$center) %*% pca$rotation[,1:6]
-v = pca$sdev * pca$sdev
-p = v / sum(v) * 100
-layout(matrix(1,1), respect=TRUE)
-# barplot(p, ylab="% of variance explained", xlab="components",xlimc(1:6))
-for (i in 1) {
-    j = i+1
-    plot(pca$x[,i], pca$x[,j], 
-    	xlab=paste0("PC", i, "(", signif(p[i], 3), "%)"), 
-    	ylab=paste0("PC", j, "(", signif(p[j], 3), "%)"), 
-    	col=adjustcolor(col = as.numeric(as.factor(df$meth_class)),alpha.f=0.3),
-    	pch=16)  
-    # scale_factor = min(abs(c(min(c(pca$x[,i], pca$x[,j])), max(c(pca$x[,i], pca$x[,j])))))
-    # scale_factor = min(abs(c(max(min(pca$x[,i]), min(pca$x[,j])), min(max(pca$x[,i]), max(pca$x[,j])))))
-    # arrows(0,0,pca$rotation[,i]*scale_factor, pca$rotation[,j]*scale_factor, col="grey")
-    # text(pca$rotation[,i]*scale_factor, pca$rotation[,j]*scale_factor, rownames(pca$rotation))
-    points(pca_test[,i],pca_test[,j],col=adjustcolor(as.numeric(as.factor(pred_disease)),alpha.f=1),pch=".")
-    points(pca_grimec[,i],pca_grimec[,j],col=adjustcolor(as.numeric(as.factor(pred_disease_grimec)),alpha.f=1),pch=17)
-    legend("topright", col=unique(as.factor(df$meth_class)), legend=unique(df$meth_class),pch=16,cex = 0.4)
-  }
-
-# Family
+# meth_class
 
 palette(pals::polychrome())
-df = mreadRDS("df_r0_ewas10000_trainGBMtest_meth_family.rds")
+df = df_disease[df_disease$ID == "train",]
 markers_start = grep("cg",colnames(df))[1]
 idx_cpg = colnames(df)[markers_start:ncol(df)]
 
 x <- df[,idx_cpg]
 pca = prcomp(x, scale=FALSE)
-test_acp = df_test[,colnames(df_test) %in% colnames(x)]
-test_acp = test_acp[,colnames(x)]
+test_acp = df_disease[df_disease$ID == "test",colnames(x)]
 pca_test = t(t(test_acp)-pca$center) %*% pca$rotation[,1:6]
-grimec_acp = df_grim[,colnames(df_grim) %in% colnames(x)]
-grimec_acp = grimec_acp[,colnames(x)]
+grimec_acp = df_disease[df_disease$ID == "grimec",colnames(x)]
 pca_grimec = t(t(grimec_acp)-pca$center) %*% pca$rotation[,1:6]
 v = pca$sdev * pca$sdev
 p = v / sum(v) * 100
 layout(matrix(1,1), respect=TRUE)
-# barplot(p, ylab="% of variance explained", xlab="components")
 for (i in 1) {
     j = i+1
     plot(pca$x[,i], pca$x[,j], 
     	xlab=paste0("PC", i, "(", signif(p[i], 3), "%)"), 
     	ylab=paste0("PC", j, "(", signif(p[j], 3), "%)"), 
-    	col=adjustcolor(col = as.numeric(as.factor(df$meth_family)),alpha.f=0.3),
+    	col=adjustcolor(df$col,alpha.f=0.3),
     	pch=16)  
-    # scale_factor = min(abs(c(min(c(pca$x[,i], pca$x[,j])), max(c(pca$x[,i], pca$x[,j])))))
-    # scale_factor = min(abs(c(max(min(pca$x[,i]), min(pca$x[,j])), min(max(pca$x[,i]), max(pca$x[,j])))))
-    # arrows(0,0,pca$rotation[,i]*scale_factor, pca$rotation[,j]*scale_factor, col="grey")
-    # text(pca$rotation[,i]*scale_factor, pca$rotation[,j]*scale_factor, rownames(pca$rotation))
-    points(pca_test[,i],pca_test[,j],col=adjustcolor(as.numeric(as.factor(pred_family)),alpha.f=1),pch=".")
-    points(pca_grimec[,i],pca_grimec[,j],col=adjustcolor(as.numeric(as.factor(pred_family_grimec)),alpha.f=1),pch=17)
-    legend("topright", col=unique(as.factor(df$meth_family)), legend=unique(df$meth_family),pch=16,cex = 1)
+    points(pca_test[,i],pca_test[,j],col=adjustcolor(df_disease[df_disease$ID == "test","col"],alpha.f=1),pch=".")
+    points(pca_grimec[,i],pca_grimec[,j],col=adjustcolor(df_disease[df_disease$ID == "grimec","col"],alpha.f=1),pch=17)
+    legend("topright", col=unique(as.factor(df_disease$meth_class)), legend=unique(df_disease$meth_class),pch=16,cex = 0.5)	
   }
 
-# Super_family
+# family 
 
-palette(pals::watlington())
-df = mreadRDS("df_r0_ewas10000_trainGBMtest_super_family.rds")
+palette(pals::polychrome())
+df = df_family[df_family$ID == "train",]
 markers_start = grep("cg",colnames(df))[1]
 idx_cpg = colnames(df)[markers_start:ncol(df)]
 
 x <- df[,idx_cpg]
 pca = prcomp(x, scale=FALSE)
-test_acp = df_test[,colnames(df_test) %in% colnames(x)]
-test_acp = test_acp[,colnames(x)]
+test_acp = df_family[df_family$ID == "test",colnames(x)]
 pca_test = t(t(test_acp)-pca$center) %*% pca$rotation[,1:6]
-grimec_acp = df_grim[,colnames(df_grim) %in% colnames(x)]
-grimec_acp = grimec_acp[,colnames(x)]
+grimec_acp = df_family[df_family$ID == "grimec",colnames(x)]
 pca_grimec = t(t(grimec_acp)-pca$center) %*% pca$rotation[,1:6]
 v = pca$sdev * pca$sdev
 p = v / sum(v) * 100
 layout(matrix(1,1), respect=TRUE)
-# barplot(p, ylab="% of variance explained", xlab="components")
 for (i in 1) {
     j = i+1
     plot(pca$x[,i], pca$x[,j], 
     	xlab=paste0("PC", i, "(", signif(p[i], 3), "%)"), 
     	ylab=paste0("PC", j, "(", signif(p[j], 3), "%)"), 
-    	col=adjustcolor(col = as.numeric(as.factor(df$super_family)),alpha.f=0.3),
-    	pch=16,cex = 1)  
-    # scale_factor = min(abs(c(min(c(pca$x[,i], pca$x[,j])), max(c(pca$x[,i], pca$x[,j])))))
-    # scale_factor = min(abs(c(max(min(pca$x[,i]), min(pca$x[,j])), min(max(pca$x[,i]), max(pca$x[,j])))))
-    # arrows(0,0,pca$rotation[,i]*scale_factor, pca$rotation[,j]*scale_factor, col="grey")
-    # text(pca$rotation[,i]*scale_factor, pca$rotation[,j]*scale_factor, rownames(pca$rotation))
-    legend("bottomright", col=unique(as.factor(df$super_family)), legend=unique(df$super_family),pch=16,cex = 1.5)
-    points(pca_test[,i],pca_test[,j],col=adjustcolor(as.numeric(as.factor(pred_super_family)),alpha.f=1),pch=".")
-    points(pca_grimec[,i],pca_grimec[,j],col=adjustcolor(as.numeric(as.factor(pred_super_family_grimec)),alpha.f=1),pch=17)
+    	col=adjustcolor(df$col,alpha.f=0.3),
+    	pch=16)  
+    points(pca_test[,i],pca_test[,j],col=adjustcolor(df_family[df_family$ID == "test","col"],alpha.f=1),pch=".")
+    points(pca_grimec[,i],pca_grimec[,j],col=adjustcolor(df_family[df_family$ID == "grimec","col"],alpha.f=1),pch=17)
+    legend("topright", col=unique(as.factor(df_family$meth_family)), legend=unique(df_family$meth_family),pch=16,cex = 1)
+  }
+
+# super_family
+
+palette(pals::watlington())
+df = df_sf[df_sf$ID == "train",]
+markers_start = grep("cg",colnames(df))[1]
+idx_cpg = colnames(df)[markers_start:ncol(df)]
+
+x <- df[,idx_cpg]
+pca = prcomp(x, scale=FALSE)
+test_acp = df_sf[df_sf$ID == "test",colnames(x)]
+pca_test = t(t(test_acp)-pca$center) %*% pca$rotation[,1:6]
+grimec_acp = df_sf[df_sf$ID == "grimec",colnames(x)]
+pca_grimec = t(t(grimec_acp)-pca$center) %*% pca$rotation[,1:6]
+v = pca$sdev * pca$sdev
+p = v / sum(v) * 100
+layout(matrix(1,1), respect=TRUE)
+for (i in 1) {
+    j = i+1
+    plot(pca$x[,i], pca$x[,j], 
+    	xlab=paste0("PC", i, "(", signif(p[i], 3), "%)"), 
+    	ylab=paste0("PC", j, "(", signif(p[j], 3), "%)"), 
+    	col=adjustcolor(df$col,alpha.f=0.3),
+    	pch=16)  
+    points(pca_test[,i],pca_test[,j],col=adjustcolor(df_sf[df_sf$ID == "test","col"],alpha.f=1),pch=".")
+    points(pca_grimec[,i],pca_grimec[,j],col=adjustcolor(df_sf[df_sf$ID == "grimec","col"],alpha.f=1),pch=17)
+    legend("topright", col=unique(as.factor(df_sf$super_family)), legend=unique(df_sf$super_family),pch=16,cex = 1.5)
+
   }
 
 ```
@@ -256,60 +403,127 @@ for (i in 1) {
 # Meth_class
 
 palette(pals::polychrome())
-df = mreadRDS("df_r0_ewas10000_trainGBMtest_meth_class.rds")
+df = df_disease[df_disease$ID == "train",]
 markers_start = grep("cg",colnames(df))[1]
 idx_cpg = colnames(df)[markers_start:ncol(df)]
 x <- df[,idx_cpg]
 umap = umap::umap(x)
-test_umap = df_test[,colnames(df_test) %in% colnames(x)]
-test_umap = test_umap[,colnames(x)]
+test_umap = df_disease[df_disease$ID == "test",colnames(x)]
 umap_test = predict(umap,data=test_umap)
-grimec_umap = df_grim[,colnames(df_grim) %in% colnames(x)]
-grimec_umap = grimec_umap[,colnames(x)]
+grimec_umap = df_disease[df_disease$ID == "grimec",colnames(x)]
 umap_grimec = predict(umap,data=grimec_umap)
 
-plot(umap$layout,col=adjustcolor(as.numeric(as.factor(df$meth_class)),alpha.f=0.3),pch=16,cex=1)
-points(umap_test[,1],umap_test[,2],col=adjustcolor(as.numeric(as.factor(pred_disease)),alpha.f=1),pch=".",cex=1)
-points(umap_grimec[,1],umap_grimec[,2],col=adjustcolor(as.numeric(as.factor(pred_disease_grimec)),alpha.f=1),pch=17,cex=1)
-legend("bottomleft", col=unique(as.factor(df$meth_class)), legend=unique(df$meth_class),pch=16,cex = 0.48)
+plot(umap$layout,col=adjustcolor(df$col,alpha.f=0.3),pch=16,cex=1)
+points(umap_test[,1],umap_test[,2],col=adjustcolor(df_disease[df_disease$ID == "test","col"],alpha.f=1),pch=".",cex=1)
+points(umap_grimec[,1],umap_grimec[,2],col=adjustcolor(df_disease[df_disease$ID == "grimec","col"],alpha.f=1),pch=17,cex=1)
+legend("bottomleft", col=unique(as.factor(df_disease$meth_class)), legend=unique(df_disease$meth_class),pch=16,cex = 0.48)
 
 # Family
 
-df = mreadRDS("df_r0_ewas10000_trainGBMtest_meth_family.rds")
+palette(pals::polychrome())
+df = df_family[df_family$ID == "train",]
 markers_start = grep("cg",colnames(df))[1]
 idx_cpg = colnames(df)[markers_start:ncol(df)]
 x <- df[,idx_cpg]
 umap = umap::umap(x)
-test_umap = df_test[,colnames(df_test) %in% colnames(x)]
-test_umap = test_umap[,colnames(x)]
+test_umap = df_family[df_family$ID == "test",colnames(x)]
 umap_test = predict(umap,data=test_umap)
-grimec_umap = df_grim[,colnames(df_grim) %in% colnames(x)]
-grimec_umap = grimec_umap[,colnames(x)]
+grimec_umap = df_family[df_family$ID == "grimec",colnames(x)]
 umap_grimec = predict(umap,data=grimec_umap)
-plot(umap$layout,col=adjustcolor(as.numeric(as.factor(df$meth_family)),alpha.f=0.3),pch=16,cex=1)
-points(umap_test[,1],umap_test[,2],col=adjustcolor(as.numeric(as.factor(pred_family)),alpha.f=0.3),pch=".",cex=1)
-points(umap_grimec[,1],umap_grimec[,2],col=adjustcolor(as.numeric(as.factor(pred_family_grimec)),alpha.f=0.3),pch=17,cex=1)
-legend("bottomleft", col=unique(as.factor(df$meth_family)), legend=unique(df$meth_family),pch=16,cex = 1)
+
+plot(umap$layout,col=adjustcolor(df$col,alpha.f=0.3),pch=16,cex=1)
+points(umap_test[,1],umap_test[,2],col=adjustcolor(df_family[df_family$ID == "test","col"],alpha.f=1),pch=".",cex=1)
+points(umap_grimec[,1],umap_grimec[,2],col=adjustcolor(df_family[df_family$ID == "grimec","col"],alpha.f=1),pch=17,cex=1)
+legend("bottomleft", col=unique(as.factor(df_family$meth_family)), legend=unique(df_family$meth_family),pch=16,cex = 1)
 
 # Super Family
 
 palette(pals::watlington())
-df = mreadRDS("df_r0_ewas10000_trainGBMtest_super_family.rds")
+df = df_sf[df_sf$ID == "train",]
 markers_start = grep("cg",colnames(df))[1]
 idx_cpg = colnames(df)[markers_start:ncol(df)]
 x <- df[,idx_cpg]
 umap = umap::umap(x)
-test_umap = df_test[,colnames(df_test) %in% colnames(x)]
-test_umap = test_umap[,colnames(x)]
+test_umap = df_sf[df_sf$ID == "test",colnames(x)]
 umap_test = predict(umap,data=test_umap)
-grimec_umap = df_grim[,colnames(df_grim) %in% colnames(x)]
-grimec_umap = grimec_umap[,colnames(x)]
+grimec_umap = df_sf[df_sf$ID == "grimec",colnames(x)]
 umap_grimec = predict(umap,data=grimec_umap)
-plot(umap$layout,col=adjustcolor(as.numeric(as.factor(df$super_family)),alpha.f=0.3),pch=16,cex=1)
-points(umap_test[,1],umap_test[,2],col=adjustcolor(as.numeric(as.factor(pred_super_family)),alpha.f=0.3),pch=".",cex=1)
-points(umap_grimec[,1],umap_grimec[,2],col=adjustcolor(as.numeric(as.factor(pred_super_family_grimec)),alpha.f=0.3),pch=17,cex=1)
-legend("bottomleft", col=unique(as.factor(df$super_family)), legend=unique(df$super_family),pch=16,cex = 1)
+
+plot(umap$layout,col=adjustcolor(df$col,alpha.f=0.3),pch=16,cex=1)
+points(umap_test[,1],umap_test[,2],col=adjustcolor(df_sf[df_sf$ID == "test","col"],alpha.f=1),pch=".",cex=1)
+points(umap_grimec[,1],umap_grimec[,2],col=adjustcolor(df_sf[df_sf$ID == "grimec","col"],alpha.f=1),pch=17,cex=1)
+legend("bottomleft", col=unique(as.factor(df_sf$super_family)), legend=unique(df_sf$super_family),pch=16,cex = 1.5)
 
 ```
 
+
+```{r UMAP new method conversion}
+
+# Cols for method conversion 
+
+df_train = mreadRDS("df_r0_ewas10000_trainGBMtest_meth_class.rds")
+
+grim_conv = all_grim[,c("Self_meth_class", "Self_family", "Self_super_family")]
+colnames(grim_conv) = c("meth_class","meth_family","super_family")
+col_conv = rbind.data.frame(df_train[,colnames(grim_conv)],pred_test,grim_conv)
+col_conv$ID = df_disease$ID
+col_conv$col_meth_class = as.numeric(as.factor(col_conv$meth_class))
+col_conv$col_meth_family = as.numeric(as.factor(col_conv$meth_family))
+col_conv$col_super_family = as.numeric(as.factor(col_conv$super_family))
+
+# Meth_class
+
+palette(pals::polychrome())
+df = df_disease[df_disease$ID == "train",]
+markers_start = grep("cg",colnames(df))[1]
+idx_cpg = colnames(df)[markers_start:ncol(df)]
+x <- df[,idx_cpg]
+umap = umap::umap(x)
+test_umap = df_disease[df_disease$ID == "test",colnames(x)]
+umap_test = predict(umap,data=test_umap)
+grimec_umap = df_disease[df_disease$ID == "grimec",colnames(x)]
+umap_grimec = predict(umap,data=grimec_umap)
+
+plot(umap$layout,col=adjustcolor(col_conv[col_conv$ID == "train","col_meth_class"],alpha.f=0.3),pch=16,cex=1)
+points(umap_test[,1],umap_test[,2],col=adjustcolor(col_conv[col_conv$ID == "test","col_meth_class"],alpha.f=1),pch=".",cex=1)
+points(umap_grimec[,1],umap_grimec[,2],col=adjustcolor(col_conv[col_conv$ID == "grimec","col_meth_class"],alpha.f=1),pch=17,cex=1)
+legend("bottomleft", col=unique(as.factor(col_conv$meth_class)), legend=unique(col_conv$meth_class),pch=16,cex = 0.48)
+
+# Family
+
+palette(pals::polychrome())
+df = df_family[df_family$ID == "train",]
+markers_start = grep("cg",colnames(df))[1]
+idx_cpg = colnames(df)[markers_start:ncol(df)]
+x <- df[,idx_cpg]
+umap = umap::umap(x)
+test_umap = df_family[df_family$ID == "test",colnames(x)]
+umap_test = predict(umap,data=test_umap)
+grimec_umap = df_family[df_family$ID == "grimec",colnames(x)]
+umap_grimec = predict(umap,data=grimec_umap)
+
+plot(umap$layout,col=adjustcolor(col_conv[col_conv$ID == "train","col_meth_family"],alpha.f=0.3),pch=16,cex=1)
+points(umap_test[,1],umap_test[,2],col=adjustcolor(col_conv[col_conv$ID == "test","col_meth_family"],alpha.f=1),pch=".",cex=1)
+points(umap_grimec[,1],umap_grimec[,2],col=adjustcolor(col_conv[col_conv$ID == "grimec","col_meth_family"],alpha.f=1),pch=17,cex=1)
+legend("bottomleft", col=unique(as.factor(col_conv$meth_family)), legend=unique(col_conv$meth_family),pch=16,cex = 1)
+
+# Super Family
+
+palette(pals::watlington())
+df = df_sf[df_sf$ID == "train",]
+markers_start = grep("cg",colnames(df))[1]
+idx_cpg = colnames(df)[markers_start:ncol(df)]
+x <- df[,idx_cpg]
+umap = umap::umap(x)
+test_umap = df_sf[df_sf$ID == "test",colnames(x)]
+umap_test = predict(umap,data=test_umap)
+grimec_umap = df_sf[df_sf$ID == "grimec",colnames(x)]
+umap_grimec = predict(umap,data=grimec_umap)
+
+plot(umap$layout,col=adjustcolor(col_conv[col_conv$ID == "train","col_super_family"],alpha.f=0.3),pch=16,cex=1)
+points(umap_test[,1],umap_test[,2],col=adjustcolor(col_conv[col_conv$ID == "test","col_super_family"],alpha.f=1),pch=".",cex=1)
+points(umap_grimec[,1],umap_grimec[,2],col=adjustcolor(col_conv[col_conv$ID == "grimec","col_super_family"],alpha.f=1),pch=17,cex=1)
+legend("bottomleft", col=unique(as.factor(col_conv$super_family)), legend=unique(col_conv$super_family),pch=16,cex = 1)
+
+```
 
