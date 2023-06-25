@@ -165,6 +165,10 @@ saveRDS(accuracy,"accuracy_conversion.rds")
 
 ```
 
+````{r, echo=TRUE, results="verbatim"}
+accuracy
+````
+
 # ACP 
 
 ```{r global ACP}
@@ -182,7 +186,7 @@ grimec_acp = df_disease[df_disease$group == "grimec",colnames(x)]
 pca_grimec = t(t(grimec_acp)-pca$center) %*% pca$rotation[,1:6]
 v = pca$sdev * pca$sdev
 p = v / sum(v) * 100
-layout(matrix(1:6,3), respect=TRUE)
+layout(matrix(1:6,2), respect=TRUE)
 barplot(p[1:6], ylab="% of variance explained", xlab="components")
 legend("topright", col=unique(as.factor(df_disease$meth_class)), legend=unique(df_disease$meth_class),pch=16,cex = 0.2)
 for (i in 1:5) {
@@ -209,7 +213,7 @@ grimec_acp = df_disease[df_disease$group == "grimec",colnames(x)]
 pca_grimec = t(t(grimec_acp)-pca$center) %*% pca$rotation[,1:6]
 v = pca$sdev * pca$sdev
 p = v / sum(v) * 100
-layout(matrix(1:6,3), respect=TRUE)
+layout(matrix(1:6,2), respect=TRUE)
 barplot(p[1:6], ylab="% of variance explained", xlab="components")
 legend("topright", col=unique(as.factor(df_disease$meth_family)), legend=unique(df_disease$meth_family),pch=16,cex = 1)
 for (i in 1:5) {
@@ -236,7 +240,7 @@ grimec_acp = df_disease[df_disease$group == "grimec",colnames(x)]
 pca_grimec = t(t(grimec_acp)-pca$center) %*% pca$rotation[,1:6]
 v = pca$sdev * pca$sdev
 p = v / sum(v) * 100
-layout(matrix(1:6,3), respect=TRUE)
+layout(matrix(1:6,2), respect=TRUE)
 barplot(p[1:6], ylab="% of variance explained", xlab="components")
 legend("topright", col=unique(as.factor(df_disease$super_family)), legend=unique(df_disease$super_family),pch=16,cex = 1.5)
 for (i in 1:5) {
@@ -267,7 +271,7 @@ grimec_acp = df_disease[df_disease$group == "grimec",colnames(x)]
 pca_grimec = t(t(grimec_acp)-pca$center) %*% pca$rotation[,1:6]
 v = pca$sdev * pca$sdev
 p = v / sum(v) * 100
-layout(matrix(1,1), respect=TRUE)
+layout(1, respect=TRUE)
 for (i in 1) {
     j = i+1
     plot(pca$x[,i], pca$x[,j], 
@@ -293,7 +297,7 @@ grimec_acp = df_disease[df_disease$group == "grimec",colnames(x)]
 pca_grimec = t(t(grimec_acp)-pca$center) %*% pca$rotation[,1:6]
 v = pca$sdev * pca$sdev
 p = v / sum(v) * 100
-layout(matrix(1,1), respect=TRUE)
+layout(1, respect=TRUE)
 for (i in 1) {
     j = i+1
     plot(pca$x[,i], pca$x[,j], 
@@ -319,7 +323,7 @@ grimec_acp = df_disease[df_disease$group == "grimec",colnames(x)]
 pca_grimec = t(t(grimec_acp)-pca$center) %*% pca$rotation[,1:6]
 v = pca$sdev * pca$sdev
 p = v / sum(v) * 100
-layout(matrix(1,1), respect=TRUE)
+layout(1, respect=TRUE)
 for (i in 1) {
     j = i+1
     plot(pca$x[,i], pca$x[,j], 
@@ -338,6 +342,7 @@ for (i in 1) {
 # UMAP
 
 ```{r UMAP new method conversion}
+layout(1, respect=TRUE)
 
 # Meth_class
 

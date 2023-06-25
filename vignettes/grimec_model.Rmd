@@ -1,6 +1,6 @@
 ---
-title: "RF for predictions"
-author: "Jossaud Fabien"
+title: "Build predictive model using RF"
+author: "Fabien Jossaud"
 date: "`r Sys.Date()`"
 output: 
   rmarkdown::html_document:
@@ -10,9 +10,15 @@ output:
     number_sections: true
 ---
 
+```{r echo=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide")
+start_time = Sys.time()
+source("common.R")
+```
+
+
 
 ```{r params}
-
 if(!exists("nbewasprobes")){
 	nbewasprobes = 10000
 }
@@ -22,13 +28,11 @@ y_key = "meth_class"
 ```
 
 ```{r ewas creation}
-
 rmarkdown::render('03_ewas.Rmd',output_file=paste0('03_ewas', nbewasprobes,'_',gse,'_',y_key, '.html'))
-
+y_key = "meth_class"
 ```
 
 ```{r rf}
-
 df = readRDS(paste0("df_r0_ewas", nbewasprobes, "_", gse,".rds"))
 markers_start = grep("cg",colnames(df))[1]
 idx_cpg = colnames(df)[markers_start:ncol(df)]
@@ -39,8 +43,6 @@ dataset = cbind(x,y)
 control <- caret::trainControl(method='repeatedcv', 
 	                        number=10, 
 	                        repeats=3)
-#Metric compare model is Accuracy
-metric <- "Accuracy"
 set.seed(123)
 #Number randomely variable selected is mtry
 mtry <- sqrt(ncol(x))
@@ -53,7 +55,21 @@ rf_default <- caret::train(y~.,
         	              trControl=control)
 print(rf_default)
 saveRDS(rf_default,paste0("rf_model",nbewasprobes,"_",y_key,".rds"))
-
-
 ```
 
+# Process Information 
+
+```{r}
+stop_time = Sys.time()
+info = list(
+  exec_time = round(difftime(stop_time, start_time, units="mins"),1)
+)
+saveRDS(info, paste0("info_fr", nbewasprobes, "_", gse, ".rds"))
+```
+
+
+# Session Information
+
+```{r, results="verbatim"}
+sessionInfo()
+```
