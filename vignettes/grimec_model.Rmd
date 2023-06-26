@@ -64,9 +64,12 @@ stop_time = Sys.time()
 info = list(
   exec_time = round(difftime(stop_time, start_time, units="mins"),1)
 )
-saveRDS(info, paste0("info_fr", nbewasprobes, "_", gse, ".rds"))
+saveRDS(info, paste0("info_grimec_model_", nbewasprobes, "_", gse, ".rds"))
 ```
 
+```{r echo=TRUE, results="verbatim"}
+info
+```
 
 # Session Information
 
