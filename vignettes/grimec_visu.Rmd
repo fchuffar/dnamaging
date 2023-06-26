@@ -16,15 +16,12 @@ knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, 
 start_time = Sys.time()
 source("common.R")
 palette(pals::watlington())
-
 ```
 
-
-```{r}
-if(!exists("nbewasprobes")){
-	nbewasprobes = 10000
-}
-
+```{r params}
+nbewasprobes = 10000
+gse = "trainGBMtest"
+y_key = "meth_class"
 ```
 
 ```{r create global database}
@@ -179,8 +176,9 @@ layout(matrix(1:6,2), respect=TRUE)
 barplot(p[1:6], ylab="% of variance explained", xlab="components")
 for (i in 1:5) {
     j = i+1
-    plot(  pca$x   [,i], pca$x   [,j], col=adjustcolor(
-                                           as.numeric(df[rownames(pca$x),]$pred_sf), alpha.f=0.3), pch=16, xlab=paste0("PC", i, "(", signif(p[i], 3), "%)"), ylab=paste0("PC", j, "(", signif(p[j], 3), "%)"))  
+    plot(xlab=paste0("PC", i, "(", signif(p[i], 3), "%)"), ylab=paste0("PC", j, "(", signif(p[j], 3), "%)")
+           pca$x   [,i], pca$x   [,j], col=adjustcolor(
+                                           as.numeric(df[rownames(pca$x),]$labl_sf), alpha.f=0.3), pch=16)  
     points(pca_test[,i], pca_test[,j], col=as.numeric(df[rownames(pca_test),]$pred_sf)           , pch=".")
     points(pca_grim[,i], pca_grim[,j], col=as.numeric(df[rownames(pca_grim),]$pred_sf)           , pch=1)
 }
@@ -200,13 +198,13 @@ x_trai = as.matrix(df[df$group=="TRAI", idx_cpg])
 x_test = as.matrix(df[df$group=="TEST", idx_cpg])
 x_grim = as.matrix(df[df$group=="GRIM", idx_cpg])
 umap_trai = umap::umap(x_trai, method="umap-learn")
-umap_test = predict(umap, data=x_test)
-umap_grim = predict(umap, data=x_grim)
+umap_test = predict(umap_trai, data=x_test)
+umap_grim = predict(umap_trai, data=x_grim)
 
 # rownames(umap_trai$layout)
 layout(matrix(1:2,1), respect=TRUE)
 plot(  umap_trai$layout            , col=adjustcolor(
-                                         as.numeric(df[rownames(umap_trai$layout),]$pred_sf), alpha.f=0.1), pch=16 )
+                                         as.numeric(df[rownames(umap_trai$layout),]$labl_sf), alpha.f=0.1), pch=16 )
 points(umap_test[,1], umap_test[,2], col=as.numeric(df[rownames(umap_test),]       $pred_sf)              , pch=".")
 points(umap_grim[,1], umap_grim[,2], col=as.numeric(df[rownames(umap_grim),]       $pred_sf)              , pch=1  )
 plot.new()
@@ -223,7 +221,7 @@ stop_time = Sys.time()
 info = list(
   exec_time = round(difftime(stop_time, start_time, units="mins"),1)
 )
-# saveRDS(info, paste0("info_grimec_visu_", nbewasprobes, "_", gse, ".rds"))
+saveRDS(info, paste0("info_grimec_visu_", nbewasprobes, "_", gse, ".rds"))
 ```
 
 ```{r echo=TRUE, results="verbatim"}

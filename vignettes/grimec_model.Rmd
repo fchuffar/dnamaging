@@ -19,12 +19,9 @@ source("common.R")
 
 
 ```{r params}
-if(!exists("nbewasprobes")){
-	nbewasprobes = 10000
-}
+nbewasprobes = 10000
 gse = "trainGBMtest"
 y_key = "meth_class"
-
 ```
 
 ```{r ewas creation}

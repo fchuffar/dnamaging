@@ -19,16 +19,20 @@ start_time = Sys.time()
 source("common.R")
 ```
 
+```{r params}
+nbewasprobes = 10000
+gse = "trainGBMtest"
+y_key = "meth_class"
+```
+
+
+
 ```{r data}
 df_grim = mreadRDS("../../datashare/GRIMEC001/df_GRIMEC001.rds") # Grimec data
 df_grim = t(df_grim)
 
 df_test = mreadRDS("df_preproc_testGBMgrimec.rds") # Test data
 df_train = mreadRDS("df_preproc_trainGBMtest.rds") # Train data
-
-if(!exists("nbewasprobes")){
-	nbewasprobes = 10000
-}
 ```
 
 ```{r predictions}
