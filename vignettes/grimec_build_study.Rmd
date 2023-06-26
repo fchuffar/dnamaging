@@ -1,0 +1,99 @@
+---
+title: "Visu for poster"
+author: "Jossaud Fabien"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+
+
+```{r, echo=FALSE, eval=TRUE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide", warning=FALSE)
+knitr::opts_knit$set(root.dir = "datashare/GRIMEC001/raw/")
+```
+
+```{r params}
+
+library(ChAMP)
+library(stringr)
+
+print("Which analysis do you want to do ? (450k/EPIC)")
+analysis<-"EPIC"
+
+print("Do you want to exclude XY probes from analysis ? (TRUE/FALSE)")
+XY<-TRUE
+
+```
+
+```{r launch champ package}
+
+myLoad<-champ.load(autoimpute=TRUE,detPcut=0.01,filterXY=XY,arraytype=analysis)
+myLoad$pd$Slide<-as.character(as.factor(myLoad$pd$Slide))
+
+dir.create(path="../Results")
+dir.create(path="../Results/ChAMP")
+
+save(myLoad, file = file.path("../Results/ChAMP/myLoad.rda"))
+champ.QC(beta=myLoad$beta,pheno=myLoad$pd$Sample_Group,resultsDir="../Results/ChAMP/CHAMP_QCimages_Sample_Group/")
+
+```
+
+```{r normalization}
+
+normali<-"Yes"
+
+if(file.exists(file.path("../Results/ChAMP/myNorm.rda"))){
+  if(normali == "Yes"){
+    myNorm<-champ.norm(beta=myLoad$beta,method="PBC",arraytype=analysis,core=detectCores(),resultsDir="../Results/ChAMP/CHAMP_Normalization/")
+    # myNorm<-champ.norm(beta=myLoad$beta,arraytype=analysis,core=detectCores(),resultsDir="../Results/ChAMP/CHAMP_Normalization/")
+    save(myNorm, file = file.path("../Results/ChAMP/myNorm.rda"))
+    write.table(cbind(rownames(myNorm),data.frame(myNorm,row.names=NULL)),file = file.path("../Results/ChAMP/myNorm.csv"),sep = ",",row.names = F)
+    betavalplot<-boxplot(myNorm,cex.axis = 0.8, las =2, ylab = "BetaValue")
+    save(betavalplot,file = file.path("../Results/ChAMP/betavalueplot.png"))
+    champ.SVD(beta = as.data.frame(myNorm),resultsDir="../Results/ChAMP/CHAMP_SVDimages/")
+  if(normali == "No"){
+    load("../Results/ChAMP/myNorm.rda")
+    }
+  }
+}
+if(!(file.exists(file.path("../Results/ChAMP/myNorm.rda")))){
+  myNorm<-champ.norm(beta=myLoad$beta,method="PBC",arraytype=analysis,core=detectCores(),resultsDir="../Results/ChAMP/CHAMP_Normalization/")
+  # myNorm<-champ.norm(beta=myLoad$beta,arraytype=analysis,core=detectCores(),resultsDir="../Results/ChAMP/CHAMP_Normalization/")
+  save(myNorm, file = file.path("../Results/ChAMP/myNorm.rda"))
+  write.table(cbind(rownames(myNorm),data.frame(myNorm,row.names=NULL)),file = file.path("../Results/ChAMP/myNorm.csv"),sep = ",",row.names = F)
+  betavalplot<-boxplot(myNorm,cex.axis = 0.8, las =2, ylab = "BetaValue")
+  save(betavalplot,file = file.path("../Results/ChAMP/betavalueplot.png"))
+  champ.SVD(beta = as.data.frame(myNorm),resultsDir="../Results/ChAMP/CHAMP_SVDimages/")
+}
+
+```
+
+```{r batch correction}
+
+batchcorr<-"No"
+
+if(batchcorr == "Yes"){
+  myCombat<-champ.runCombat()
+  save(myCombat, file = file.path("../Results/ChAMP/myCombat.rda"))
+  myNorm<-myCombat
+  write.table(cbind(rownames(myNorm),data.frame(myNorm,row.names=NULL)),file = file.path("../Results/ChAMP/myNorm.csv"),sep = ",",row.names = F)
+}
+gc()
+
+```
+
+```{r sample name}
+
+exp_grp = openxlsx::read.xlsx("../IAB_2023_02_22.xlsx",sheet=2)
+dim(exp_grp)
+head(exp_grp)
+id = paste0("SMP",substr(exp_grp[,"TD-GENET.NUMBER"],1,7),"_",exp_grp[,"BEADCHIP.SAMPLE.NUMBER"])
+id = sort(id)
+colnames(myNorm) = id
+saveRDS(myNorm,"../df_GRIMEC001.rds")
+```
