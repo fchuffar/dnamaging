@@ -1,6 +1,6 @@
 ---
 title: "Visualisation for Grimec pipeline"
-author: "Jossaud Fabien"
+author: "Jossaud Fabien, Florent chuffart"
 date: "`r Sys.Date()`"
 output: 
   rmarkdown::html_document:
@@ -45,10 +45,8 @@ dico = openxlsx::read.xlsx("classes_brain_tumor.xlsx")
 rownames(dico) = dico[,1]
 exp_grp$meth_class = dico[paste0("methylation class ",do.call(rbind,strsplit(do.call(rbind,strsplit(gsub("pediatric","paediatric",gsub("\r\n"," ",gsub("0,","0.",gsub( "Methylation class family", "MCF",df_grim$meth_class )))), "ethylation class "))[,2]," 0.",fixed=TRUE))[,1]),2]
 exp_grp$meth_class
-# WARNING PATCH BEFORE REBUILT DF GRIM USING PROPER NAME
 cbind(rownames(df_grim), rownames(exp_grp))
-rownames(df_grim) = rownames(exp_grp)           
-df_grim$meth_class = exp_grp$meth_class
+df_grim$meth_class = exp_grp[rownames(df_grim),]$meth_class
                
 # TEST
 df_test = mreadRDS("df_preproc_testGBMgrimec.rds") # Test data

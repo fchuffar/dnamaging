@@ -1,23 +1,13 @@
-# conda deactivate
-# rm -Rf /summer/epistorage/miniconda3/*
-# ~/Miniconda3-latest-Linux-x86_64.sh -u -p /summer/epistorage/miniconda3 -b
-# conda update -n base -c defaults conda
+conda create --clone epimedtools_env -n dnamaging_env 
+conda activate dnamaging_env
 
-__conda_setup="$('/summer/epistorage/miniconda3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
-if [ $? -eq 0 ]; then
-   eval "$__conda_setup"
-else
-   if [ -f "/summer/epistorage/miniconda3/etc/profile.d/conda.sh" ]; then
-       . "/summer/epistorage/miniconda3/etc/profile.d/conda.sh"
-   else
-       export PATH="/summer/epistorage/miniconda3/bin:$PATH"
-   fi
-fi
-unset __conda_setup
+conda install -c bioconda bioconductor-champ
+conda install -c conda-forge umap-learn r-umap
 
 
-# conda create --name R3.6.1_env
-conda activate R3.6.1_env
+# under R
+# devtools::install_github("fchuffar/dnamaging")
+
 
 # conda install  -c anaconda libopenblas
 #

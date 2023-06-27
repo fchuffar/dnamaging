@@ -1,5 +1,5 @@
 ---
-title: "Visu for poster"
+title: "Buiding GRIMEC study"
 author: "Jossaud Fabien"
 date: "`r Sys.Date()`"
 output: 
@@ -12,13 +12,13 @@ output:
 
 
 
-```{r, echo=FALSE, eval=TRUE}
-knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide", warning=FALSE)
-knitr::opts_knit$set(root.dir = "datashare/GRIMEC001/raw/")
+```{r echo=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide")
+start_time = Sys.time()
+source("common.R")
 ```
 
 ```{r params}
-
 library(ChAMP)
 library(stringr)
 
@@ -27,19 +27,17 @@ analysis<-"EPIC"
 
 print("Do you want to exclude XY probes from analysis ? (TRUE/FALSE)")
 XY<-TRUE
-
 ```
 
 ```{r launch champ package}
-
-myLoad<-champ.load(autoimpute=TRUE,detPcut=0.01,filterXY=XY,arraytype=analysis)
+myLoad<-champ.load(directory="datashare/GRIMEC001/raw/", autoimpute=TRUE, detPcut=0.01, filterXY=XY, arraytype=analysis)
 myLoad$pd$Slide<-as.character(as.factor(myLoad$pd$Slide))
 
-dir.create(path="../Results")
-dir.create(path="../Results/ChAMP")
+dir.create(path="datashare/GRIMEC001/Results")
+dir.create(path="datashare/GRIMEC001/Results/ChAMP")
 
-save(myLoad, file = file.path("../Results/ChAMP/myLoad.rda"))
-champ.QC(beta=myLoad$beta,pheno=myLoad$pd$Sample_Group,resultsDir="../Results/ChAMP/CHAMP_QCimages_Sample_Group/")
+save(myLoad, file = file.path("datashare/GRIMEC001/Results/ChAMP/myLoad.rda"))
+champ.QC(beta=myLoad$beta,pheno=myLoad$pd$Sample_Group,resultsDir="datashare/GRIMEC001/Results/ChAMP/CHAMP_QCimages_Sample_Group/")
 
 ```
 
@@ -47,28 +45,28 @@ champ.QC(beta=myLoad$beta,pheno=myLoad$pd$Sample_Group,resultsDir="../Results/Ch
 
 normali<-"Yes"
 
-if(file.exists(file.path("../Results/ChAMP/myNorm.rda"))){
+if(file.exists(file.path("datashare/GRIMEC001/Results/ChAMP/myNorm.rda"))){
   if(normali == "Yes"){
-    myNorm<-champ.norm(beta=myLoad$beta,method="PBC",arraytype=analysis,core=detectCores(),resultsDir="../Results/ChAMP/CHAMP_Normalization/")
-    # myNorm<-champ.norm(beta=myLoad$beta,arraytype=analysis,core=detectCores(),resultsDir="../Results/ChAMP/CHAMP_Normalization/")
-    save(myNorm, file = file.path("../Results/ChAMP/myNorm.rda"))
-    write.table(cbind(rownames(myNorm),data.frame(myNorm,row.names=NULL)),file = file.path("../Results/ChAMP/myNorm.csv"),sep = ",",row.names = F)
+    myNorm<-champ.norm(beta=myLoad$beta,method="PBC",arraytype=analysis,core=detectCores(),resultsDir="datashare/GRIMEC001/Results/ChAMP/CHAMP_Normalization/")
+    # myNorm<-champ.norm(beta=myLoad$beta,arraytype=analysis,core=detectCores(),resultsDir="datashare/GRIMEC001/Results/ChAMP/CHAMP_Normalization/")
+    save(myNorm, file = file.path("datashare/GRIMEC001/Results/ChAMP/myNorm.rda"))
+    write.table(cbind(rownames(myNorm),data.frame(myNorm,row.names=NULL)),file = file.path("datashare/GRIMEC001/Results/ChAMP/myNorm.csv"),sep = ",",row.names = F)
     betavalplot<-boxplot(myNorm,cex.axis = 0.8, las =2, ylab = "BetaValue")
-    save(betavalplot,file = file.path("../Results/ChAMP/betavalueplot.png"))
-    champ.SVD(beta = as.data.frame(myNorm),resultsDir="../Results/ChAMP/CHAMP_SVDimages/")
+    save(betavalplot,file = file.path("datashare/GRIMEC001/Results/ChAMP/betavalueplot.png"))
+    champ.SVD(beta = as.data.frame(myNorm),resultsDir="datashare/GRIMEC001/Results/ChAMP/CHAMP_SVDimages/")
   if(normali == "No"){
-    load("../Results/ChAMP/myNorm.rda")
+    load("datashare/GRIMEC001/Results/ChAMP/myNorm.rda")
     }
   }
 }
-if(!(file.exists(file.path("../Results/ChAMP/myNorm.rda")))){
-  myNorm<-champ.norm(beta=myLoad$beta,method="PBC",arraytype=analysis,core=detectCores(),resultsDir="../Results/ChAMP/CHAMP_Normalization/")
-  # myNorm<-champ.norm(beta=myLoad$beta,arraytype=analysis,core=detectCores(),resultsDir="../Results/ChAMP/CHAMP_Normalization/")
-  save(myNorm, file = file.path("../Results/ChAMP/myNorm.rda"))
-  write.table(cbind(rownames(myNorm),data.frame(myNorm,row.names=NULL)),file = file.path("../Results/ChAMP/myNorm.csv"),sep = ",",row.names = F)
+if(!(file.exists(file.path("datashare/GRIMEC001/Results/ChAMP/myNorm.rda")))){
+  myNorm<-champ.norm(beta=myLoad$beta,method="PBC",arraytype=analysis,core=detectCores(),resultsDir="datashare/GRIMEC001/Results/ChAMP/CHAMP_Normalization/")
+  # myNorm<-champ.norm(beta=myLoad$beta,arraytype=analysis,core=detectCores(),resultsDir="datashare/GRIMEC001/Results/ChAMP/CHAMP_Normalization/")
+  save(myNorm, file = file.path("datashare/GRIMEC001/Results/ChAMP/myNorm.rda"))
+  write.table(cbind(rownames(myNorm),data.frame(myNorm,row.names=NULL)),file = file.path("datashare/GRIMEC001/Results/ChAMP/myNorm.csv"),sep = ",",row.names = F)
   betavalplot<-boxplot(myNorm,cex.axis = 0.8, las =2, ylab = "BetaValue")
-  save(betavalplot,file = file.path("../Results/ChAMP/betavalueplot.png"))
-  champ.SVD(beta = as.data.frame(myNorm),resultsDir="../Results/ChAMP/CHAMP_SVDimages/")
+  save(betavalplot,file = file.path("datashare/GRIMEC001/Results/ChAMP/betavalueplot.png"))
+  champ.SVD(beta = as.data.frame(myNorm),resultsDir="datashare/GRIMEC001/Results/ChAMP/CHAMP_SVDimages/")
 }
 
 ```
@@ -79,21 +77,41 @@ batchcorr<-"No"
 
 if(batchcorr == "Yes"){
   myCombat<-champ.runCombat()
-  save(myCombat, file = file.path("../Results/ChAMP/myCombat.rda"))
+  save(myCombat, file = file.path("datashare/GRIMEC001/Results/ChAMP/myCombat.rda"))
   myNorm<-myCombat
-  write.table(cbind(rownames(myNorm),data.frame(myNorm,row.names=NULL)),file = file.path("../Results/ChAMP/myNorm.csv"),sep = ",",row.names = F)
+  write.table(cbind(rownames(myNorm),data.frame(myNorm,row.names=NULL)),file = file.path("datashare/GRIMEC001/Results/ChAMP/myNorm.csv"),sep = ",",row.names = F)
 }
 gc()
 
 ```
 
 ```{r sample name}
+saveRDS(myNorm,"datashare/GRIMEC001/df_GRIMEC001.rds")
+```
 
-exp_grp = openxlsx::read.xlsx("../IAB_2023_02_22.xlsx",sheet=2)
-dim(exp_grp)
-head(exp_grp)
-id = paste0("SMP",substr(exp_grp[,"TD-GENET.NUMBER"],1,7),"_",exp_grp[,"BEADCHIP.SAMPLE.NUMBER"])
-id = sort(id)
-colnames(myNorm) = id
-saveRDS(myNorm,"../df_GRIMEC001.rds")
+
+
+
+
+
+
+
+# Process Information 
+
+```{r}
+stop_time = Sys.time()
+info = list(
+  exec_time = round(difftime(stop_time, start_time, units="mins"),1)
+)
+saveRDS(info, paste0("info_grimec_build_study.rds"))
+```
+
+```{r echo=TRUE, results="verbatim"}
+info
+```
+
+# Session Information
+
+```{r, results="verbatim"}
+sessionInfo()
 ```
