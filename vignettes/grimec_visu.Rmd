@@ -41,7 +41,7 @@ dim(df_grim)
 head(df_grim)[,1:6]
 df_grim$meth_class = exp_grp[,"DKFZ.CLASSIFIER.RESULT.brain.v11b4"]
 # convert meth_class
-dico = openxlsx::read.xlsx("classes_brain_tumor.xlsx")
+dico = openxlsx::read.xlsx("NIHMS942946-supplement-Sup_Table_1.xlsx")
 rownames(dico) = dico[,1]
 exp_grp$meth_class = dico[paste0("methylation class ",do.call(rbind,strsplit(do.call(rbind,strsplit(gsub("pediatric","paediatric",gsub("\r\n"," ",gsub("0,","0.",gsub( "Methylation class family", "MCF",df_grim$meth_class )))), "ethylation class "))[,2]," 0.",fixed=TRUE))[,1]),2]
 exp_grp$meth_class

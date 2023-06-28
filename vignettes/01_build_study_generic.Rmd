@@ -57,16 +57,21 @@ s$gse = gse
 
 # get exp_grp df from NCBI/GEO
 dim(s$exp_grp)
-tmp_exp_grp = s$get_exp_grp(dest_dir="./datashare")
-dim(tmp_exp_grp)
+if (substr(gse,1,3)=="GSE") {
+  tmp_exp_grp = s$get_exp_grp(dest_dir="./datashare")
+  dim(tmp_exp_grp)  
+}
 
 # get data matrix from NCBI/GEO
 dim(s$data)
+if (substr(gse,1,3)=="GSE") {
 tmp_data = s$get_data(dest_dir="./datashare")
 dim(tmp_data)
-
 # data orig
 s$stuffs$orig = "series_matrix"
+} else {
+  tmp_data = matrix(nrow=0, ncol=0)
+}
 ```
 
 ```{r build exp_grp from EpiMedDB, eval=FALSE}
@@ -285,6 +290,10 @@ info_build = list(
 )
 
 saveRDS(info_build, paste0("info_build_",gse,".rds"))
+```
+
+```{r echo=TRUE, results="verbatim"}
+info_build
 ```
 
 # Session Information
