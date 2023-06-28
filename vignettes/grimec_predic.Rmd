@@ -25,11 +25,24 @@ gse = "trainGBMtest"
 y_key = "meth_class"
 ```
 
+need files:
+
+  - "datashare/GRIMEC001/study_GRIMEC001.rds"
+  - "df_preproc_testGBMgrimec.rds"
+  - "df_preproc_trainGBMtest.rds"
+  - "rf_model10000_meth_class.rds"
+
+```{r}
+if (!file.exists("datashare/GRIMEC001/study_GRIMEC001.rds")) {stop(paste0("need file ", "datashare/GRIMEC001/study_GRIMEC001.rds"))}
+if (!file.exists("df_preproc_testGBMgrimec.rds"           )) {stop(paste0("need file ", "df_preproc_testGBMgrimec.rds"           ))}
+if (!file.exists("df_preproc_trainGBMtest.rds"            )) {stop(paste0("need file ", "df_preproc_trainGBMtest.rds"            ))}
+if (!file.exists("rf_model10000_meth_class.rds"           )) {stop(paste0("need file ", "rf_model10000_meth_class.rds"           ))}
+```
 
 
 ```{r data}
-df_grim = mreadRDS("datashare/GRIMEC001/df_GRIMEC001.rds") # Grimec data
-df_grim = t(df_grim)
+study_grimec = mreadRDS("datashare/GRIMEC001/study_GRIMEC001.rds") # Grimec data
+data_grimec = t(study_grimec$data)
 
 df_test = mreadRDS("df_preproc_testGBMgrimec.rds") # Test data
 df_train = mreadRDS("df_preproc_trainGBMtest.rds") # Train data
@@ -53,8 +66,8 @@ names(disease_test) = rownames(df_test)
 saveRDS(disease_test,"pred_disease_test.rds")
 
 ## Grimec prediction
-disease_grimec = predict(rf_disease, newdata=df_grim)
-names(disease_grimec) = rownames(df_grim)
+disease_grimec = predict(rf_disease, newdata=data_grimec)
+names(disease_grimec) = rownames(data_grimec)
 disease_grimec = as.character(disease_grimec)
 saveRDS(disease_grimec,"pred_disease_grim.rds")
 ```

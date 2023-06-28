@@ -17,6 +17,8 @@ Imports:
     ChAMP,
     glmnet,
     glmnetUtils,
+    randomForest,
+    pals,
     memoise
 Depends:
     methods
