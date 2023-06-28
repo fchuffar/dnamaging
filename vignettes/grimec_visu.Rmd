@@ -238,6 +238,37 @@ points(umap_test[,1], umap_test[,2], col=as.numeric(df[rownames(umap_test),]    
 points(umap_grim[,1], umap_grim[,2], col=as.numeric(df[rownames(umap_grim),]       $pred_sf)              , pch=1  )
 plot.new()
 legend("topright", col=1:length(levels(df$labl_sf)), legend=levels(df$labl_sf), pch=16, cex=.8, title="Histology")
+
+
+
+
+```
+
+
+
+
+
+
+
+
+# Mismatches
+
+```{r Mismatches}
+layout(matrix(1:2,1), respect=TRUE)
+plot(  umap_trai$layout            , col=adjustcolor(
+                                         as.numeric(df[rownames(umap_trai$layout),]$labl_sf), alpha.f=0.1), pch=16 )
+points(umap_test[,1], umap_test[,2], col=as.numeric(df[rownames(umap_test),]       $pred_sf)              , pch=".")
+
+
+plot(  umap_trai$layout            , col=adjustcolor(
+                                         as.numeric(df[rownames(umap_trai$layout),]$labl_sf), alpha.f=0.1), pch=16, main="Mismatches")
+points(umap_test[,1], umap_test[,2], col=as.numeric(df[rownames(umap_test),]       $pred_sf)              , pch=".")
+# Where are mismatches?
+idx_mismatch_sf = idx_test[df[idx_test,]$labl_sf != df[idx_test,]$pred_sf]
+levels(idx_mismatch_sf)
+points(umap_test[idx_mismatch_sf,1], umap_test[idx_mismatch_sf,2], col=as.numeric(df[idx_mismatch_sf,]       $pred_sf)              , pch=1)
+
+
 ```
 
 

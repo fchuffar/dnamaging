@@ -68,7 +68,6 @@ saveRDS(disease_test,"pred_disease_test.rds")
 ## Grimec prediction
 disease_grimec = predict(rf_disease, newdata=data_grimec)
 names(disease_grimec) = rownames(data_grimec)
-disease_grimec = as.character(disease_grimec)
 saveRDS(disease_grimec,"pred_disease_grim.rds")
 ```
 
