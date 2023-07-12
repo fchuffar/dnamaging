@@ -276,24 +276,24 @@ cat(getwd()           , file=log_filename, sep="\n", append=TRUE)
 
 ```{r}
 stop_time = Sys.time()
-info_build = list(
+info = list(
   exec_time = round(difftime(stop_time, start_time, units="mins"),1),
   GPL  = s$platform_name,
   orig = s$stuffs$orig,
   n    = ncol(s$data),
   p    = nrow(s$data),
-  age     = ifelse("age"     %in% colnames(s$exp_grp), paste0(round(quantile(s$exp_grp$age)), collapse=", ")                                                            , NA),
-  gender  = ifelse("gender"  %in% colnames(s$exp_grp), paste0(sapply(levels(s$exp_grp$gender  ), function(x) {paste0(x, " (", table(s$exp_grp$gender  )[x], ")")}), collapse=" "), NA),
-  tissue  = ifelse("tissue"  %in% colnames(s$exp_grp), paste0(sapply(levels(s$exp_grp$tissue  ), function(x) {paste0(x, " (", table(s$exp_grp$tissue  )[x], ")")}), collapse=" "), NA),
-  tobacco = ifelse("tobacco" %in% colnames(s$exp_grp), paste0(sapply(levels(s$exp_grp$tobacco ), function(x) {paste0(x, " (", table(s$exp_grp$tobacco )[x], ")")}), collapse=" "), NA),
-  disease = ifelse("disease" %in% colnames(s$exp_grp), paste0(sapply(levels(s$exp_grp$disease ), function(x) {paste0(x, " (", table(s$exp_grp$disease )[x], ")")}), collapse=" "), NA)
+  age     = ifelse("age"     %in% colnames(s$exp_grp), paste0(round(quantile(s$exp_grp$age, na.rm=TRUE)), collapse=", ")                                                            , NA),
+  gender  = ifelse("gender"  %in% colnames(s$exp_grp), paste0(sapply(levels(s$exp_grp$gender           ), function(x) {paste0(x, " (", table(s$exp_grp$gender  , useNA="ifany")[x], ")")}), collapse=" "), NA),
+  tissue  = ifelse("tissue"  %in% colnames(s$exp_grp), paste0(sapply(levels(s$exp_grp$tissue           ), function(x) {paste0(x, " (", table(s$exp_grp$tissue  , useNA="ifany")[x], ")")}), collapse=" "), NA),
+  tobacco = ifelse("tobacco" %in% colnames(s$exp_grp), paste0(sapply(levels(s$exp_grp$tobacco          ), function(x) {paste0(x, " (", table(s$exp_grp$tobacco , useNA="ifany")[x], ")")}), collapse=" "), NA),
+  disease = ifelse("disease" %in% colnames(s$exp_grp), paste0(sapply(levels(s$exp_grp$disease          ), function(x) {paste0(x, " (", table(s$exp_grp$disease , useNA="ifany")[x], ")")}), collapse=" "), NA)
 )
 
-saveRDS(info_build, paste0("info_build_",gse,".rds"))
+saveRDS(info, paste0("info_build_",gse,".rds"))
 ```
 
 ```{r echo=TRUE, results="verbatim"}
-info_build
+info
 ```
 
 # Session Information
