@@ -14,7 +14,7 @@ Encoding: UTF-8
 LazyData: TRUE
 Imports:
     EpiDISH,
-    ChAMP,
+    # ChAMP,
     glmnet,
     glmnetUtils,
     randomForest,
