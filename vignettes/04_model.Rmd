@@ -729,7 +729,7 @@ https://github.com/fchuffar/dnamaging
 stop_time = Sys.time()
 info$exec_time = round(difftime(stop_time, start_time, units="mins"),1)
 
-saveRDS(info, paste0("info_model_r", run, "_ewas", nbewasprobes, "_", gse, ".rds"))
+saveRDS(info, paste0("info_model_r", run,"_", typeofmodel, "_ewas", nbewasprobes, "_", gse, ".rds"))
 ```
 
 # Session Information
