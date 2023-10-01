@@ -397,6 +397,16 @@ barplot(cumsum(rev(table(table(probes)))), las=2,
 tmp_tab = sort(table(unlist(bs_probes)))
 best_model_bs_probes = names(tmp_tab)[tmp_tab > (n_boot / 2)]
 best_model_bs_probes = intersect(best_model_bs_probes, idx_cpg)
+
+if(length(best_model_bs_probes) == 1) {
+  tmp_tmp_tab = table(tmp_tab) 
+  tmp_tmp_tab=tmp_tmp_tab[as.character(sort(as.numeric(names(tmp_tmp_tab)),decreasing=TRUE))]
+  tmp_tmp_tab=cumsum(tmp_tmp_tab)
+
+  boot_lim = as.numeric(names(tmp_tmp_tab[tmp_tmp_tab >=2][1]))
+  best_model_bs_probes = names(tmp_tab)[tmp_tab >= boot_lim]
+  best_model_bs_probes = intersect(best_model_bs_probes, idx_cpg)
+}
 ```
 
 
