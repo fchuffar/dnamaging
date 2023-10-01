@@ -23,11 +23,15 @@ source("params_default.R")
 if (!exists("seed")) seed = 1
 if (!exists("run")) run = 0
 if (!exists("scenario")) scenario = "A"
+if (!exists("typeofmodel")) typeofmodel = "bs"
+
 ```
 
 ```{r load data and build indexes, echo=FALSE}
 print("Loading data")
-df = mreadRDS(paste0("df_r", run, "_ewas", nbewasprobes, "_", gse, ".rds"))
+if (run == 0) {
+  df = mreadRDS(paste0("df_r", run, "_ewas", nbewasprobes, "_", gse, ".rds"))
+}else { df = mreadRDS(paste0("df_r", run, "_", typeofmodel, "_ewas", nbewasprobes, "_", gse, ".rds")) }
 for (new_factoi in c("tobacco", "disease")) {
   if (new_factoi %in% colnames(df)) {
     covariates = unique(c(covariates, new_factoi))  
