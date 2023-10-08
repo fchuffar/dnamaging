@@ -702,14 +702,14 @@ if(typeofmodel == "bs"){
   dim(df)
   df = df [,!(colnames(df)%in%best_model_bs_probes)]
   dim(df)
-  saveRDS(df,paste0("df_r", run+1, "_bs", "_ewas", nbewasprobes, "_", gse, ".rds"))
+  saveRDS(df,paste0("df_r", run+1, "_bs", "_ewas", nbewasprobes, "_nn", dist_nn, "_", gse, ".rds"))
 }
 
 if(typeofmodel == "glm"){
   dim(df)
   df = df [,!(colnames(df)%in%rownames(best_model_cvaglmnet$coeff))]
   dim(df)
-  saveRDS(df,paste0("df_r", run+1, "_glm", "_ewas", nbewasprobes, "_", gse, ".rds"))
+  saveRDS(df,paste0("df_r", run+1, "_glm", "_ewas", nbewasprobes, "_nn", dist_nn, "_", gse, ".rds"))
 }
 
 ```
@@ -730,7 +730,7 @@ https://github.com/fchuffar/dnamaging
 stop_time = Sys.time()
 info$exec_time = round(difftime(stop_time, start_time, units="mins"),1)
 
-saveRDS(info, paste0("info_model_r", run,"_", typeofmodel, "_ewas", nbewasprobes, "_", gse, ".rds"))
+saveRDS(info, paste0("info_model_r", run,"_", typeofmodel, "_ewas", nbewasprobes, "_nn", dist_nn, "_", gse, ".rds"))
 ```
 
 # Session Information
