@@ -130,7 +130,7 @@ if (nbewasprobes>0) {
   # Nothing to do for idx_cpg
 }
 ```
-```{nn_computing}
+```{r nn_computing}
 if(dist_nn != 0){
   
   df_preproc = mreadRDS(preproc_filename)
