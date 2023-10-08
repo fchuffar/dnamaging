@@ -133,7 +133,7 @@ if (nbewasprobes>0) {
 ```{r nn_computing}
 if(dist_nn != 0){
   
-  df_preproc = mreadRDS(preproc_filename)
+  df_preproc = mreadRDS(paste0("df_preproc_",gse,".rds"))
 
   foo = mreadRDS(paste0("../../datashare/",gse,"/study_",gse,".rds"))
   platform = foo$platform
