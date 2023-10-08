@@ -135,7 +135,7 @@ if(dist_nn != 0){
   
   df_preproc = mreadRDS(preproc_filename)
 
-  foo = mreadRDS(paste0("../../datashare/",gse,"/study_",gse,".rds")
+  foo = mreadRDS(paste0("../../datashare/",gse,"/study_",gse,".rds"))
   platform = foo$platform
 	
   foo = read.table("~/projects/datashare/hg38.chrom.sizes")[1:24,]
