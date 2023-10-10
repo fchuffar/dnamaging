@@ -1,8 +1,10 @@
 conda create --clone epimedtools_env -n dnamaging_env 
 conda activate dnamaging_env
 
-conda install -c conda-forge umap-learn r-umap r-caret r-randomforest
-conda install -c bioconda bioconductor-champ
+conda install -c conda-forge umap-learn r-umap r-caret r-randomforest r-glmnetutils
+conda install -c bioconda bioconductor-champ snakemake bedtools bioconductor-annotatr
+
+
 
 
 

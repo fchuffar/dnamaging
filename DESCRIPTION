@@ -18,6 +18,8 @@ Imports:
     glmnet,
     glmnetUtils,
     randomForest,
+    beeswarm,
+    WriteXLS,
     pals,
     memoise
 Depends:

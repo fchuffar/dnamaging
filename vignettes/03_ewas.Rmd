@@ -39,6 +39,29 @@ idx_clinicals = colnames(df)[1:(markers_start-1)]
 idx_cpg = colnames(df)[markers_start:ncol(df)]
 ```
 
+## 
+
+```{r}
+print("27k")
+library(IlluminaHumanMethylation27kanno.ilmn12.hg19)
+pf27k = data.frame(getAnnotation(IlluminaHumanMethylation27kanno.ilmn12.hg19))
+print("450k")
+library(IlluminaHumanMethylation450kanno.ilmn12.hg19)
+pf450k = data.frame(getAnnotation(IlluminaHumanMethylation450kanno.ilmn12.hg19))
+print("epic")
+library(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)  
+pfepic = data.frame(getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b4.hg19))
+
+
+# # B. remove probes on chrX and chrY
+# head(s$platform[,1:6])
+# table(s$platform[,1])
+# s$platform = s$platform[!s$platform[,1] %in% c("chrX", "chrY"),]
+# table(s$platform[,1])
+# s$data = s$data[rownames(s$platform),]
+
+```
+
 ## Model
 
 ```{r}
