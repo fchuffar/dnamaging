@@ -23,11 +23,16 @@ source("params_default.R")
 if (!exists("seed")) seed = 1
 if (!exists("run")) run = 0
 if (!exists("scenario")) scenario = "A"
+if (!exists("typeofmodel")) typeofmodel = "bs"
+if (!exists("dist_nn")) dist_nn = 0
+
 ```
 
 ```{r load data and build indexes, echo=FALSE}
 print("Loading data")
-df = mreadRDS(paste0("df_r", run, "_ewas", nbewasprobes, "_", gse, ".rds"))
+if (run == 0) {
+  df = mreadRDS(paste0("df_r", run, "_ewas", nbewasprobes, "_nn", dist_nn, "_", gse, ".rds"))
+}else { df = mreadRDS(paste0("df_r", run, "_", typeofmodel, "_ewas", nbewasprobes, "_nn", dist_nn, "_", gse, ".rds")) }
 for (new_factoi in c("tobacco", "disease")) {
   if (new_factoi %in% colnames(df)) {
     covariates = unique(c(covariates, new_factoi))  
@@ -397,6 +402,16 @@ barplot(cumsum(rev(table(table(probes)))), las=2,
 tmp_tab = sort(table(unlist(bs_probes)))
 best_model_bs_probes = names(tmp_tab)[tmp_tab > (n_boot / 2)]
 best_model_bs_probes = intersect(best_model_bs_probes, idx_cpg)
+
+if(length(best_model_bs_probes) <= 1) {
+  tmp_tmp_tab = table(tmp_tab) 
+  tmp_tmp_tab=tmp_tmp_tab[as.character(sort(as.numeric(names(tmp_tmp_tab)),decreasing=TRUE))]
+  tmp_tmp_tab=cumsum(tmp_tmp_tab)
+
+  boot_lim = as.numeric(names(tmp_tmp_tab[tmp_tmp_tab >=2][1]))
+  best_model_bs_probes = names(tmp_tab)[tmp_tab >= boot_lim]
+  best_model_bs_probes = intersect(best_model_bs_probes, idx_cpg)
+}
 ```
 
 
@@ -487,7 +502,7 @@ models = list(
   litterature_models$hannum_model_mc, 
   litterature_models$horvath_model_mc
 )
-saveRDS(list(best_model_cvaglmnet, best_model_bs), paste0("models_", gse, ".rds"))
+saveRDS(list(best_model_cvaglmnet, best_model_bs), paste0("models_r", run,"_",typeofmodel, "_ewas", nbewasprobes, "_nn", dist_nn, "_", gse, ".rds"))
 ```
 
 
@@ -683,10 +698,19 @@ barplot(tab_probes, las=2) # Check when number of probes stabilised
 
 
 ```{r next run}
-dim(df)
-df = df [,!(colnames(df)%in%best_model_bs_probes)]
-dim(df)
-saveRDS(df,paste0("df_r", run+1, "_ewas", nbewasprobes, "_", gse, ".rds"))
+if(typeofmodel == "bs"){
+  dim(df)
+  df = df [,!(colnames(df)%in%best_model_bs_probes)]
+  dim(df)
+  saveRDS(df,paste0("df_r", run+1, "_bs", "_ewas", nbewasprobes, "_nn", dist_nn, "_", gse, ".rds"))
+}
+
+if(typeofmodel == "glm"){
+  dim(df)
+  df = df [,!(colnames(df)%in%rownames(best_model_cvaglmnet$coeff))]
+  dim(df)
+  saveRDS(df,paste0("df_r", run+1, "_glm", "_ewas", nbewasprobes, "_nn", dist_nn, "_", gse, ".rds"))
+}
 
 ```
 
@@ -706,7 +730,7 @@ https://github.com/fchuffar/dnamaging
 stop_time = Sys.time()
 info$exec_time = round(difftime(stop_time, start_time, units="mins"),1)
 
-saveRDS(info, paste0("info_model_r", run, "_ewas", nbewasprobes, "_", gse, ".rds"))
+saveRDS(info, paste0("info_model_r", run,"_", typeofmodel, "_ewas", nbewasprobes, "_nn", dist_nn, "_", gse, ".rds"))
 ```
 
 # Session Information

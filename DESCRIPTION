@@ -14,12 +14,12 @@ Encoding: UTF-8
 LazyData: TRUE
 Imports:
     EpiDISH,
-    ChAMP,
     glmnet,
     glmnetUtils,
     randomForest,
     beeswarm,
     WriteXLS,
+    impute,
     pals,
     memoise
 Depends:

@@ -22,6 +22,8 @@ source("common.R")
 source("params_default.R")
 if (!exists("seed")) seed = 1
 if (!exists("scenario")) scenario = "A"
+if (!exists("dist_nn")) dist_nn = 0
+
 ```
 
 ```{r load data and build indexes, echo=FALSE}
@@ -150,8 +152,45 @@ if (nbewasprobes>0) {
 } else {
   # Nothing to do for idx_cpg
 }
- 
-saveRDS(df, paste0("df_r0_ewas", nbewasprobes, "_", gse, ".rds"))
+```
+```{r nn_computing}
+if(dist_nn != 0){
+  
+  df_preproc = mreadRDS(paste0("df_preproc_",gse,".rds"))
+
+  foo = mreadRDS(paste0("../../datashare/",gse,"/study_",gse,".rds"))
+  platform = foo$platform
+	
+  foo = read.table("~/projects/datashare/hg38.chrom.sizes")[1:24,]
+
+  platform = platform[order(platform$chr,platform$pos),]
+  platform$pos_prev_nn = c(NA,platform$pos[-length(platform$pos)])
+  platform$pos_next_nn =  c(platform$pos[-1],NA)
+  platform$dist_prev_nn = platform$pos - platform$pos_prev_nn
+  platform$dist_next_nn = platform$pos_next_nn - platform$pos
+  platform[is.na(platform$dist_prev_nn) | platform$dist_prev_nn < 0,]$dist_prev_nn = max(foo[,2])
+  platform[is.na(platform$dist_next_nn) | platform$dist_next_nn < 0,]$dist_next_nn = max(foo[,2])
+  platform$is_kept = FALSE
+  platform[idx_cpg,]$is_kept = TRUE
+  new_count = sum(platform$is_kept,na.rm = TRUE)
+  old_count = new_count -1 
+  while(old_count < new_count) {
+	  old_count = new_count
+	  platform$is_kept = platform$is_kept | (platform$dist_prev_nn <= dist_nn & c(FALSE,platform$is_kept[-length(platform$is_kept)] %in%TRUE))
+	  print(sum(platform$is_kept,na.rm = TRUE))
+	  platform$is_kept = platform$is_kept | (platform$dist_next_nn <= dist_nn & c(platform$is_kept[-1],FALSE) %in%TRUE)
+	  new_count = sum(platform$is_kept,na.rm = TRUE)
+  }
+
+  idx_kept = rownames(platform)[platform$is_kept]  
+  idx_kept = idx_kept[idx_kept %in% colnames(df_preproc)]
+  df = df_preproc[,c(idx_clinicals,idx_kept)]
+
+}
+```
+
+```{r save_ewas}
+saveRDS(df, paste0("df_r0_ewas", nbewasprobes, "_nn", dist_nn, "_", gse, ".rds"))
 ```
 
 
@@ -163,7 +202,7 @@ info = list(
   exec_time = round(difftime(stop_time, start_time, units="mins"),1)
 )
 
-saveRDS(info, paste0("info_ewas", nbewasprobes, "_", gse, ".rds"))
+saveRDS(info, paste0("info_ewas", nbewasprobes, "_nn", dist_nn, "_", gse, ".rds"))
 ```
 
 # Session Information
