@@ -141,8 +141,8 @@ if (nbewasprobes>0) {
   idx_cpg = intersect(idx_cpg, c(idx_cpg_oi, idx_cpg_litt))
 
   dim(df)
-  df = df[,c(idx_clinicals, idx_cpg)]
-  dim(df)
+  df_ewas = df[,c(idx_clinicals, idx_cpg)]
+  dim(df_ewas)
 
 
   # df_dnamaging = df
@@ -184,13 +184,13 @@ if(dist_nn != 0){
 
   idx_kept = rownames(platform)[platform$is_kept]  
   idx_kept = idx_kept[idx_kept %in% colnames(df_preproc)]
-  df = df_preproc[,c(idx_clinicals,idx_kept)]
+  df_ewas = df_preproc[,c(idx_clinicals,idx_kept)]
 
 }
 ```
 
 ```{r save_ewas}
-saveRDS(df, paste0("df_r0_ewas", nbewasprobes, "_nn", dist_nn, "_", gse, ".rds"))
+saveRDS(df_ewas, paste0("df_r0_ewas", nbewasprobes, "_nn", dist_nn, "_", gse, ".rds"))
 ```
 
 
