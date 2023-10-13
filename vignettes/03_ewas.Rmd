@@ -131,6 +131,8 @@ if (nbewasprobes>0) {
   fit = mlimma_lmFit(cpg_matrix, design_matrix)
   fit = limma::eBayes(fit) # compute moderated t-statistics, moderated F-statistic, and log-odds of differential expression by empirical Bayes moderation of the standard errors towards a global value
   # head(fit$p.value)
+  saveRDS(fit, paste0("fit_limma", nbewasprobes, "_nn", dist_nn, "_", gse, ".rds"))
+
   idx_cpg_oi = rownames(fit$p.value)[rank(fit$p.value[,2]) <= nbewasprobes]
   layout(1, respect=TRUE)
   plot(fit$coefficients[,2], -log10(fit$p.value[,2]), col=(rownames(fit$p.value) %in% idx_cpg_oi)+1, pch=".", main=paste0(nbewasprobes, " probes"))
