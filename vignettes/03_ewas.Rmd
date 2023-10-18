@@ -41,6 +41,29 @@ idx_clinicals = colnames(df)[1:(markers_start-1)]
 idx_cpg = colnames(df)[markers_start:ncol(df)]
 ```
 
+## 
+
+```{r}
+print("27k")
+library(IlluminaHumanMethylation27kanno.ilmn12.hg19)
+pf27k = data.frame(getAnnotation(IlluminaHumanMethylation27kanno.ilmn12.hg19))
+print("450k")
+library(IlluminaHumanMethylation450kanno.ilmn12.hg19)
+pf450k = data.frame(getAnnotation(IlluminaHumanMethylation450kanno.ilmn12.hg19))
+print("epic")
+library(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)  
+pfepic = data.frame(getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b4.hg19))
+
+
+# # B. remove probes on chrX and chrY
+# head(s$platform[,1:6])
+# table(s$platform[,1])
+# s$platform = s$platform[!s$platform[,1] %in% c("chrX", "chrY"),]
+# table(s$platform[,1])
+# s$data = s$data[rownames(s$platform),]
+
+```
+
 ## Model
 
 ```{r}
@@ -108,6 +131,8 @@ if (nbewasprobes>0) {
   fit = mlimma_lmFit(cpg_matrix, design_matrix)
   fit = limma::eBayes(fit) # compute moderated t-statistics, moderated F-statistic, and log-odds of differential expression by empirical Bayes moderation of the standard errors towards a global value
   # head(fit$p.value)
+  saveRDS(fit, paste0("fit_limma", nbewasprobes, "_nn", dist_nn, "_", gse, ".rds"))
+
   idx_cpg_oi = rownames(fit$p.value)[rank(fit$p.value[,2]) <= nbewasprobes]
   layout(1, respect=TRUE)
   plot(fit$coefficients[,2], -log10(fit$p.value[,2]), col=(rownames(fit$p.value) %in% idx_cpg_oi)+1, pch=".", main=paste0(nbewasprobes, " probes"))
@@ -118,8 +143,8 @@ if (nbewasprobes>0) {
   idx_cpg = intersect(idx_cpg, c(idx_cpg_oi, idx_cpg_litt))
 
   dim(df)
-  df = df[,c(idx_clinicals, idx_cpg)]
-  dim(df)
+  df_ewas = df[,c(idx_clinicals, idx_cpg)]
+  dim(df_ewas)
 
 
   # df_dnamaging = df
@@ -161,13 +186,13 @@ if(dist_nn != 0){
 
   idx_kept = rownames(platform)[platform$is_kept]  
   idx_kept = idx_kept[idx_kept %in% colnames(df_preproc)]
-  df = df_preproc[,c(idx_clinicals,idx_kept)]
+  df_ewas = df_preproc[,c(idx_clinicals,idx_kept)]
 
 }
 ```
 
 ```{r save_ewas}
-saveRDS(df, paste0("df_r0_ewas", nbewasprobes, "_nn", dist_nn, "_", gse, ".rds"))
+saveRDS(df_ewas, paste0("df_r0_ewas", nbewasprobes, "_nn", dist_nn, "_", gse, ".rds"))
 ```
 
 

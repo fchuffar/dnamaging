@@ -16,9 +16,7 @@ Imports:
     EpiDISH,
     glmnet,
     glmnetUtils,
-    randomForest,
-    impute,
-    pals,
+    WriteXLS,
     memoise
 Depends:
     methods
