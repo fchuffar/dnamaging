@@ -13,24 +13,25 @@ output:
 ```{r set parameters}
 
 
-if(!exists(nb_ewas)){ nb_ewas = 2000 }
-if(!exists(dist_nn)){ dist_nn = 1000 }
-if(!exists(nb_run)){ nb_run = 100 }
+if(!exists("nb_ewas")){ nb_ewas = 2000 }
+if(!exists("dist_nn")){ dist_nn = 1000 }
+if(!exists("nb_run")){ nb_run = 100 }
 typeofmodel = "bs"
-if(!exists(pvals)){ pvals = c(1e-05, 1e-10, 1e-20, 1e-30) } 
+if(!exists("pvals")){ pvals = c(1e-05, 1e-10, 1e-20, 1e-30) } 
 
 ```
 
 ```{r run comparative function}
 
-
+source("fct_comp_it_DMR.R")
 source("common.R")
 
 for (pval in pvals){
 	for (run in (0:nb_run)) {
-
-			recap_it_DMR(nb_ewas, dist_nn, typeofmodel, run, pval)
-	
+			
+			if(!file.exists(paste0("stats_pres_it_run",run,"_",typeofmodel, "_ewas", nb_ewas, "_nn", dist_nn, "_pval", pval,"_GSE42861.rds"))){
+				recap_it_DMR(nb_ewas, dist_nn, typeofmodel, run, pval)
+			}
 	}
 }
 
