@@ -1,14 +1,23 @@
-conda create --clone epimedtools_env -n dnamaging_env 
-conda activate dnamaging_env
+# conda deactivate
+# rm -Rf /summer/epistorage/miniconda3/*
+# ~/Miniconda3-latest-Linux-x86_64.sh -u -p /summer/epistorage/miniconda3 -b
+# conda update -n base -c defaults conda
 
-conda install -c conda-forge umap-learn r-umap r-caret r-randomforest
-conda install -c bioconda bioconductor-champ
+__conda_setup="$('/summer/epistorage/miniconda3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
+if [ $? -eq 0 ]; then
+   eval "$__conda_setup"
+else
+   if [ -f "/summer/epistorage/miniconda3/etc/profile.d/conda.sh" ]; then
+       . "/summer/epistorage/miniconda3/etc/profile.d/conda.sh"
+   else
+       export PATH="/summer/epistorage/miniconda3/bin:$PATH"
+   fi
+fi
+unset __conda_setup
 
 
-
-# under R
-# devtools::install_github("fchuffar/dnamaging")
-
+# conda create --name R3.6.1_env
+# conda activate R3.6.1_env
 
 # conda install  -c anaconda libopenblas
 #
@@ -18,7 +27,7 @@ conda install -c bioconda bioconductor-champ
 #   r-devtools       \
 #   r r-xml
 #
-#   install.packages("https://cran.r-project.org/src/contrib/Archive/locfit/locfit_1.5-9.tar.gz")
+#   install.package("https://cran.r-project.org/src/contrib/Archive/locfit/locfit_1.5-9.tar.gz")
 #
 #
 # # conda install --no-update-deps -c r r-xml
@@ -35,14 +44,13 @@ conda install -c bioconda bioconductor-champ
 #
 #
 # #conda install -c r r-locfit
-# conda install -c r r-glmnet
+#
 #
 #
 #
 # conda install -c bioconda bioconductor-rhdf5lib
 # conda install -c bioconda bioconductor-rhdf5
 # conda install -c bioconda bioconductor-hdf5array
-# conda install -c bioconda snakemake
 #
 #
 # BiocManager::install("HDF5Array")
@@ -57,19 +65,11 @@ conda install -c bioconda bioconductor-champ
 #
 # # https://github.com/fchuffar/epimedtools
 # Sys.setenv(TAR = "/bin/tar") ; devtools::install_github("fchuffar/epimedtools")
-# Sys.setenv(TAR = "/bin/tar") ; devtools::install_github("fchuffar/dnamaging")
-
-# BiocManager::install("impute")
-
-
+#
 # install.packages("dbplyr")
 # install.packages("tidyr")
 # install.packages("memoise")
-# install.packages("glmnet")
-# install.packages("glmnetUtils")
-# install.packages("beeswarm")
-# install.packages("openxlsx")
-
+#
 #
 #
 #
