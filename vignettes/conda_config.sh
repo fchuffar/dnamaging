@@ -1,15 +1,19 @@
+# conda remove --name dnamaging_env --all
 conda create --clone epimedtools_env -n dnamaging_env 
 conda activate dnamaging_env
 
-conda install -c conda-forge umap-learn r-umap r-caret r-randomforest r-glmnetutils
-conda install -c bioconda bioconductor-champ snakemake bedtools bioconductor-annotatr
+conda install -c conda-forge -c bioconda r-glmnetutils r-writexls bioconductor-epidish bioconductor-annotatr snakemake bedtools
 
+conda install -c bioconda bioconductor-impute
+
+# umap-learn r-umap r-caret r-randomforest
+# conda install -c bioconda bioconductor-champ
 
 
 
 
 # under R
-# devtools::install_github("fchuffar/dnamaging")
+devtools::install_github("fchuffar/dnamaging")
 
 
 # conda install  -c anaconda libopenblas
