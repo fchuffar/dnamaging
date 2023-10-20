@@ -4,6 +4,8 @@ dim(study_dnamaging$platform)
 head(study_dnamaging$platform[,1:6])
 study_dnamaging$platform = study_dnamaging$platform[,1:2]
 dim(study_dnamaging$data)
+colnames(study_dnamaging$exp_grp)[1] = "tissue"
+study_dnamaging$exp_grp$tissue = "blood"
 dim(study_dnamaging$exp_grp)
 head(study_dnamaging$exp_grp)
 save(study_dnamaging, file='~/projects/dnamaging/data/study_dnamaging.RData' , compress='xz')
