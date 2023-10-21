@@ -13,7 +13,7 @@ git clone git@github.com:fchuffar/dnamaging.git
 # Get dnamaging package data (will be include in the packege later)
 mkdir dnamaging/data/
 cd dnamaging/data/
-wget http://epimed.univ-grenoble-alpes.fr/downloads/dmzfch/dnamaging/data/df_dnamaging.RData
+wget http://epimed.univ-grenoble-alpes.fr/downloads/dmzfch/dnamaging/data/study_dnamaging.RData
 wget http://epimed.univ-grenoble-alpes.fr/downloads/dmzfch/dnamaging/data/litterature_models.RData
 # install package
 cd ..

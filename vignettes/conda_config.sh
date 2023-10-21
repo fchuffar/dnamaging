@@ -2,9 +2,20 @@
 conda create --clone epimedtools_env -n dnamaging_env 
 conda activate dnamaging_env
 
-conda install -c conda-forge -c bioconda r-glmnetutils r-writexls bioconductor-epidish bioconductor-annotatr snakemake bedtools
+conda install -c conda-forge -c bioconda r-glmnetutils r-writexls bioconductor-epidish bioconductor-annotatr snakemake bedtools bioconductor-limma
+
+conda install -c bioconda bioconductor-illuminahumanmethylation27kanno.ilmn12.hg19 bioconductor-illuminahumanmethylation450kanno.ilmn12.hg19 bioconductor-illuminahumanmethylationepicanno.ilm10b4.hg19
+                          
+IlluminaHumanMethylation450kanno.ilmn12.hg19
+IlluminaHumanMethylationEPICanno.ilm10b4.hg19
+
+
+
 
 conda install -c bioconda bioconductor-impute
+conda install -c "bioconda/label/cf201901" bioconductor-impute
+conda install -c "bioconda/label/gcc7" bioconductor-impute 
+
 
 # umap-learn r-umap r-caret r-randomforest
 # conda install -c bioconda bioconductor-champ

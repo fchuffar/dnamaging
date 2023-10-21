@@ -10,7 +10,7 @@
 #' @examples gse = "GSE41037" ; get_df_preproc(gse)
 
 get_df_preproc = function(gse){
-    df = readRDS(paste0("df_preproc_",gse,".rds"))
+    df = readRDS(paste0("./datashare/", gse, "/df_preproc_",gse,".rds"))
     return(df)
 }
 

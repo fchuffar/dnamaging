@@ -24,34 +24,33 @@ source("params_default.R")
 
 ```{r loading_data}
 if (gse != "dnamaging") {
-  df_filename = paste0("./datashare/", gse, "/df_", gse, ".rds")
-  df = mreadRDS(df_filename)
+  study_filename = paste0("./datashare/", gse, "/study_", gse, ".rds")
+  s = mreadRDS(study_filename)
 } else {
-  df = dnamaging::df_dnamaging  
+  s = dnamaging::study_dnamaging  
 }
 
-covariates = intersect(c("tobacco", "disease", "gender"), colnames(df))
+covariates = intersect(c("tobacco", "disease", "gender"), colnames(s$exp_grp))
 ```
 
 
 ```{r building_indexes}
-idx_samples = rownames(df)
-markers_start = grep("cg",colnames(df))[1]
-idx_clinicals = colnames(df)[1:(markers_start-1)]
-idx_cpg = colnames(df)[markers_start:ncol(df)]
-n = nrow(df)
-tissue = paste(unique(df$tissue),collapse="/")
+idx_samples = rownames(s$exp_grp)
+idx_clinicals = colnames(s$exp_grp)
+idx_cpg = rownames(s$data)
+n = nrow(s$exp_grp)
+tissue = paste(unique(s$exp_grp$tissue),collapse="/")
 ```
 
 # Explained variable
 
 ```{r}
-if (y_key %in% colnames(df)) {
+if (y_key %in% colnames(s$exp_grp)) {
   layout(1, respect=TRUE)
-  hist(df[[y_key]], prob=TRUE, xlab=y_key, main=paste0(y_key, " distribution (", nrow(df), " obs.)")) 
-  lines(density(df[[y_key]], na.rm=TRUE))
+  hist(s$exp_grp[[y_key]], prob=TRUE, xlab=y_key, main=paste0(y_key, " distribution (", nrow(s$exp_grp), " obs.)")) 
+  lines(density(s$exp_grp[[y_key]], na.rm=TRUE))
 }
-# Norm_Age = shapiro.test(df[[y_key]])
+# Norm_Age = shapiro.test(s$exp_grp[[y_key]])
 # text(60,0.03, paste0("SW Normality test p-val = ", round(Norm_Age$p.value,5)))
 ```
 
@@ -61,17 +60,17 @@ if (y_key %in% colnames(df)) {
 ```{r, fig.height=4.5}
 for (cov in covariates) {
   layout(matrix(1:2,1), respect=TRUE)
-  tmp_tab = table(df[[cov]], useNA="ifany")
+  tmp_tab = table(s$exp_grp[[cov]], useNA="ifany")
   # tmp_col = 1:dim(tmp_tab)
   tmp_col = RColorBrewer::brewer.pal(n=max(3,dim(tmp_tab)), name = "Set1")
   tmp_x = barplot(tmp_tab, col=tmp_col, ylim=c(0,max(tmp_tab)*1.2), main=cov, las=2)
   text(tmp_x, tmp_tab+max(tmp_tab)*.1, labels=tmp_tab)
 
-  if (y_key %in% colnames(df)) {
+  if (y_key %in% colnames(s$exp_grp)) {
     f = paste0(y_key,"~",cov)
-    beanplot::beanplot(formula(f), data=df, border=tmp_col, col=adjustcolor(c(1,1,1,1), alpha.f=.1), method="jitter", log="", ylab=y_key, xlab="", las=2, main=f)
-    boxplot(formula(f), data=df, col=adjustcolor(tmp_col, alpha.f=.5), ylab=y_key, xlab="", las=2, main=f)
-    beeswarm::beeswarm(formula(f), data=df, ylab=y_key, xlab="", col=tmp_col, las=2, main=f)  
+    # beanplot::beanplot(formula(f), data=s$exp_grp, border=tmp_col, col=adjustcolor(c(1,1,1,1), alpha.f=.1), method="jitter", log="", ylab=y_key, xlab="", las=2, main=f)
+    boxplot(formula(f), data=s$exp_grp, col=adjustcolor(tmp_col, alpha.f=.5), ylab=y_key, xlab="", las=2, main=f)
+    # beeswarm::beeswarm(formula(f), data=s$exp_grp, ylab=y_key, xlab="", col=tmp_col, las=2, main=f)
   }
 }
 ```
@@ -82,30 +81,30 @@ for (cov in covariates) {
 **TODO**, adding description, what appends there?
 
 ```{r missing values, results="verbatim"}
-if (sum(is.na(df[,idx_cpg]))>0) {
+if (sum(is.na(s$data))>0) {
   # Looking how much got more than 5% missing values
   # apply_func = epimedtools::monitored_apply
   if (! exists("apply_func")) {apply_func = apply}
-  prop_na_col =  apply_func(is.na(df[idx_samples,idx_cpg]), 2, sum) / nrow(df)
+  prop_na_col =  apply_func(is.na(s$data[idx_cpg, idx_samples]), 1, sum) / length(idx_samples)
   sum(prop_na_col>=1)
   idx_cpg = names(prop_na_col)[prop_na_col<1]
   print(paste0("#probes removed (all NA): ", sum(prop_na_col>=.05)))
 
-  prop_na_row =  apply_func(is.na(df[idx_samples,idx_cpg]), 1, sum) / ncol(df)
+  prop_na_row =  apply_func(is.na(s$data[idx_cpg, idx_samples]), 2, sum) / length(idx_cpg)
   idx_samples = names(prop_na_row)[prop_na_row<.05]
-  prop_na_col =  apply_func(is.na(df[idx_samples,idx_cpg]), 2, sum) / nrow(df)
+  prop_na_col =  apply_func(is.na(s$data[idx_cpg, idx_samples]), 1, sum) / length(idx_samples)
   sum(prop_na_col>=.05)
   idx_cpg = names(prop_na_col)[prop_na_col<.05]
 
   print(paste0("#samples removed: ", sum(prop_na_row>=.05)))
   print(paste0("#probes removed: ", sum(prop_na_col>=.05)))
 
-  df = df[idx_samples, c(idx_clinicals, idx_cpg)]
-
-  if (as.numeric(length(idx_cpg))*as.numeric(nrow(df)) > .Machine$integer.max) {
+  s$data = s$data[idx_cpg, idx_samples]
+  
+  if (as.numeric(length(idx_cpg))*as.numeric(nrow(s$exp_grp)) > .Machine$integer.max) {
     # stop("Machine$integer.max problem")
-    sds = apply(df[, idx_cpg], 2, sd, na.rm=TRUE)
-    sds_tresh = sort(sds, decreasing=TRUE)[floor(.Machine$integer.max / nrow(df))]
+    sds = apply(s$data[idx_cpg, ], 1, sd, na.rm=TRUE)
+    sds_tresh = sort(sds, decreasing=TRUE)[floor(.Machine$integer.max / nrow(s$exp_grp))]
     plot(density(sds))
     abline(v=sds_tresh)
     tmp_idx = idx_cpg[sds > sds_tresh]
@@ -114,11 +113,11 @@ if (sum(is.na(df[,idx_cpg]))>0) {
   }
 
   ## KNN - We use the function impute.knn of the package impute to replace remaining missing values with KNN method. 
-  dknn = as.matrix(df[,idx_cpg])
+  dknn = t(s$data)
   dknnf = impute::impute.knn(dknn, k=10, maxp=5000, rng.seed=1)
   dknn = dknnf$data
   head(dknn[,1:6])
-  df = cbind(df[idx_samples,idx_clinicals],dknn[idx_samples,idx_cpg])
+  s$data = t(dknn[idx_samples,idx_cpg])
 } else {
   print("# No NA.") 
 }
@@ -129,7 +128,7 @@ if (sum(is.na(df[,idx_cpg]))>0) {
 
 ```{r filter_sd1, fig.height=4.5}
 print("Filtering probes according to sd")
-d = t(as.matrix(df[,idx_cpg]))
+d = s$data
 sd_thresh = 0.05
 sds = apply(d, 1, sd)
 sum(is.na(sds))
@@ -158,13 +157,13 @@ legend("topright", c("all", paste0("sd>", sd_thresh), paste0("sd<=", sd_thresh))
 ```{r acp, results="verbatim"}
 padj = 0
 covariate = covariates[1]
-df[,covariate] = as.factor(df[,covariate])
-levls = levels(df[,covariate])
+s$exp_grp[,covariate] = as.factor(s$exp_grp[,covariate])
+levls = levels(s$exp_grp[,covariate])
 it=1
 while(sum(padj < 0.2) != 0) {
   print(paste0("******* iteration #", it, "..."))
   it = it+1
-  mat = as.matrix(df[idx_samples, idx_cpg])
+  mat = t(as.matrix(s$data[idx_cpg, idx_samples]))
   pca = prcomp(mat, scale=FALSE)
   v = pca$sdev * pca$sdev
   p = v / sum(v) * 100
@@ -176,7 +175,7 @@ while(sum(padj < 0.2) != 0) {
     plot(pca$x[,i], pca$x[,j], 
     	xlab=paste0("PC", i, "(", signif(p[i], 3), "%)"), 
     	ylab=paste0("PC", j, "(", signif(p[j], 3), "%)"), 
-    	col=as.numeric(df[idx_samples,covariate]),
+    	col=as.numeric(s$exp_grp[idx_samples,covariate]),
     	pch=16)  
     legend(x="topright", legend=levls, col=1:length(levls), lty = 1, title=covariate)
     # scale_factor = min(abs(c(min(c(pca$x[,i], pca$x[,j])), max(c(pca$x[,i], pca$x[,j])))))
@@ -193,8 +192,9 @@ while(sum(padj < 0.2) != 0) {
   sum(padj <= 0.2)
   range(padj)  
   idx_samples = names(padj)[padj > 0.2]
-  print(paste0("  #sample removed: ", nrow(df) - length(idx_samples)))
-  df = df[idx_samples,]
+  print(paste0("  #sample removed: ", nrow(s$exp_grp) - length(idx_samples)))
+  s$exp_grp = s$exp_grp[idx_samples,]
+  s$data = s$data[,idx_samples]
 }
 print(paste0("end of iterations."))
 
@@ -213,7 +213,7 @@ print(paste0("end of iterations."))
 
 ```{r filter_sd2, fig.height=4.5}
 print("Filtering probes according to sd")
-d = t(as.matrix(df[,idx_cpg]))
+d = s$data
 sd_thresh = 0.05
 sds = apply(d, 1, sd)
 sum(is.na(sds))
@@ -241,25 +241,27 @@ legend("topright", c("all", paste0("sd>", sd_thresh), paste0("sd<=", sd_thresh))
 # Save
 
 ```{r save, results="verbatim"}
-# s_filename = paste0("./datashare/", gse, "/study_preproc_", gse, ".rds")
-# print(paste0("Writing ", s_filename, "..."))
-# s$save(s_filename)
-# dim(s$data)
-# dim(s$exp_grp)
-# dim(s$platform)
-# df = cbind(s$exp_grp, t(s$data[,rownames(s$exp_grp)]))
+study_preproc_filename = paste0("./datashare/", gse, "/study_preproc_", gse, ".rds")
+print(paste0("Writing ", study_preproc_filename, "..."))
+saveRDS(s, study_preproc_filename)
+dim(s$data)
+dim(s$exp_grp)
+dim(s$platform)
 
-df_filename = paste0("./datashare/", gse, "/df_preproc_", gse, ".rds")
+df = cbind(s$exp_grp, t(s$data[,rownames(s$exp_grp)]))
+dir_df_filename = paste0("./datashare/", gse, "/")
+df_filename = paste0(dir_df_filename, "df_preproc_", gse, ".rds")
+dir.create(file.path(dir_df_filename), showWarnings=FALSE, recursive=TRUE)
 print(paste0("Writing ", df_filename, "..."))
 saveRDS(df, df_filename)
 dim(df)
 
 log_filename = paste0("./datashare/", gse, "/info_preproc_", gse, ".log")
-cat(s_filename        , file=log_filename, sep="\n", append=FALSE)
-cat(" and "           , file=log_filename, sep="\n", append=TRUE)
-cat(df_filename       , file=log_filename, sep="\n", append=TRUE)
-cat(" built from:\n"  , file=log_filename, sep="\n", append=TRUE)
-cat(getwd()           , file=log_filename, sep="\n", append=TRUE)
+cat(study_preproc_filename , file=log_filename, sep="\n", append=FALSE)
+cat(" and "                , file=log_filename, sep="\n", append=TRUE)
+cat(df_filename            , file=log_filename, sep="\n", append=TRUE)
+cat(" built from:\n"       , file=log_filename, sep="\n", append=TRUE)
+cat(getwd()                , file=log_filename, sep="\n", append=TRUE)
 ```
 
 
@@ -269,7 +271,7 @@ cat(getwd()           , file=log_filename, sep="\n", append=TRUE)
 all_cofactors = c("disease","gender","tobacco")
 distrib = list()
 for (cov in covariates) {
-  tmp_distrib = table(df[[cov]], useNA="always")
+  tmp_distrib = table(s$exp_grp[[cov]], useNA="always")
   names(tmp_distrib)[length(tmp_distrib)] = "NA"  
   distrib[[length(distrib)+1]] = tmp_distrib
 }
@@ -293,7 +295,7 @@ info = list(
   exec_time = round(difftime(stop_time, start_time, units="mins"),1),
 	tissue = tissue,
 	n = n,
-	n_preproc = nrow(df),
+	n_preproc = nrow(s$exp_grp),
 	cofactors = paste0(covariates,collapse="/")
 )
 
