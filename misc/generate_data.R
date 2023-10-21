@@ -10,7 +10,7 @@ dim(study_dnamaging$exp_grp)
 head(study_dnamaging$exp_grp)
 save(study_dnamaging, file='~/projects/dnamaging/data/study_dnamaging.RData' , compress='xz')
 
-litterature_models = mreadRDS("../vignettes/litterature_models.rds")
+litterature_models = readRDS("../vignettes/litterature_models.rds")
 save(litterature_models, file='~/projects/dnamaging/data/litterature_models.RData' , compress='xz')
 
 

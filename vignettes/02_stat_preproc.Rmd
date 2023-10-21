@@ -27,6 +27,8 @@ if (gse != "dnamaging") {
   study_filename = paste0("./datashare/", gse, "/study_", gse, ".rds")
   s = mreadRDS(study_filename)
 } else {
+  dir_df_filename = paste0("./datashare/", gse, "/")
+  dir.create(file.path(dir_df_filename), showWarnings=FALSE, recursive=TRUE)
   s = dnamaging::study_dnamaging  
 }
 
@@ -241,6 +243,7 @@ legend("topright", c("all", paste0("sd>", sd_thresh), paste0("sd<=", sd_thresh))
 # Save
 
 ```{r save, results="verbatim"}
+
 study_preproc_filename = paste0("./datashare/", gse, "/study_preproc_", gse, ".rds")
 print(paste0("Writing ", study_preproc_filename, "..."))
 saveRDS(s, study_preproc_filename)
@@ -249,9 +252,7 @@ dim(s$exp_grp)
 dim(s$platform)
 
 df = cbind(s$exp_grp, t(s$data[,rownames(s$exp_grp)]))
-dir_df_filename = paste0("./datashare/", gse, "/")
-df_filename = paste0(dir_df_filename, "df_preproc_", gse, ".rds")
-dir.create(file.path(dir_df_filename), showWarnings=FALSE, recursive=TRUE)
+df_filename = paste0("./datashare/", gse, "/df_preproc_", gse, ".rds")
 print(paste0("Writing ", df_filename, "..."))
 saveRDS(df, df_filename)
 dim(df)
