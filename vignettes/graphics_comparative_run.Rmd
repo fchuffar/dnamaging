@@ -10,67 +10,189 @@ output:
     number_sections: true
 ---
 
-```{r set parameters}
 
 
-if(!exists("nb_ewas")){ nb_ewas = 2000 }
-if(!exists("dist_nn")){ dist_nn = 1000 }
-if(!exists("nb_run")){ nb_run = 100 }
-typeofmodel = "bs"
-if(!exists("pvals")){ pvals = c(1e-05, 1e-10, 1e-20, 1e-30) } 
-
+```{r echo=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide")
+start_time = Sys.time()
+source("common.R")
 ```
 
-```{r run comparative function}
 
-source("fct_comp_it_DMR.R")
-source("common.R")
 
-for (pval in pvals){
+```{r params_default, echo=FALSE}
+if (!exists("model_formula"))   { model_formula = "meth~age"            }
+if (!exists("model_func_name")) { model_func_name = "modelcalllm"       }
+if (!exists("newas"))           { newas = 300000                           }
+if (!exists("neighb"))          { neighb = 1000                         }
+if (!exists("nb_run"))          { nb_run = 50                           }
+if (!exists("pvals"))           { pvals = c(1e-05, 1e-10, 1e-20, 1e-30) }
+
+gse = paste0("GSE42861_modelcalllm_meth~age_ewas", newas, "_nn", neighb)
+study_filename = paste0("study_", gse,".rds") 
+gse_short = strsplit(gse, "_")[[1]][1]
+```
+
+
+mkdir -p ./datashare/GSE42861/
+
+
+
+rsync -auvP luke:~/projects/dnamaging/vignettes/models_r*_ewas*_nn1000_GSE42861_modelcalllm_meth~age_ewas*_nn1000.rds ~/projects/dnamaging/vignettes/.
+rsync -auvP luke:~/projects/ewascombpr/vignettes/global_results_study_GSE42861_modelcalllm_meth~age_ewas*_nn1000.rds_modelcalllm_meth~age_1e-*.xlsx ~/projects/ewascombpr/vignettes/.
+rsync -auvP luke:~/projects/ewascombpr/vignettes/study_GSE42861_modelcalllm_meth~age_ewas*_nn1000.rds ~/projects/dnamaging/vignettes/datashare/GSE42861/.
+rsync -auvP luke:~/projects/dnamaging/vignettes/info_model_r*_ewas*_nn1000_GSE42861_modelcalllm_meth~age_ewas*_nn1000.rds ~/projects/dnamaging/vignettes/.
+
+
+for (newas in c("200", "1000", "2000", "3000", "5000", "10000", "20000", "30000", "100000", "200000", "300000")) {
+  print(paste0("****************newas: ", newas))
+  source(knitr::purl("graphics_comparative_run.Rmd"))
+}
+
+for (newas in c("200000")) {
+  print(paste0("****************newas: ", newas))
+  source(knitr::purl("graphics_comparative_run.Rmd"))
+}
+
+
+for (newas in c("200", "1000", "2000", "3000", "5000", "10000", "20000", "30000", "200000", "300000")) {
+  print(paste0("****************newas: ", newas))
+  rmarkdown::render("graphics_comparative_run.Rmd", output_file=paste0("graphics_comparative_run_ewas", newas, ".html"))
+}
+
+
+
+```{r run comparative function, eval=TRUE}
+recap_it_DMR = function(newas=2000, neighb=1000, run=0, pval=1e-30, study_filename, gse) { 
+	foo = mreadRDS(paste0("./datashare/", gse_short, "/", study_filename))
+	platform = foo$platform
+	
+	foo = read.table("~/projects/datashare/genomes/Homo_sapiens/UCSC/hg19/hg19.chrom.sizes")[-1,]
+	xshift = c(0,cumsum(as.numeric(foo[,2]))[-nrow(foo)]) ; names(xshift) = foo[,1] 
+
+
+
+	probes_it = list(probes = c(), it = c(), chr = c(), pos = c(), pos_tot = c())
+  rds_model_file = paste0("models_r",run,"_ewas",newas, "_nn", neighb, "_", gse, ".rds")
+  if (!file.exists(rds_model_file)) {print(paste0("no file ", rds_model_file)) ; return()}
+	for (i in 0:run) { 
+    rds_model_file = paste0("models_r",i,"_ewas",newas, "_nn", neighb, "_", gse, ".rds")
+    print(rds_model_file)
+		modele = mreadRDS(rds_model_file)
+		modele = modele[[2]]$coeff$probes
+		probes_it$probes = c(probes_it$probes,modele)
+		probes_it$it = c(probes_it$it, rep(i, length(modele)))
+		probes_it$chr = c(probes_it$chr,platform[modele,"chr"])
+		probes_it$pos = c(probes_it$pos,platform[modele,"pos"])
+	}
+	probes_it$pos_tot = c(probes_it$pos_tot, probes_it$pos + xshift[probes_it$chr])	
+	saveRDS(probes_it, paste0("meth_it_run",run,"_ewas", newas, "_nn", neighb, "_", gse, ".rds"))
+
+
+
+  ewascombpr_global_results_file = paste0("~/projects/ewascombpr/vignettes/global_results_", study_filename, "_modelcalllm_meth~age_", pval, ".xlsx")
+  print(ewascombpr_global_results_file)
+	tab_DMR = mopenxlsx_read.xlsx(ewascombpr_global_results_file)
+	tab_DMR = as.data.frame(tab_DMR)
+	
+	tab_comp = tab_DMR[,c("X.chrom","start","end","len","n_probes","probes")]
+	
+	# Probes de la méthode itérative présente dans chaque DMR
+	probes_it_in_DMR = c()
+	nb_probes_it_in_DMR = c()
+	for (i in 1:nrow(tab_DMR)) {
+		tmp_probes_it_in_DMR = probes_it$probes[probes_it$pos_tot <= tab_comp[i,"end"] + xshift[tab_comp[i,"X.chrom"]] & probes_it$pos_tot >= tab_comp[i,"start"] + xshift[tab_comp[i,"X.chrom"]]]
+		tmp_nb_probes_it_in_DMR = length(tmp_probes_it_in_DMR)
+		tmp_probes_it_in_DMR = paste(tmp_probes_it_in_DMR, collapse = ";")
+		probes_it_in_DMR = c(probes_it_in_DMR, tmp_probes_it_in_DMR)
+		nb_probes_it_in_DMR = c(nb_probes_it_in_DMR, tmp_nb_probes_it_in_DMR)
+	}
+	tab_comp = cbind.data.frame(tab_comp,probes_it_in_DMR,nb_probes_it_in_DMR)
+	
+	# Probes des DMR qui ne sont pas dans la méthode itérative 
+	probes_DMR_not_in_it = c()
+	for (i in 1:nrow(tab_comp)) {
+		DMR_probes = strsplit(tab_comp[i,"probes"], split = ";")
+		it_probes = strsplit(tab_comp[i,"probes_it_in_DMR"], split = ";")
+		tmp_DMR_not_in_it = DMR_probes[!(DMR_probes %in% it_probes)]
+		tmp_DMR_not_in_it = paste(unlist(tmp_DMR_not_in_it), collapse = ";")
+		probes_DMR_not_in_it = c(probes_DMR_not_in_it,tmp_DMR_not_in_it) 
+	}
+	tab_comp = cbind.data.frame(tab_comp,probes_DMR_not_in_it)
+	
+	# pourcentage de probes de la méthode it présente et non presente dans chaque DMR	
+	pct_probes_DMR_in_it = tab_comp[,"nb_probes_it_in_DMR"] / tab_comp[,"n_probes"] *100
+	pct_probes_DMR_not_in_it = 100 - pct_probes_DMR_in_it
+	tab_comp = cbind.data.frame(tab_comp,pct_probes_DMR_in_it, pct_probes_DMR_not_in_it)	
+  saveRDS(tab_comp, paste0("tab_comp_run",run,"_ewas", newas, "_nn", neighb, "_pval",pval,"_", gse, ".rds"))
+  # WriteXLS::WriteXLS(tab_comp, paste0("tab_comp_run",run,"_ewas", newas, "_nn", neighb, "_pval",pval,"_", gse, ".xlsx"), verbose=FALSE, row.names=FALSE, AdjWidth=TRUE, BoldHeaderRow=TRUE, FreezeCol=1)
+	
+	# Recap global 	
+  probes_DMR = unlist(strsplit(tab_comp[,"probes"], split = ";"))
+	probes_it_in_DMR = unlist(strsplit(tab_comp[,"probes_it_in_DMR"],split=";"))
+	probes_it_not_in_DMR = probes_it$probes[!(probes_it$probes %in% probes_it_in_DMR)]
+	nb_probes_it_in_DMR = length(probes_it_in_DMR)
+	nb_probes_it_not_in_DMR = length(probes_it_not_in_DMR)
+	pct_nb_probes_it_not_in_DMR = nb_probes_it_not_in_DMR / length(probes_it$probes) *100
+	pct_gl_it_in_DMR = length(probes_it_in_DMR) / length(probes_DMR) *100
+	pct_mean_it_in_DMR = mean(tab_comp[,"pct_probes_DMR_in_it"])
+	
+	stats_pres_it = data.frame(nb_probes_it_not_in_DMR, nb_probes_it_in_DMR)
+	saveRDS(stats_pres_it, paste0("stats_pres_it_run",run,"_ewas", newas, "_nn", neighb, "_pval", pval,"_", gse, ".rds"))
+	
+	# Annotations probes not in DMR 
+	
+#	annot_it_not_in_DMR = data.frame(probes = probes_it_not_in_DMR,chr = probes_it$chr[!(probes_it$probes %in% probes_it_in_DMR)],it = probes_it$it[!(probes_it$probes %in% probes_it_in_DMR)],pos = probes_it$pos[!(probes_it$probes %in% probes_it_in_DMR)],pos_tot = probes_it$pos_tot[!(probes_it$probes %in% probes_it_in_DMR)])
+#	WriteXLS::WriteXLS(annot_it_not_in_DMR, paste0("annot_it_not_in_DMR_run",run,"_pval",pval,".xlsx"), verbose=TRUE, row.names=FALSE, AdjWidth=TRUE, BoldHeaderRow=TRUE, FreezeRow=1, FreezeCol=1)
+	
+	print(paste0("run ", run, " terminated"))
+	
+	return()
+	
+}
+
+for (pval in pvals) {
 	for (run in (0:nb_run)) {
-			
-			if(!file.exists(paste0("stats_pres_it_run",run,"_",typeofmodel, "_ewas", nb_ewas, "_nn", dist_nn, "_pval", pval,"_GSE42861.rds"))){
-				recap_it_DMR(nb_ewas, dist_nn, typeofmodel, run, pval)
+    print(paste0(pval," ", run))
+			if(!file.exists(paste0("stats_pres_it_run",run,"_ewas", newas, "_nn", neighb, "_pval", pval,"_", gse, ".rds"))){
+				recap_it_DMR(newas, neighb, run, pval, study_filename, gse)
 			}
 	}
 }
 
 ```
 
-``` {r plot comparative graph DMR/IT}
+# nb_probes
 
+``` {r plot comparative graph DMR IT}
 # FOR BS 
-
 for (pval in pvals) {
-
 	global_stat = c()
 	for (run in (0:nb_run)) {
-
-		tmp_stat = readRDS(paste0("stats_pres_it_run",run,"_",typeofmodel, "_ewas", nb_ewas, "_nn", dist_nn, "_pval", pval,"_GSE42861.rds"))
+		tmp_stat = readRDS(paste0("stats_pres_it_run",run,"_ewas", newas, "_nn", neighb, "_pval", pval,"_", gse, ".rds"))
 		global_stat = rbind(global_stat,tmp_stat)
-	
 	}
 	rownames(global_stat) = c(0:nb_run)
 
 
-	tab_DMR = readxl::read_excel(paste0("../../ewascombpr/vignettes/global_results_study_GSE42861_modelcalllm_meth~age_ewas", nb_ewas, "_nn", dist_nn, ".rds_modelcalllm_meth~age_", pval, ".xlsx"))
+	tab_DMR = mopenxlsx_read.xlsx(paste0("~/projects/ewascombpr/vignettes/global_results_", study_filename, "_modelcalllm_meth~age_", pval, ".xlsx"))
 	tab_DMR = as.data.frame(tab_DMR)
 	probes_DMR = unlist(strsplit(tab_DMR[,"probes"], split = ";"))
 	nb_tot_DMR = length(probes_DMR)
 
-	if(nb_tot_DMR>10000) { ylim = c(0,nb_tot_DMR)} else { ylim = c(0,10000) }
- 
-	plot(x = rownames(global_stat), y = global_stat$nb_probes_it_not_in_DMR, type = "b", col = "red",lty=1, ylim=ylim,main = paste0("comparison between DMR pval=", pval, " and iterative bs method for ewas ", nb_ewas))
+  layout(matrix(1:2,1), respect=TRUE)
+  ylim = c(0, max(global_stat$nb_probes_it_not_in_DMR + global_stat$nb_probes_it_in_DMR))
+  ylim=c(0,1500)  
+	plot(x = rownames(global_stat), y = global_stat$nb_probes_it_not_in_DMR, type = "b", col = "red",lty=1, ylim=ylim, main = paste0("comparison between DMR pval=", pval, " and iterative bs method for ewas ", newas))
 	points(x = rownames(global_stat), y = global_stat$nb_probes_it_in_DMR, type = "b", col = "blue",lty=1)
 	points(x = rownames(global_stat), y = global_stat$nb_probes_it_not_in_DMR + global_stat$nb_probes_it_in_DMR, type = "b", col = "black",lty=1)
 
 	# FOR GLM
 
-	#typeofmodel = "glm"
 	#global_stat = c()
 	#for (run in (0:nb_run)) {
 
-	#	tmp_stat = readRDS(paste0("stats_pres_it_run",run,"_",typeofmodel, "_ewas", nb_ewas, "_nn", dist_nn, "_pval", pval,"_GSE42861.rds"))
+	#	tmp_stat = readRDS(paste0("stats_pres_it_run",run,"_ewas", newas, "_nn", neighb, "_pval", pval,"_", gse, ".rds"))
 	#	global_stat = rbind(global_stat,tmp_stat)
 	
 	#}
@@ -82,8 +204,8 @@ for (pval in pvals) {
 
 	abline(h=nb_tot_DMR,col = "cyan",lwd=3)
 	abline(h=sum(tab_DMR[,"n_probes"]),col="orange",lwd=3)
-
-	legend("topleft", col = c("red","blue","black","cyan","orange"), lty=c(rep(1,3),1,1) , lwd=c(rep(1,3),3,3), legend = c("nb bs iterative probes not included in DMR pipeline", "nb bs iterative probes inluded in DMR pipeline", "total nb of bs iterative probes", "number of DMR probes", "number of significative DMR probes" ))
+  plot.new()
+	legend("topleft", col = c("red","blue","black","cyan","orange"), lty=c(rep(1,3),1,1) , lwd=c(rep(1,3),3,3), legend = c("nb bs iterative probes not included in DMR pipeline", "nb bs iterative probes inluded in DMR pipeline", "total nb of bs iterative probes", "number of DMR probes", "number of significative DMR probes" ), cex=.7)
 
 	# legend("topleft", col = c("red","blue","black","red","blue","black","cyan"), lty=c(rep(1,3),rep(2,3),1) , lwd=c(rep(1,6),3), legend = c("nb bs iterative probes not included in DMR pipeline", "nb bs iterative probes inluded in DMR pipeline", "total nb of bs iterative probes", "nb glm iterative probes not included in DMR pipeline", "nb glm iterative probes inluded in DMR pipeline", "total nb of glm iterative probes","number of DMR probes"))
 
@@ -93,8 +215,9 @@ for (pval in pvals) {
 
 ```{r manhattan plot, eval = FALSE}
 
-probes_it = readRDS(paste0("meth_it_run",nb_run,"_",typeofmodel,"_ewas", nb_ewas, "_nn", dist_nn, "_GSE42861.rds"))
-it_in_DMR = as.data.frame(readxl::read_excel(paste0("tab_comp_run",run,"_",typeofmodel, "_ewas", nb_ewas, "_nn", dist_nn, "_pval",pval,"_GSE42861.xlsx")))
+probes_it = readRDS(paste0("meth_it_run",nb_run,"_ewas", newas, "_nn", neighb, "_", gse, ".rds"))
+# it_in_DMR = as.data.frame(openxlsx::read.xlsx(paste0("tab_comp_run",run,"_ewas", newas, "_nn", neighb, "_pval",pval,"_", gse, ".xlsx")))
+it_in_DMR = mreadRDS(paste0("tab_comp_run",run,"_ewas", newas, "_nn", neighb, "_pval",pval,"_", gse, ".rds"))
 it_in_DMR = unlist(strsplit(it_in_DMR$probes_it_in_DMR,split=";"))
 it_in_DMR = it_in_DMR[!(is.na(it_in_DMR))]
 
@@ -102,7 +225,12 @@ plot(x= probes_it$pos_tot, y = probes_it$it, col = as.numeric(probes_it$probes %
 
 ```
 
-```{r RMSE/nb_probes for iterative method}####### RMSE nb_pb compare ######
+# RMSE
+
+
+```{r RMSE/nb_probes for iterative method}
+
+####### RMSE nb_pb compare ######
 
 ## recover data 
 
@@ -111,27 +239,29 @@ rmse_bs = c()
 rmse_glm = c()
 nb_pb_bs = c()
 nb_pb_glm = c()
-for (run in 0:nb_run){
-	tmp_model_bs = readRDS(paste0("info_model_r",run,"_bs_ewas", nb_ewas, "_nn", dist_nn, "_GSE42861.rds"))
+for (run in 0:nb_run) {
+	tmp_model_bs = readRDS(paste0("info_model_r",run,"_ewas", newas, "_nn", neighb, "_", gse, ".rds"))
 	tmp_rmse_bs = tmp_model_bs$gender.bootstrap.RMSE
 	tmp_nb_pb_bs = tmp_model_bs$gender.bootstrap.nb_probes_mod
 	rmse_bs = c(rmse_bs,tmp_rmse_bs)
 	nb_pb_bs = c(nb_pb_bs, tmp_nb_pb_bs)
 	
-#	tmp_model_glm = readRDS(paste0("info_model_r",run,"_glm_ewas", nb_ewas, "_nn", dist_nn, "_GSE42861.rds"))
+#	tmp_model_glm = readRDS(paste0("info_model_r",run,"_glm_ewas", newas, "_nn", neighb, "_", gse, ".rds"))
 #	tmp_rmse_glm = tmp_model_glm$gender.elasticnet.RMSE
 #	tmp_nb_pb_glm = tmp_model_glm$gender.elasticnet.nb_probes_mod
 #	rmse_glm = c(rmse_glm,tmp_rmse_glm)
 #	nb_pb_glm = c(nb_pb_glm, tmp_nb_pb_glm)
 }
 
+layout(matrix(1:2,1), respect=TRUE)
+
 ## add extra space to right margin of plot within frame
 par(mar=c(5, 4, 4, 6) + 0.1)
 
 ## Plot first set of data and draw its axis
 plot(x, rmse_bs, axes=FALSE, xlab="", ylab="", 
-   type="b",ylim=c(0,max(c(rmse_bs,rmse_glm))), lty = 1, col="black", main=paste0("Comparison GLM/BS method for ewas=",nb_ewas))
-axis(2, ylim=c(0,max(c(rmse_bs,rmse_glm))),col="black",las=1)  ## las=1 makes horizontal labels
+   type="b", ylim=c(0,10), lty = 1, col="black", main=paste0("Comparison GLM/BS method for ewas=",newas))
+axis(2,col="black",las=1)  ## las=1 makes horizontal labels
 mtext("RMSE",side=2,line=2.5)
 #points(x, rmse_glm, lty = 2, col = "black", type ="b")
 
@@ -139,11 +269,11 @@ mtext("RMSE",side=2,line=2.5)
 par(new=TRUE)
 
 ## Plot the second plot and put axis scale on right
-plot(x, nb_pb_bs,  xlab="", ylab="", ylim=c(0,max(c(nb_pb_bs,nb_pb_glm))), 
+plot(x, nb_pb_bs,  xlab="", ylab="", ylim=c(0,200), 
     axes=FALSE, type="b", col="red", lty=1)
 ## a little farther out (line=4) to make room for labels
 mtext("nb_probes",side=4,col="red",line=4) 
-axis(4, ylim=c(0,max(c(nb_pb_bs,nb_pb_glm))), col="red",col.axis="red",las=1)
+axis(4, col="red",col.axis="red",las=1)
 #points(x, nb_pb_glm, lty = 2, col = "red", type ="b")
 
 ## Draw the time axis
@@ -151,20 +281,45 @@ axis(1,pretty(range(x),10))
 mtext("nb_run",side=1,col="black",line=2.5)  
 
 ## Add Legend
+plot.new()
 legend("topleft",legend=c("RMSE for BS method","RMSE for GLM method", "nb probes for BS method", "nb probes for GLM method"),
-  text.col=c("black","black","red","red"),col=c("black","black","red","red"), lty = c(1,2,1,2))
+  text.col=c("black","black","red","red"),col=c("black","black","red","red"), lty = c(1,2,1,2), cex=.7)
 
-}
+
+
+```
+
+
+```{r isolated probes find, eval=FALSE}
+tab_probes = openxlsx::read.xlsx(paste0("~/projects/ewascombpr/vignettes/global_results_", study_filename,".xlsx"))
+probes_unique = unlist(tab_probes$probes[tab_probes$nb_probes == 1])
+names(probes_unique) = probes_unique
+
+probes_bs = readRDS(paste0("meth_it_run",nb_run,"_ewas", newas, "_nn", neighb, "_", gse, ".rds"))
+
+probes_unique_it = probes_bs$it[probes_bs$probes %in%  probes_unique]
+names(probes_unique_it) = probes_bs$probes[probes_bs$probes %in% probes_unique]
+
+#probes_unique_not_it_name = probes_unique[!(probes_unique %in%  probes_bs$probes)]
+#probes_unique_not_it = rep(-1,length(probes_unique_not_it_name))
+#names(probes_unique_not_it) = probes_unique_not_it_name
+#probes_unique = c(probes_unique_it, probes_unique_not_it)
+layout(matrix(1:2,1), respect=TRUE)
+
+plot(0:100,cumsum(table(factor(probes_unique_it, levels = 0:100))),type="b",ylim= c(0,length(probes_unique)),main=paste0("Isolated probes by iteration for ewas ",newas))
+abline(h=length(probes_unique),col ="blue",lwd=3)
+
+plot.new()
+legend("topleft", legend = c("Isolated probes by iteration", "total of isolated probes"), col = c("black","blue"), lty = 1, lwd = c(1,3), cex=.7)
 
 ```
 
 ```{r plot density, eval = FALSE}
-
 # Density ppv all probes 
 
 if(file.exists("ppv_all_probes.rds")){ ppv_all_probes = readRDS("ppv_all_probes.rds") } else {
 
-foo = readRDS("../../datashare/GSE42861/study_GSE42861.rds")
+foo = mreadRDS(paste0("./datashare/", gse_short, "/", study_filename))
 platform = foo$platform
 	
 foo = read.table("~/projects/datashare/hg38.chrom.sizes")[1:24,]
@@ -195,9 +350,8 @@ print("all probes done")
 
 # Density k-ppv it probes glm
 
-#typeofmodel="glm"
 
-#probes_it = readRDS(paste0("meth_it_run",nb_run,"_",typeofmodel,"_ewas", nb_ewas, "_nn", dist_nn, "_GSE42861.rds"))
+#probes_it = readRDS(paste0("meth_it_run",nb_run,"_ewas", newas, "_nn", neighb, "_", gse, ".rds"))
 
 #ppv_glm = c()
 #for (i in 1:length(probes_it$pos_tot)) {
@@ -211,7 +365,7 @@ print("all probes done")
 
 # Density k-ppv it probes bs
 
-probes_it = readRDS(paste0("meth_it_run",nb_run,"_",typeofmodel,"_ewas", nb_ewas, "_nn", dist_nn, "_GSE42861.rds"))
+probes_it = readRDS(paste0("meth_it_run",nb_run,"_ewas", newas, "_nn", neighb, "_", gse, ".rds"))
 
 ppv_bs = c()
 for (i in 1:length(probes_it$pos_tot)) {
@@ -227,7 +381,7 @@ print("bs done")
 
 pval = 1e-30
 
-tab_DMR = readxl::read_excel(paste0("../../ewascombpr/vignettes/global_results_study_r0_ewas", nb_ewas, "_nn", dist_nn, "_GSE42861.rds_modelcalllm_meth~age+gender_",pval,".xlsx"))
+tab_DMR = openxlsx::read.xlsx(paste0("~/projects/ewascombpr/vignettes/global_results_", study_filename, "_modelcalllm_meth~age_", pval, ".xlsx"))
 tab_DMR = as.data.frame(tab_DMR)
 
 foo = read.table("~/projects/datashare/hg38.chrom.sizes")[1:24,]
@@ -255,29 +409,6 @@ lines(density(ppv_DMR, bw),col = "blue")
 print("DMR done")
 
 legend("topleft", legend = c("distance of platform probes NN", "distance of DMRs NN", "distance of glm iterative probes NN", "distance of bs iterative probes NN"), col = c("black","blue","red","green"), lty = 1)
-
-```
-
-```{r isolated probes find}
-
-tab_probes = readxl::read_excel(paste0("../../ewascombpr/vignettes/global_results_GSE42861_modelcalllm_meth~age_ewas",nb_ewas,"_nn",dist_nn,".xlsx"))
-probes_unique = unlist(tab_probes$probes[tab_probes$nb_probes == 1])
-names(probes_unique) = probes_unique
-
-probes_bs = readRDS(paste0("meth_it_run",nb_run,"_",typeofmodel,"_ewas", nb_ewas, "_nn", dist_nn, "_GSE42861.rds"))
-
-probes_unique_it = probes_bs$it[probes_bs$probes %in%  probes_unique]
-names(probes_unique_it) = probes_bs$probes[probes_bs$probes %in% probes_unique]
-
-#probes_unique_not_it_name = probes_unique[!(probes_unique %in%  probes_bs$probes)]
-#probes_unique_not_it = rep(-1,length(probes_unique_not_it_name))
-#names(probes_unique_not_it) = probes_unique_not_it_name
-#probes_unique = c(probes_unique_it, probes_unique_not_it)
-
-plot(0:100,cumsum(table(factor(probes_unique_it, levels = 0:100))),type="b",ylim= c(0,length(probes_unique)),main=paste0("Isolated probes by iteration for ewas ",nb_ewas)) 
-abline(h=length(probes_unique),col ="blue",lwd=3)
-
-legend("bottomright", legend = c("Isolated probes by iteration", "total of isolated probes"), col = c("black","blue"), lty = 1, lwd = c(1,3))
 
 ```
 

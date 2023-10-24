@@ -23,16 +23,14 @@ source("params_default.R")
 if (!exists("seed")) seed = 1
 if (!exists("run")) run = 0
 if (!exists("scenario")) scenario = "A"
-if (!exists("typeofmodel")) typeofmodel = "bs"
-if (!exists("dist_nn")) dist_nn = 0
-
+if (!exists("neight")) neight = 0
 ```
+
 
 ```{r load data and build indexes, echo=FALSE}
 print("Loading data")
-if (run == 0) {
-  df = mreadRDS(paste0("df_r", run, "_ewas", nbewasprobes, "_nn", dist_nn, "_", gse, ".rds"))
-}else { df = mreadRDS(paste0("df_r", run, "_", typeofmodel, "_ewas", nbewasprobes, "_nn", dist_nn, "_", gse, ".rds")) }
+gse_short = strsplit(gse, "_")[[1]][1] ; gse_short
+df = mreadRDS(paste0("./datashare/", gse_short, "/df_preproc_r", run, "_", gse, ".rds"))
 for (new_factoi in c("tobacco", "disease")) {
   if (new_factoi %in% colnames(df)) {
     covariates = unique(c(covariates, new_factoi))  
@@ -106,7 +104,6 @@ if (!exists("MODESA")) {
 
 At the first time, we use elastic net method to build our first model. To use this method, we need 2 parameters $\alpha$ (lasso and ridge regression rate) and $\lambda$ (penalization parameter for penalized regression). We decide to use cross validation to first find the best $\lambda$ for each $\alpha$ we have. On the left you have the mean of cross validation RMSE depending on $\lambda$ and $\alpha$ and on the right you have the mean of cross validation probes taken for the model depending on $\alpha$ and $\lambda$. Here, the different $\alpha$ are chosen with the function cva.glmnet. As we can see, the RMSE really differ depending on what $\lambda$ we take for each $\alpha$. But we also see that RMSE from the best $\lambda$ for each $\alpha$ doesn’t differ much depending on $\alpha$. Every RMSE from best $\lambda$ for each $\alpha$ are in the RMSE interval (mean $\pm$ sd) of the best $\alpha$,$\lambda$ couple (here 0.216,1.72). So we verify after in the right plot the number of probes for our best couple to see if we have a good number of probes to avoid overfitting. So we can select our best $\alpha$,$\lambda$ couple to build our model with an elastic net regression. 
 For information, Elastic net regularization is a method consisting in mix Lasso and Ridge regression methods. We have the metaparameter lambda for Ridge and Lasso regression model (regularization parameter) and the meta parameter alpha corresponding in the proportion of Lasso and Ridge (principe of Elastic net regression). Cross validation is a process consisting in cutting the train set in k folds. We learn our model on k-1 folds and validate it on the last fold, and we make that k times to validate the model on each folds. We can after make the mean mse to take the best parameters.
-
 
 
 
@@ -502,7 +499,7 @@ models = list(
   litterature_models$hannum_model_mc, 
   litterature_models$horvath_model_mc
 )
-saveRDS(list(best_model_cvaglmnet, best_model_bs), paste0("models_r", run,"_",typeofmodel, "_ewas", nbewasprobes, "_nn", dist_nn, "_", gse, ".rds"))
+saveRDS(list(best_model_cvaglmnet, best_model_bs), paste0("models_r", run,"_ewas", newas, "_nn", neight, "_", gse, ".rds"))
 ```
 
 
@@ -698,21 +695,14 @@ barplot(tab_probes, las=2) # Check when number of probes stabilised
 
 
 ```{r next run}
-if(typeofmodel == "bs"){
-  dim(df)
-  df = df [,!(colnames(df)%in%best_model_bs_probes)]
-  dim(df)
-  saveRDS(df,paste0("df_r", run+1, "_bs", "_ewas", nbewasprobes, "_nn", dist_nn, "_", gse, ".rds"))
-}
-
-if(typeofmodel == "glm"){
-  dim(df)
-  df = df [,!(colnames(df)%in%rownames(best_model_cvaglmnet$coeff))]
-  dim(df)
-  saveRDS(df,paste0("df_r", run+1, "_glm", "_ewas", nbewasprobes, "_nn", dist_nn, "_", gse, ".rds"))
-}
-
+dim(df)
+df = df [,!(colnames(df)%in%best_model_bs_probes)]
+dim(df)
+gse_short = strsplit(gse, "_")[[1]][1] ; gse_short
+saveRDS(df,paste0("./datashare/", gse_short, "/df_preproc_r", run+1, "_", gse, ".rds"))
 ```
+
+
 
 
 
@@ -730,7 +720,7 @@ https://github.com/fchuffar/dnamaging
 stop_time = Sys.time()
 info$exec_time = round(difftime(stop_time, start_time, units="mins"),1)
 
-saveRDS(info, paste0("info_model_r", run,"_", typeofmodel, "_ewas", nbewasprobes, "_nn", dist_nn, "_", gse, ".rds"))
+saveRDS(info, paste0("info_model_r", run,"_ewas", newas, "_nn", neight, "_", gse, ".rds"))
 ```
 
 # Session Information

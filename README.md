@@ -1,6 +1,9 @@
 # dnamaging
 A set of scripts and vignettes allowing to build and evaluate an epigenetic clock model.
 
+# conda environnement
+
+
 
 
 # 180 seconds turorial

@@ -5,4 +5,5 @@ if (!exists("mmodel_factory_glmnet")) {mmodel_factory_glmnet = memoise::memoise(
 if (!exists("mcall_glmnet_mod")) {mcall_glmnet_mod = memoise::memoise(dnamaging::call_glmnet_mod)}
 if (!exists("mcvaglmnet")) {mcvaglmnet = memoise::memoise(dnamaging::cvaglmnet)}   # Memoise for cvaglmnet
 if (!exists("mlimma_lmFit")) {mlimma_lmFit = memoise::memoise(limma::lmFit)}  
+if (!exists("mopenxlsx_read.xlsx")) {mopenxlsx_read.xlsx = memoise::memoise(openxlsx::read.xlsx)}  
   
