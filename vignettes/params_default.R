@@ -1,6 +1,6 @@
 if (!exists("gse")) gse = "dnamaging"
 if (!exists("nb_train")) nb_train = 482
-if (!exists("nbewasprobes")) nbewasprobes = 3000
+if (!exists("nbewasprobes")) nbewasprobes = 200
 if (!exists("CVBS")) CVBS = FALSE
 if (!exists("y_key")) y_key = "age"
 covariates = c("gender")

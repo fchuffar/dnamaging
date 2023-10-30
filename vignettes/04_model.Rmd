@@ -23,11 +23,13 @@ source("params_default.R")
 if (!exists("seed")) seed = 1
 if (!exists("run")) run = 0
 if (!exists("scenario")) scenario = "A"
-if (!exists("neight")) neight = 0
 ```
 
 
 ```{r load data and build indexes, echo=FALSE}
+if (nbewasprobes>0 & length(grep("ewas", gse))==0) {
+  gse = paste0(gse, "_ewas", nbewasprobes)
+}
 print("Loading data")
 gse_short = strsplit(gse, "_")[[1]][1] ; gse_short
 df = mreadRDS(paste0("./datashare/", gse_short, "/df_preproc_r", run, "_", gse, ".rds"))
@@ -499,7 +501,7 @@ models = list(
   litterature_models$hannum_model_mc, 
   litterature_models$horvath_model_mc
 )
-saveRDS(list(best_model_cvaglmnet, best_model_bs), paste0("models_r", run,"_ewas", newas, "_nn", neight, "_", gse, ".rds"))
+saveRDS(list(best_model_cvaglmnet, best_model_bs), paste0("models_r", run, "_", gse, ".rds"))
 ```
 
 
@@ -720,7 +722,7 @@ https://github.com/fchuffar/dnamaging
 stop_time = Sys.time()
 info$exec_time = round(difftime(stop_time, start_time, units="mins"),1)
 
-saveRDS(info, paste0("info_model_r", run,"_ewas", newas, "_nn", neight, "_", gse, ".rds"))
+saveRDS(info, paste0("info_model_r", run, "_", gse, ".rds"))
 ```
 
 # Session Information
