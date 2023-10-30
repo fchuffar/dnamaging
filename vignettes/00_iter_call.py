@@ -59,7 +59,8 @@ run_prerequisits = {
 
 prefix = os.getcwd()
 # info_idat  = [f"{prefix}/01_idat2study_{gse}.html" for gse in gses]
-html_target  = [f"{prefix}/04_model_r50_ewas{newas}_nn1000_GSE42861.html" for newas in ["1000", "2000", "3000", "5000", "10000", "20000", "30000", "50000", "100000", "200000", "300000"]]
+html_target  = [f"{prefix}/04_model_r50_ewas{newas}_nn1000_GSE42861.html" for newas in ["1000", "2000", "3000", "5000", "10000", "20000", "30000", "50000", "100000", "200000", "300000", "500000"]]
+model_target  = [f"{prefix}/models_r0_ewas{newas}_nn1000_GSE42861_modelcalllm_meth~age_ewas{newas}_nn1000.rds" for newas in ["1000", "2000", "3000", "5000", "10000", "20000", "30000", "50000", "100000", "200000", "300000", "500000"]]
 # html_target  = [f"{prefix}/04_model_r50_ewas{newas}_nn1000_GSE42861.html" for newas in ["200"]]
 # html_target  = [f"{prefix}/04_model_r2_ewas{newas}_nn1000_GSE42861.html" for newas in ["100"]]
 
@@ -70,6 +71,8 @@ rule target:
     message: "-- Rule target completed. --"
     input:
       html_target, 
+      model_target,
+      "/home/chuffarf/projects/dnamaging/vignettes/models_r0_ewas100000_nn1000_GSE42861_modelcalllm_meth~age_ewas100000_nn1000.rds", 
       # info_idat,
     shell:"""
 export PATH="/summer/epistorage/opt/bin:$PATH"
@@ -92,6 +95,7 @@ rule R01_itera_model_call:
     output: 
       html      = "{prefix}/04_model_r{runid}_ewas{newas}_nn{neight}_{gse}.html",  # "{prefix}/01_idat2study_{gse}.html"   ,
       rout      = "{prefix}/04_model_r{runid}_ewas{newas}_nn{neight}_{gse}.Rout",  # "{prefix}/01_idat2study_{gse}.html"   ,
+      model_rds = "{prefix}/models_r{runid}_ewas{newas}_nn{neight}_{gse}_modelcalllm_meth~age_ewas{newas}_nn{neight}.rds",
     threads: 32
     shell:"""
 export PATH="/summer/epistorage/opt/bin:$PATH"

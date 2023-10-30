@@ -13,6 +13,10 @@ A set of scripts and vignettes allowing to build and evaluate an epigenetic cloc
 rm -Rf dnamaging
 # Clone dnamaging package
 git clone git@github.com:fchuffar/dnamaging.git
+# Create conda environnement and install dependancies
+conda create --name dnamaging_env -c anaconda -c bioconda -c conda-forge -c r --file dnamaging/vignettes/conda_export_dnamaging_env.txt 
+conda activate dnamaging_env
+echo "devtools::install_github('fchuffar/epimedtools')" | Rscript -       
 # Get dnamaging package data (will be include in the packege later)
 mkdir dnamaging/data/
 cd dnamaging/data/

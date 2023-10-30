@@ -16,6 +16,7 @@ output:
 knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide")
 start_time = Sys.time()
 source("common.R")
+if (!exists("mopenxlsx_read.xlsx")) {mopenxlsx_read.xlsx = memoise::memoise(openxlsx::read.xlsx)}  
 ```
 
 
@@ -44,18 +45,12 @@ rsync -auvP luke:~/projects/ewascombpr/vignettes/study_GSE42861_modelcalllm_meth
 rsync -auvP luke:~/projects/dnamaging/vignettes/info_model_r*_ewas*_nn1000_GSE42861_modelcalllm_meth~age_ewas*_nn1000.rds ~/projects/dnamaging/vignettes/.
 
 
-for (newas in c("200", "1000", "2000", "3000", "5000", "10000", "20000", "30000", "100000", "200000", "300000")) {
+for (newas in c("200", "1000", "2000", "3000", "5000", "10000", "20000", "30000", "50000", "100000", "200000", "300000", "500000")) {
   print(paste0("****************newas: ", newas))
   source(knitr::purl("graphics_comparative_run.Rmd"))
 }
 
-for (newas in c("200000")) {
-  print(paste0("****************newas: ", newas))
-  source(knitr::purl("graphics_comparative_run.Rmd"))
-}
-
-
-for (newas in c("200", "1000", "2000", "3000", "5000", "10000", "20000", "30000", "200000", "300000")) {
+for (newas in c("200", "1000", "2000", "3000", "5000", "10000", "20000", "30000", "50000", "100000", "200000", "300000", "500000")) {
   print(paste0("****************newas: ", newas))
   rmarkdown::render("graphics_comparative_run.Rmd", output_file=paste0("graphics_comparative_run_ewas", newas, ".html"))
 }
@@ -161,6 +156,52 @@ for (pval in pvals) {
 }
 
 ```
+# RMSE
+
+
+```{r RMSE/nb_probes for iterative method}
+
+####### RMSE nb_pb compare ######
+
+## recover data 
+
+x = c(0:nb_run)
+rmse_bs = c()
+rmse_glm = c()
+nb_pb_bs = c()
+nb_pb_glm = c()
+for (run in 0:nb_run) {
+	tmp_model_bs = readRDS(paste0("info_model_r",run,"_ewas", newas, "_nn", neighb, "_", gse, ".rds"))
+	tmp_rmse_bs = tmp_model_bs$gender.bootstrap.RMSE
+	tmp_nb_pb_bs = tmp_model_bs$gender.bootstrap.nb_probes_mod
+	rmse_bs = c(rmse_bs,tmp_rmse_bs)
+	nb_pb_bs = c(nb_pb_bs, tmp_nb_pb_bs)
+	
+#	tmp_model_glm = readRDS(paste0("info_model_r",run,"_glm_ewas", newas, "_nn", neighb, "_", gse, ".rds"))
+#	tmp_rmse_glm = tmp_model_glm$gender.elasticnet.RMSE
+#	tmp_nb_pb_glm = tmp_model_glm$gender.elasticnet.nb_probes_mod
+#	rmse_glm = c(rmse_glm,tmp_rmse_glm)
+#	nb_pb_glm = c(nb_pb_glm, tmp_nb_pb_glm)
+}
+
+layout(1, respect=TRUE)
+
+## add extra space to right margin of plot within frame
+par(mar=c(5, 4, 4, 6) + 0.1)
+## Plot first set of data and draw its axis
+plot(x, rmse_bs, xlab="iteration", ylab="RMSE", 
+   type="b", ylim=c(0,12), lty=1, col=1, main=paste0("RMSE~it newas=",newas), las=1)
+abline(v=10, h=6, lty=2, col="grey")
+
+## Allow a second plot on the same graph
+par(new=TRUE)
+## Plot the second plot and put axis scale on right
+plot(x, nb_pb_bs,  xlab="", ylab="", ylim=c(0,200), 
+    axes=FALSE, type="b", col="red", lty=1)
+## a little farther out (line=4) to make room for labels
+mtext("#probes",side=4,col="red",line=4) 
+axis(4, col="red",col.axis="red",las=1)
+```
 
 # nb_probes
 
@@ -181,12 +222,11 @@ for (pval in pvals) {
 	nb_tot_DMR = length(probes_DMR)
 
   layout(matrix(1:2,1), respect=TRUE)
-  ylim = c(0, max(global_stat$nb_probes_it_not_in_DMR + global_stat$nb_probes_it_in_DMR))
   ylim=c(0,1500)  
-	plot(x = rownames(global_stat), y = global_stat$nb_probes_it_not_in_DMR, type = "b", col = "red",lty=1, ylim=ylim, main = paste0("comparison between DMR pval=", pval, " and iterative bs method for ewas ", newas))
-	points(x = rownames(global_stat), y = global_stat$nb_probes_it_in_DMR, type = "b", col = "blue",lty=1)
-	points(x = rownames(global_stat), y = global_stat$nb_probes_it_not_in_DMR + global_stat$nb_probes_it_in_DMR, type = "b", col = "black",lty=1)
-
+	plot(x=rownames(global_stat), y=global_stat$nb_probes_it_not_in_DMR, type = "b", col= "red", lty=1, ylim=ylim, main=paste0("cumsum(#probes) newas=", newas), ylab="#probes", xlab="iteration")
+	points(x=rownames(global_stat), y = global_stat$nb_probes_it_in_DMR, type = "b", col = "blue",lty=1)
+	points(x=rownames(global_stat), y = global_stat$nb_probes_it_not_in_DMR + global_stat$nb_probes_it_in_DMR, type = "b", col = "black",lty=1)
+  abline(v=10, h=1000, lty=2, col="grey")
 	# FOR GLM
 
 	#global_stat = c()
@@ -225,69 +265,6 @@ plot(x= probes_it$pos_tot, y = probes_it$it, col = as.numeric(probes_it$probes %
 
 ```
 
-# RMSE
-
-
-```{r RMSE/nb_probes for iterative method}
-
-####### RMSE nb_pb compare ######
-
-## recover data 
-
-x = c(0:nb_run)
-rmse_bs = c()
-rmse_glm = c()
-nb_pb_bs = c()
-nb_pb_glm = c()
-for (run in 0:nb_run) {
-	tmp_model_bs = readRDS(paste0("info_model_r",run,"_ewas", newas, "_nn", neighb, "_", gse, ".rds"))
-	tmp_rmse_bs = tmp_model_bs$gender.bootstrap.RMSE
-	tmp_nb_pb_bs = tmp_model_bs$gender.bootstrap.nb_probes_mod
-	rmse_bs = c(rmse_bs,tmp_rmse_bs)
-	nb_pb_bs = c(nb_pb_bs, tmp_nb_pb_bs)
-	
-#	tmp_model_glm = readRDS(paste0("info_model_r",run,"_glm_ewas", newas, "_nn", neighb, "_", gse, ".rds"))
-#	tmp_rmse_glm = tmp_model_glm$gender.elasticnet.RMSE
-#	tmp_nb_pb_glm = tmp_model_glm$gender.elasticnet.nb_probes_mod
-#	rmse_glm = c(rmse_glm,tmp_rmse_glm)
-#	nb_pb_glm = c(nb_pb_glm, tmp_nb_pb_glm)
-}
-
-layout(matrix(1:2,1), respect=TRUE)
-
-## add extra space to right margin of plot within frame
-par(mar=c(5, 4, 4, 6) + 0.1)
-
-## Plot first set of data and draw its axis
-plot(x, rmse_bs, axes=FALSE, xlab="", ylab="", 
-   type="b", ylim=c(0,10), lty = 1, col="black", main=paste0("Comparison GLM/BS method for ewas=",newas))
-axis(2,col="black",las=1)  ## las=1 makes horizontal labels
-mtext("RMSE",side=2,line=2.5)
-#points(x, rmse_glm, lty = 2, col = "black", type ="b")
-
-## Allow a second plot on the same graph
-par(new=TRUE)
-
-## Plot the second plot and put axis scale on right
-plot(x, nb_pb_bs,  xlab="", ylab="", ylim=c(0,200), 
-    axes=FALSE, type="b", col="red", lty=1)
-## a little farther out (line=4) to make room for labels
-mtext("nb_probes",side=4,col="red",line=4) 
-axis(4, col="red",col.axis="red",las=1)
-#points(x, nb_pb_glm, lty = 2, col = "red", type ="b")
-
-## Draw the time axis
-axis(1,pretty(range(x),10))
-mtext("nb_run",side=1,col="black",line=2.5)  
-
-## Add Legend
-plot.new()
-legend("topleft",legend=c("RMSE for BS method","RMSE for GLM method", "nb probes for BS method", "nb probes for GLM method"),
-  text.col=c("black","black","red","red"),col=c("black","black","red","red"), lty = c(1,2,1,2), cex=.7)
-
-
-
-```
 
 
 ```{r isolated probes find, eval=FALSE}
@@ -412,3 +389,32 @@ legend("topleft", legend = c("distance of platform probes NN", "distance of DMRs
 
 ```
 
+# exec_time
+```{r}
+
+####### RMSE nb_pb compare ######
+
+## recover data 
+
+x = c(0:nb_run)
+exec_time = c()
+for (run in 0:nb_run) {
+	tmp_model_bs = readRDS(paste0("info_model_r",run,"_ewas", newas, "_nn", neighb, "_", gse, ".rds"))
+	tmp_exec_time = as.numeric(tmp_model_bs$exec_time)
+	exec_time = c(exec_time,tmp_exec_time)
+	
+#	tmp_model_glm = readRDS(paste0("info_model_r",run,"_glm_ewas", newas, "_nn", neighb, "_", gse, ".rds"))
+#	tmp_rmse_glm = tmp_model_glm$gender.elasticnet.RMSE
+#	tmp_nb_pb_glm = tmp_model_glm$gender.elasticnet.nb_probes_mod
+#	rmse_glm = c(rmse_glm,tmp_rmse_glm)
+#	nb_pb_glm = c(nb_pb_glm, tmp_nb_pb_glm)
+}
+
+layout(matrix(1:2,1), respect=TRUE)
+
+## add extra space to right margin of plot within frame
+par(mar=c(5, 4, 4, 6) + 0.1)
+
+## Plot first set of data and draw its axis
+plot(x, exec_time, xlab="iteration", type="b", ylim=c(0,15), lty = 1, col="black", main=paste0("Comparison GLM/BS method for ewas=",newas), ylab="exec_time (min)")
+```
