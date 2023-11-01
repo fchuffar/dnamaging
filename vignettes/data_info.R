@@ -33,7 +33,9 @@ data_info = lapply(gses, function(gse) {
     info_model = list()
   }
   
-  cofactors = strsplit(info_desc$cofactors,"/")
+  if ("cofactors" %in% names(info_desc)) {
+    cofactors = strsplit(info_desc$cofactors,"/")    
+  }
   models = list("elasticnet","bootstrap","hannum","horvath")
   all_cofactors = list("gender","tobacco","disease","ethnicity")
   list = list()

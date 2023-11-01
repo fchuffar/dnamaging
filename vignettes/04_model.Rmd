@@ -25,14 +25,14 @@ if (!exists("run")) run = 0
 if (!exists("scenario")) scenario = "A"
 ```
 
-
 ```{r load data and build indexes, echo=FALSE}
 if (nbewasprobes>0 & length(grep("ewas", gse))==0) {
   gse = paste0(gse, "_ewas", nbewasprobes)
 }
 print("Loading data")
 gse_short = strsplit(gse, "_")[[1]][1] ; gse_short
-df = mreadRDS(paste0("./datashare/", gse_short, "/df_preproc_r", run, "_", gse, ".rds"))
+df_filename = paste0("./datashare/", gse_short, "/df_preproc_r", run, "_", gse, ".rds")
+df = mreadRDS(df_filename)
 for (new_factoi in c("tobacco", "disease")) {
   if (new_factoi %in% colnames(df)) {
     covariates = unique(c(covariates, new_factoi))  

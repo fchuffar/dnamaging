@@ -102,6 +102,8 @@ if (sum(is.na(s$data))>0) {
   print(paste0("#probes removed: ", sum(prop_na_col>=.05)))
 
   s$data = s$data[idx_cpg, idx_samples]
+  s$exp_grp = s$exp_grp[colnames(s$data),]
+  s$platform = s$platform[rownames(s$data),]
   
   if (as.numeric(length(idx_cpg))*as.numeric(nrow(s$exp_grp)) > .Machine$integer.max) {
     # stop("Machine$integer.max problem")
@@ -195,8 +197,8 @@ while(sum(padj < 0.2) != 0) {
   range(padj)  
   idx_samples = names(padj)[padj > 0.2]
   print(paste0("  #sample removed: ", nrow(s$exp_grp) - length(idx_samples)))
-  s$exp_grp = s$exp_grp[idx_samples,]
   s$data = s$data[,idx_samples]
+  s$exp_grp = s$exp_grp[colnames(s$data),]
 }
 print(paste0("end of iterations."))
 
