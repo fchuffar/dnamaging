@@ -1,5 +1,5 @@
 cd ~/projects/dnamaging/vignettes
-rsync -auvP ~/projects/dnamaging/ cargo:~/projects/dnamaging/
+rsync -auvP ~/projects/dnamaging/ cargo:~/projects/dnamaging/ --dry-run
 
 
 
@@ -17,9 +17,9 @@ cp 00_preproc.sh 00_custom_preproc.sh
 cp 00_rules.py 00_custom_rules.py
 cp config 00_custom_config
 
-snakemake --cores 1 -s 00_custom_build_studies.py -pn 
+snakemake --cores 1 -s 00_build_studies_wf.py  -pn 
 rm -Rf info_build_*.rds
-snakemake -k -s 00_custom_build_studies.py --jobs 50 --cluster "oarsub --project epimed -l /nodes=1,walltime=10:00:00"  --latency-wait 60 -pn
+snakemake -k -s 00_build_studies_wf.py  --jobs 50 --cluster "oarsub --project epimed -l /nodes=1,walltime=10:00:00"  --latency-wait 60 -pn
 
 snakemake --cores 1 -s 00_custom_preproc_studies.py -pn 
 rm -Rf info_desc_*.rds
@@ -31,6 +31,11 @@ snakemake -k -s 00_custom_ewas_ewcpr_wf.py --jobs 50 --cluster "oarsub --project
 snakemake --cores 1 -s 00_custom_ewas_neighb_wf.py -pn 
 snakemake -k -s 00_custom_ewas_neighb_wf.py --jobs 50 --cluster "oarsub --project epimed -l /nodes=1,walltime=10:00:00"  --latency-wait 60 -pn
 
+snakemake --cores 1 -s 00_model_wf.py -pn 
+snakemake -k -s 00_model_wf.py --jobs 50 --cluster "oarsub --project epimed -l /nodes=1,walltime=10:00:00"  --latency-wait 60 -pn
+
+snakemake --cores 1 -s 00_combp_wf.py -pn 
+snakemake -k -s 00_combp_wf.py --jobs 50 --cluster "oarsub --project epimed -l /nodes=1,walltime=10:00:00"  --latency-wait 60 -pn
 
 
 

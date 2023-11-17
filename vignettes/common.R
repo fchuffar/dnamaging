@@ -5,6 +5,8 @@ if (!exists("mmodel_factory_glmnet")) {mmodel_factory_glmnet = memoise::memoise(
 if (!exists("mcall_glmnet_mod")) {mcall_glmnet_mod = memoise::memoise(dnamaging::call_glmnet_mod)}
 if (!exists("mcvaglmnet")) {mcvaglmnet = memoise::memoise(dnamaging::cvaglmnet)}   # Memoise for cvaglmnet
 if (!exists("mlimma_lmFit")) {mlimma_lmFit = memoise::memoise(limma::lmFit)}  
+if (!exists("mreadtablegz")) {mreadtablegz = memoise::memoise(function(gz_file, ...){read.table(file=gzfile(gz_file), ...)})}  
+if (!exists("mepimedtools_monitored_apply")) {mepimedtools_monitored_apply = memoise::memoise(epimedtools::monitored_apply)}  
 # if (!exists("mopenxlsx_read.xlsx")) {mopenxlsx_read.xlsx = memoise::memoise(openxlsx::read.xlsx)}
 
 
@@ -13,6 +15,241 @@ if (!exists("mlimma_lmFit")) {mlimma_lmFit = memoise::memoise(limma::lmFit)}
 
 
 
+plot_meth_hm = function(data, 
+  main=""                          , 
+  rsc=NULL                         , 
+  csc=NULL                         , 
+  nb_grp_row=4                     ,
+  nb_grp_col=4                     , 
+  hcmeth_cols="eucl_dist"          , 
+  hcmeth_rows="cor"                , 
+  normalization=FALSE              , 
+  ordering_func=median             , 
+  colors=c("cyan", "black", "red") , 
+  range_exp=NULL                   ,
+  features_type="probes"           ,
+  samples_type="patients"          ,
+  PCA=FALSE
+) {
+  # Remove rows with no variation (needed to clustering rows according to cor)
+  # data = data[apply(data, 1, function(l) {length(unique(l))})>1, ]
+  
+  # normalization
+  # colnames(data) = s$exp_grp[colnames(data),]$tissue_group_level1
+  if (normalization=="zscore_rows" | normalization==TRUE) {
+    data = data - apply(data, 1, mean)
+    data = data / apply(data, 1, sd)    
+  } else if (normalization=="zscore_cols") {
+    data = t(data)
+    data = data - apply(data, 1, mean)
+    data = data / apply(data, 1, sd)    
+    data = t(data)
+  } else if (normalization=="rank_cols") {
+    data = apply(data, 2, rank)
+  } else if (normalization=="qqnorm_cols") {
+    data = apply(data, 2, function(c) {
+      qqnorm(c, plot.it=FALSE)$x
+    })
+  }
+  
+  if (! is.null(range_exp)) {
+    data[data<min(range_exp)] = min(range_exp)
+    data[data>max(range_exp)] = max(range_exp)    
+  }
+
+  # clustering samples...
+  if (hcmeth_cols != FALSE) {
+    tmp_d = t(data)
+    if (hcmeth_cols == "cor") {
+      # ... based on correlation
+      tmp_d = tmp_d[!apply(is.na(tmp_d), 1, any), ]
+      d = dist(1 - cor(t(tmp_d), method="pe"))
+      hc_col = hclust(d, method="complete")
+      Colv = as.dendrogram(hc_col)
+    } else if (hcmeth_cols == "ordered") {
+      # ... ordered by median
+      data = data[,order(apply(tmp_d, 1, ordering_func, na.rm=TRUE), decreasing=TRUE)]
+      hc_col = Colv = NULL      
+    } else {
+      # ... based on eucl. dist.
+      d = dist(tmp_d)
+      hc_col = hclust(d, method="complete")
+      Colv = as.dendrogram(hc_col)
+    }
+  } else {
+    hc_col = Colv = NULL          
+  }
+  ColSideColors = rep("white", ncol(data))
+  names(ColSideColors) = colnames(data)
+
+  # clustering features...
+  if (hcmeth_rows != FALSE) {
+    tmp_d = data
+    if (hcmeth_rows == "eucl_dist") {
+      # ... based on eucl. dist.
+      d = dist(tmp_d)
+      hc_row = hclust(d, method="complete")
+      Rowv = as.dendrogram(hc_row)
+    } else if (hcmeth_rows == "ordered") {
+      # ... ordered by median
+      data = data[order(apply(tmp_d, 1, ordering_func, na.rm=TRUE), decreasing=TRUE),]
+      hc_row = Rowv = NULL      
+    } else {
+      # ... bases on correlation
+      tmp_d = tmp_d[!apply(is.na(tmp_d), 1, any), ]
+      data = tmp_d 
+      d = dist(1 - cor(t(tmp_d), method="pe"))
+      hc_row = hclust(d, method="complete")
+      Rowv = as.dendrogram(hc_row)      
+    }
+  } else {
+    hc_row = Rowv = NULL    
+  }
+  
+  RowSideColors = rep("white", nrow(data))
+  names(RowSideColors) = rownames(data)
+  
+  if (!is.null(csc)) {
+    ColSideColors = csc
+  }
+
+  
+  if (PCA) {
+    tmp_d = t(data)
+    
+    nb_clusters = c()
+    scores = c()
+    best_score = NULL
+    for (nb_cluster in 2:10) {
+      for (i in 1:20) {
+        k = kmeans(tmp_d, centers=nb_cluster)
+
+        com1 = k$cluster + 10000
+        com2 = as.numeric(as.factor(names(k$cluster)))
+        names(com1) = names(com2) = paste0("id", 1:length(com1))
+        # score = igraph::compare(com1, com2, method="nmi")
+        score = -igraph::compare(com1, com2, method="vi")
+        score
+        
+        nb_clusters = c(nb_clusters, nb_cluster)
+        scores = c(scores, score)
+
+        if (is.null(best_score)) {
+          best_k = k
+          best_score = score
+          best_nb_cluster = nb_cluster
+        } else if (score > best_score) {
+          best_k = k
+          best_score = score
+          best_nb_cluster = nb_cluster
+        }
+      }
+    }
+    
+    k = best_k
+    nb_cluster = best_nb_cluster
+    score = best_score
+
+    ColSideColors = palette(RColorBrewer::brewer.pal(n=8, "Dark2"))[k$cluster[colnames(data)]]    
+    names(ColSideColors) = colnames(data)    
+    
+    if (!is.null(csc)) {
+      ColSideColors = csc
+    }
+
+    # PCA on tissues
+    pca = prcomp(tmp_d, scale=FALSE)
+    PLOT_SAMPLE_LABELS = length(unique(rownames(pca$x))) < nrow(pca$x)
+    if (PLOT_SAMPLE_LABELS) {
+      sample_labels = t(sapply(unique(rownames(pca$x)), function(t) {        
+        idx= which(rownames(pca$x)==t)
+        if (length(idx)==1) {
+          pca$x[idx,]          
+        } else {
+          apply(pca$x[idx,], 2, mean)                    
+        }
+      }))      
+    }
+    v = pca$sdev * pca$sdev
+    p = v / sum(v) * 100
+    layout(matrix(1:6,2, byrow=FALSE), respect=TRUE)
+    barplot(p)
+    i=3
+    j=2
+    plot(pca$x[,i], pca$x[,j], xlab=paste0("PC", i, "(", signif(p[i], 3), "%)"), ylab=paste0("PC", j, "(", signif(p[j], 3), "%)"), col=ColSideColors[rownames(pca$x)])
+    if (PLOT_SAMPLE_LABELS) text(sample_labels[,i], sample_labels[,j], rownames(sample_labels))
+    i=1
+    j=3
+    plot(pca$x[,i], pca$x[,j], xlab=paste0("PC", i, "(", signif(p[i], 3), "%)"), ylab=paste0("PC", j, "(", signif(p[j], 3), "%)"), col=ColSideColors[rownames(pca$x)])
+    if (PLOT_SAMPLE_LABELS) text(sample_labels[,i], sample_labels[,j], rownames(sample_labels))
+    i=1
+    j=2
+    plot(pca$x[,i], pca$x[,j], xlab=paste0("PC", i, "(", signif(p[i], 3), "%)"), ylab=paste0("PC", j, "(", signif(p[j], 3), "%)"), col=ColSideColors[rownames(pca$x)])
+    if (PLOT_SAMPLE_LABELS) text(sample_labels[,i], sample_labels[,j], rownames(sample_labels))
+    i=4
+    j=5
+    plot(pca$x[,i], pca$x[,j], xlab=paste0("PC", i, "(", signif(p[i], 3), "%)"), ylab=paste0("PC", j, "(", signif(p[j], 3), "%)"), col=ColSideColors[rownames(pca$x)])
+    if (PLOT_SAMPLE_LABELS) text(sample_labels[,i], sample_labels[,j], rownames(sample_labels))
+
+    plot(jitter(nb_clusters), scores)
+    points(nb_cluster, score, col=2)
+
+    # stop("EFN")    
+  # } else {
+  #   ColSideColors = rep("white", ncol(data))
+  #   names(RowSideColors) = colnames(data)
+  #   hc_col = Colv = NULL
+
+
+  ColSideColors = palette(RColorBrewer::brewer.pal(n=length(unique(colnames(data))), "Dark2"))[as.factor(colnames(data))]    
+  names(ColSideColors) = colnames(data)    
+
+  }
+
+  # stop("EFN")
+
+
+
+
+
+
+
+  # if (is.null(rsc)) {
+  #   grps = list()
+  #   ct = cutree(hc_row, nb_grp_row)
+  #   for (i in 1:nb_grp_row) {
+  #     grps[[palette()[i]]] = names(ct)[ct==i]
+  #   }
+  #   # print(grps)
+  #   RowSideColors = palette()[ct[rownames(data)]]
+  #   names(RowSideColors) = rownames(data)
+  # } else {
+  #   RowSideColors = rep("white", nrow(data))
+  #   names(RowSideColors) = rownames(data)
+  #   idx = intersect(rownames(data), names(rsc))
+  #   RowSideColors[idx] = rsc[idx]
+  # }
+  
+
+
+  if (!is.null(Colv) & !is.null(Rowv)) {
+    dendrogram="both"
+  } else if (!is.null(Rowv)) {
+    dendrogram="row"
+  } else if (!is.null(Colv)) {
+    dendrogram="col"
+  } else {
+    dendrogram="none"
+  }
+
+  # colors = c("green", "black", "red")
+  # colors = c("blue", "yellow", "red")
+  # colors = rev(RColorBrewer::brewer.pal(n=11, "RdYlBu"))
+  cols = colorRampPalette(colors)(30)
+  tracecol="green"
+  foo = gplots::heatmap.2(data, Rowv=Rowv, Colv=Colv, dendrogram=dendrogram, trace="none", col=cols, tracecol=tracecol, main=paste0(main, " (", nrow(data), " ", features_type, " x ", ncol(data), " ", samples_type, ")"), mar=c(10,5), useRaster=TRUE, RowSideColors=RowSideColors, ColSideColors=ColSideColors, cex.axis=0.5)  
+  return(list(rsc=RowSideColors, csc=ColSideColors, hc_row=hc_row, hc_col=hc_col))  
+}
 
 
 

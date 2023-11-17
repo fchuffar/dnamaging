@@ -265,3 +265,39 @@ rm -Rf /tmp/wd_{wildcards.gse}
 """
 
 
+
+
+
+rule R04_combp_call:
+    input: 
+      bed_ewas = "{prefix}/ewas4combp_{gse}_{modelcall}_meth~{model_formula}.bed",
+      rmd = "{prefix}/04_combp.Rmd",
+    output: 
+      html      = "{prefix}/04_combp_{gse}_{modelcall}_meth~{model_formula}_{pval_thresh}.html",  # "{prefix}/01_idat2study_{gse}.html"   ,
+      rout      = "{prefix}/04_combp_{gse}_{modelcall}_meth~{model_formula}_{pval_thresh}.Rout",  # "{prefix}/01_idat2study_{gse}.html"   ,
+      info      = "{prefix}/info_combp_{gse}_{modelcall}_meth~{model_formula}_{pval_thresh}.rds",
+      dmr_reg   = "{prefix}/dmr_{gse}_{modelcall}_meth~{model_formula}_{pval_thresh}.regions-t.bed",
+      dmr_pbs   = "{prefix}/dmr_{gse}_{modelcall}_meth~{model_formula}_{pval_thresh}.fdr.bed.gz",
+    threads: 32
+    shell:"""
+export PATH="/summer/epistorage/opt/bin:$PATH"
+export PATH="/summer/epistorage/miniconda3/envs/dnamaging_env/bin:$PATH"
+export OMP_NUM_THREADS=1
+cd {wildcards.prefix}
+
+TMPDIR=/tmp/wd_{wildcards.gse}_{wildcards.modelcall}_meth~{wildcards.model_formula}_{wildcards.pval_thresh} 
+rm -Rf $TMPDIR
+mkdir -p $TMPDIR
+cd $TMPDIR
+ln -s {wildcards.prefix}/datashare 
+cp {input.rmd} {input.bed_ewas} {wildcards.prefix}/common.R {wildcards.prefix}/params_default.R  {wildcards.prefix}/params_{wildcards.gse}.R {wildcards.prefix}/litterature_models.rds . || :
+
+RCODE="gse='{wildcards.gse}' ; model_func_name='{wildcards.modelcall}' ; model_formula='meth~{wildcards.model_formula}' ; pval_thresh='{wildcards.pval_thresh}' ; rmarkdown::render('04_combp.Rmd', output_file=paste0('04_combp_', gse, '_', model_func_name, '_', model_formula, '_', pval_thresh, '.html'));"
+echo $RCODE | Rscript - 2>&1 > 04_combp_{wildcards.gse}_{wildcards.modelcall}_meth~{wildcards.model_formula}_{wildcards.pval_thresh}.Rout
+
+cp  04_combp_{wildcards.gse}_{wildcards.modelcall}_meth~{wildcards.model_formula}_{wildcards.pval_thresh}.html 04_combp_{wildcards.gse}_{wildcards.modelcall}_meth~{wildcards.model_formula}_{wildcards.pval_thresh}.Rout info_combp_{wildcards.gse}_{wildcards.modelcall}_meth~{wildcards.model_formula}_{wildcards.pval_thresh}.rds dmr_{wildcards.gse}_{wildcards.modelcall}_meth~{wildcards.model_formula}_{wildcards.pval_thresh}.regions-t.bed dmr__{wildcards.gse}_{wildcards.modelcall}_meth~{wildcards.model_formula}_{wildcards.pval_thresh}.fdr.bed.gz {wildcards.prefix}/. 
+cd {wildcards.prefix}
+rm -Rf /tmp/wd_{wildcards.gse}
+"""
+
+
