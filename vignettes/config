@@ -1,5 +1,5 @@
-project="breast"
-study="04.2_ewascombpr"
+project="expedition_5300"
+study="dnamaging"
 species="Homo_sapiens"  
 genome="hg19"
 annotation="UCSC"
