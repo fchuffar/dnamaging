@@ -308,11 +308,19 @@ tmp_results_filename = paste0("tmp_", prefix, ".bed")
 
 # Process Information 
 
+<<<<<<< HEAD
+```{r}
+info$stop_time = Sys.time()
+info$exec_time = round(difftime(info$stop_time, info$start_time, units="mins"),1)
+
+saveRDS(info, paste0("info_combp_", prefix, ".rds"))
+=======
 ```{r, results="verbatim"}
 info$stop_time = Sys.time()
 info$exec_time = round(difftime(info$stop_time, info$start_time, units="mins"),1)
 saveRDS(info, paste0("info_ewas_ewcpr_", prefix, ".rds"))
 print(info)
+>>>>>>> 54fba22d6a75658d07be7855bf2cc299d1077faf
 ```
 
 

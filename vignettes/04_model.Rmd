@@ -14,7 +14,7 @@ output:
 
 ```{r echo=FALSE}
 knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide")
-start_time = Sys.time()
+info = list(start_time = Sys.time())
 source("common.R")
 ```
 
@@ -719,8 +719,8 @@ https://github.com/fchuffar/dnamaging
 # Process Information 
 
 ```{r}
-stop_time = Sys.time()
-info$exec_time = round(difftime(stop_time, start_time, units="mins"),1)
+info$stop_time = Sys.time()
+info$exec_time = round(difftime(info$stop_time, info$start_time, units="mins"),1)
 
 saveRDS(info, paste0("info_model_r", run, "_", gse, ".rds"))
 ```
