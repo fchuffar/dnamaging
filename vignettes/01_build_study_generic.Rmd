@@ -116,7 +116,7 @@ if (file.exists(gseidat_study_filename)) {
 
 # get data matrix from wrapper
 if (nrow(tmp_data)==0) {
-  datawrapper_file = paste0("01_wrapper/01_datawrapper_", gse, ".R")
+  datawrapper_file = paste0("01_wrappers/01_datawrapper_", gse, ".R")
   print(datawrapper_file)
   source(datawrapper_file)    
   s$stuffs$orig = "datawrapper"
