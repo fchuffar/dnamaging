@@ -309,8 +309,8 @@ tmp_results_filename = paste0("tmp_", prefix, ".bed")
 # Process Information 
 
 ```{r}
-stop_time = Sys.time()
-info$exec_time = round(difftime(stop_time, start_time, units="mins"),1)
+info$stop_time = Sys.time()
+info$exec_time = round(difftime(info$stop_time, info$start_time, units="mins"),1)
 
 saveRDS(info, paste0("info_combp_", prefix, ".rds"))
 ```

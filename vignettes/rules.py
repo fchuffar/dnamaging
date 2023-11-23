@@ -295,7 +295,7 @@ cp {input.rmd} {input.bed_ewas} {wildcards.prefix}/common.R {wildcards.prefix}/p
 RCODE="gse='{wildcards.gse}' ; model_func_name='{wildcards.modelcall}' ; model_formula='meth~{wildcards.model_formula}' ; pval_thresh='{wildcards.pval_thresh}' ; rmarkdown::render('04_combp.Rmd', output_file=paste0('04_combp_', gse, '_', model_func_name, '_', model_formula, '_', pval_thresh, '.html'));"
 echo $RCODE | Rscript - 2>&1 > 04_combp_{wildcards.gse}_{wildcards.modelcall}_meth~{wildcards.model_formula}_{wildcards.pval_thresh}.Rout
 
-cp  04_combp_{wildcards.gse}_{wildcards.modelcall}_meth~{wildcards.model_formula}_{wildcards.pval_thresh}.html 04_combp_{wildcards.gse}_{wildcards.modelcall}_meth~{wildcards.model_formula}_{wildcards.pval_thresh}.Rout info_combp_{wildcards.gse}_{wildcards.modelcall}_meth~{wildcards.model_formula}_{wildcards.pval_thresh}.rds dmr_{wildcards.gse}_{wildcards.modelcall}_meth~{wildcards.model_formula}_{wildcards.pval_thresh}.regions-t.bed dmr__{wildcards.gse}_{wildcards.modelcall}_meth~{wildcards.model_formula}_{wildcards.pval_thresh}.fdr.bed.gz {wildcards.prefix}/. 
+cp  04_combp_{wildcards.gse}_{wildcards.modelcall}_meth~{wildcards.model_formula}_{wildcards.pval_thresh}.html 04_combp_{wildcards.gse}_{wildcards.modelcall}_meth~{wildcards.model_formula}_{wildcards.pval_thresh}.Rout info_combp_{wildcards.gse}_{wildcards.modelcall}_meth~{wildcards.model_formula}_{wildcards.pval_thresh}.rds dmr_{wildcards.gse}_{wildcards.modelcall}_meth~{wildcards.model_formula}_{wildcards.pval_thresh}.regions-t.bed dmr_{wildcards.gse}_{wildcards.modelcall}_meth~{wildcards.model_formula}_{wildcards.pval_thresh}.fdr.bed.gz {wildcards.prefix}/. 
 cd {wildcards.prefix}
 rm -Rf /tmp/wd_{wildcards.gse}
 """
