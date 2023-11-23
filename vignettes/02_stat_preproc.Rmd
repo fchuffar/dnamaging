@@ -33,6 +33,11 @@ if (gse != "dnamaging") {
 }
 
 covariates = intersect(c("tobacco", "disease", "gender"), colnames(s$exp_grp))
+if (length(covariates)<1) {
+  s$exp_grp$covariate = "covariate"
+  covariates = c("covariate")
+} 
+
 ```
 
 
