@@ -42,7 +42,10 @@ if (!file.exists(s_betatabfile_filename)) {
   head(tmp_data[,1:10])
   colnames(tmp_data)
 
-  s$exp_grp$key = substr(as.character(s$exp_grp$title), 53, 10000)
+  all(colnames(tmp_data) %in% gsub("-", ".", s$exp_grp$title))
+
+
+  s$exp_grp$key = as.character(gsub("-", ".", s$exp_grp$title))
   s$exp_grp$key
   sum(!colnames(tmp_data) %in% s$exp_grp$key)
   sum(!s$exp_grp$key %in% colnames(tmp_data))
