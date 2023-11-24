@@ -76,8 +76,8 @@ data_info = lapply(gses, function(gse) {
 
     exec_time  = info_ewas$exec_time,
 
-    RMSE       = eval(parse(text = paste0("info_model$",cofactors[[1]][1],".bootstrap.RMSE"))),
-    nb_probes  = eval(parse(text = paste0("info_model$",cofactors[[1]][1],".bootstrap.nb_probes_mod"))),
+    # RMSE       = eval(parse(text = paste0("info_model$",cofactors[[1]][1],".bootstrap.RMSE"))),
+    # nb_probes  = eval(parse(text = paste0("info_model$",cofactors[[1]][1],".bootstrap.nb_probes_mod"))),
   
     
     # ...
