@@ -362,7 +362,9 @@ fat_feat_indexed_probes = epimedtools::monitored_apply(fat_feat, 1, function(fea
 fat_feat$n_probes = sapply(fat_feat_indexed_probes, length) 
 fat_feat$z_sidak_p = 1
 
+```
 
+```{r barplots}
 layout(matrix(1:2,1), respect=TRUE)
 barplot(table(cut(fat_feat$score, breaks=c(0, 100, 200, 300, 500, 1000, 2000, 3000, 5000, 10000, 20000, 30000, 50000, 100000, 200000, 50000000), include.lowest=TRUE)), las=2,main="locus length distribution")
 barplot(table(cut(fat_feat$score[fat_feat$score>1], breaks=c(0, 100, 200, 300, 500, 1000, 2000, 3000, 5000, 10000, 20000, 30000, 50000, 100000, 200000, 50000000), include.lowest=TRUE)), las=2,main="locus length distribution")
@@ -387,7 +389,9 @@ abline(a=0,b=1, lty=2, col="grey")
 legend("topleft", pch=1, col=2, paste0(length(idx_cpg_newas_neighb), " probes in ", newas, " lowest\n ewas probes +/-", neighb, " bp"))
 
 # stop("EFN")
+```
 
+```{r save}
 s$data = s$data[rownames(s$data)%in%idx_cpg_newas_neighb,]  
 s$platform = s$platform[rownames(s$data),]
 saveRDS(s, study_output_filename)

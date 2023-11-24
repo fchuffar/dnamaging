@@ -523,7 +523,6 @@ Ytest =  mget_df_preproc(gse)[idx_test, y_key]
 
 # df$qAge = cut(df[,y_key], quantile(df[,y_key]), include.lowest=TRUE)
 # if (!"qAge" %in% covariates) covariates = c(covariates, "qAge")
-info = list()
 for (covariate in covariates) {
   layout(matrix(1:20, 5), respect=TRUE)
   # ADD
