@@ -523,20 +523,20 @@ Ytest =  mget_df_preproc(gse)[idx_test, y_key]
 
 # df$qAge = cut(df[,y_key], quantile(df[,y_key]), include.lowest=TRUE)
 # if (!"qAge" %in% covariates) covariates = c(covariates, "qAge")
-for (covariate in covariates) {
+foo = lapply(covariates, function(covariate) {
   layout(matrix(1:20, 5), respect=TRUE)
   # ADD
   info_cov = lapply(models, function(m) {
     dnamaging::plot_model_eval(m, df, covariate, Xtrain=Xtrain, Xtest=Xtest, Ytrain=Ytrain, Ytest=Ytest)
   })
   names(info_cov) = c("elasticnet", "bootstrap", "hannum", "horvath")
-  info_cov$ElasticNet$alpha  = best_model_cvaglmnet_params$alpha
-  info_cov$ElasticNet$lambda = best_model_cvaglmnet_params$lambda
-  info[[length(info)+1]] = info_cov 
-}
-names(info) = covariates
-info = as.list(unlist(info))
-
+  info_cov$elasticnet$alpha  = best_model_cvaglmnet_params$alpha
+  info_cov$elasticnet$lambda = best_model_cvaglmnet_params$lambda
+  as.list(unlist(info_cov))
+})
+names(foo) = covariates
+foo = as.list(unlist(foo))
+info = c(info, foo)
 ```
  
 
