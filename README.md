@@ -3,6 +3,7 @@ A set of scripts and vignettes allowing to build and evaluate an epigenetic cloc
 
 # conda environnement
 
+https://docs.conda.io/projects/miniconda/en/latest/miniconda-install.html
 
 
 
