@@ -18,6 +18,7 @@ tail(s$exp_grp[s$exp_grp$tissue %in% c("Prostate", "Breast - Mammary Tissue"),c(
 levels(s$exp_grp$gender) = c("M", "F")
 head(s$exp_grp[s$exp_grp$tissue %in% c("Prostate", "Breast - Mammary Tissue"),c("gender", "tissue")])
 tail(s$exp_grp[s$exp_grp$tissue %in% c("Prostate", "Breast - Mammary Tissue"),c("gender", "tissue")])
+s$exp_grp$gender = as.factor(as.character(s$exp_grp$gender))
 table(s$exp_grp$gender, useNA="always")
 
 # 4. tobacco
@@ -33,13 +34,13 @@ table(s$exp_grp[!is.na(s$exp_grp$tobacco), c("age", "gender", "tissue")])
 # s$exp_grp = s$exp_grp[!is.na(s$exp_grp$tobacco), ]
 table(s$exp_grp$tobacco, useNA="always")
 # 4.1 tobacco_never_01 tobacco_current_01 tobacco_former_01 tobacco_occas01
-s$exp_grp$tobacco_current01 = 0
-s$exp_grp$tobacco_former01 = 0 
-s$exp_grp$tobacco_never01 = 0
-s$exp_grp[s$exp_grp$tobacco%in%"current",]$tobacco_current01 = 1
-s$exp_grp[s$exp_grp$tobacco%in%"former" ,]$tobacco_former01  = 1
-s$exp_grp[s$exp_grp$tobacco%in%"never"  ,]$tobacco_never01   = 1
-head(s$exp_grp[, c("tobacco", "tobacco_never01", "tobacco_former01", "tobacco_current01")])
+# s$exp_grp$tobacco_current01 = 0
+# s$exp_grp$tobacco_former01 = 0
+# s$exp_grp$tobacco_never01 = 0
+# s$exp_grp[s$exp_grp$tobacco%in%"current",]$tobacco_current01 = 1
+# s$exp_grp[s$exp_grp$tobacco%in%"former" ,]$tobacco_former01  = 1
+# s$exp_grp[s$exp_grp$tobacco%in%"never"  ,]$tobacco_never01   = 1
+# head(s$exp_grp[, c("tobacco", "tobacco_never01", "tobacco_former01", "tobacco_current01")])
 
 # # 5. disease
 # s$exp_grp$disease = as.factor(s$exp_grp$"disease state:ch1")
@@ -58,6 +59,6 @@ head(s$exp_grp[, c("tobacco", "tobacco_never01", "tobacco_former01", "tobacco_cu
 
 
 s$exp_grp$"participant_id:ch1"
-s$exp_grp$participant_id = as.factor(s$exp_grp$"participant_id state:ch1")
+s$exp_grp$participant_id = as.factor(s$exp_grp$"participant_id:ch1")
 table(s$exp_grp$participant_id, useNA="always")
 
