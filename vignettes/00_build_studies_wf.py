@@ -24,7 +24,9 @@ gses = [
   # # "GSE142439"   TO CHECK Epic, n=16  # Transient non-integrative nuclear reprogramming promotes multifaceted reversal of aging in human cells
   # # "GSE140686", # WARNING mixed 450k & Epic (n=1505) only keep Epic (n=1020) # Sarcoma Classification by DNA-methylation profiling
   # # "GSE154566", # WARNING mixed 450k & Epic (n=1177) only keep Epic (n=944) # DNA methylation signatures of adolescent victimization: Analysis of a longitudinal monozygotic twin sample.
-  # # "GSE156374",  NO GO # GSE Epilepto # TODO Fabien: few probes on GEO matrix need to used IDAT
+  # # "GSE156374",  Epic, n=96 , IDAT, **Epilepto** # DNA methylation and copy number profiling in polymicrogyria
+  # # "GSE185090", 	Epic, n=215, IDAT, **Epilepto** # DNA methylation-based classification of MCD in the human brain
+  # # "GSE227239", 	Epic, n=7  , IDAT, **Epilepto** # The specific DNA methylation landscape in Focal Cortical Dysplasia ILAE Type 3D
   # "GSE50923",    # PROBLEM no age # 27k GBM vs. normal brain
   # "GSE60753",    # PROBLEM no age # 450k # Alcohol #
   # "GSE85210",    # PROBLEM no age # 450k # n=250 # tobacco

@@ -19,11 +19,11 @@ gses = [
   # "GSE72775" , # 450k, n=335  # DNA methylation profiles of human blood samples from Hispanics and Caucasians
   # "GSE136296", # Epic, n=113  # Age-Associated Epigenetic Change in Chimpanzees and Humans
   "GSE147740", # Epic, n=1129 # DNA methylation analysis of human peripheral blood mononuclear cell collected in the AIRWAVE study
-  "GSE152026" # Epic, n=934 # Blood DNA methylation profiles from first episode psychosis patients and controls I
+  "GSE152026", # Epic, n=934 # Blood DNA methylation profiles from first episode psychosis patients and controls I
   # "GSE213478", # Epic, n=987 # Methylation data from nine tissues from GTEx samples profiled with Infinium HumanMethylationEPIC BeadChip
-  # "GSE40279" , # 450k, n=656  # Genome-wide Methylation Profiles Reveal Quantitative Views of Human Aging Rates
-  # "GSE42861" , # 450k, n=689  # Differential DNA methylation in Rheumatoid arthritis
-  # "GSE87571"   # 450k, n=750  # Continuous Aging of the Human DNA Methylome Throughout the Human Lifespan
+  "GSE40279",  # 450k, n=656  # Genome-wide Methylation Profiles Reveal Quantitative Views of Human Aging Rates
+  "GSE42861",  # 450k, n=689  # Differential DNA methylation in Rheumatoid arthritis
+  "GSE87571",   # 450k, n=750  # Continuous Aging of the Human DNA Methylome Throughout the Human Lifespan
 ]
 
 prefix = os.getcwd()
@@ -34,7 +34,7 @@ info_combp = [f"{prefix}/info_combp_{gse}_modelcalllm_meth~age_{pval_tresh}.rds"
 
 # runmax=2
 info_model = [f"{prefix}/info_model_r{runmax}_{gse}_modelcalllm_meth~age_ewas{newas}_nn{neighb}.rds"  for gse in gses for newas in ["1000000"]]
-info_model = [f"{prefix}/info_model_r{runmax}_{gse}_modelcalllm_meth~age_ewas{newas}_nn{neighb}.rds"  for gse in ["GSE42861"] for newas in ["1000"]]
+# info_model = [f"{prefix}/info_model_r{runmax}_{gse}_modelcalllm_meth~age_ewas{newas}_nn{neighb}.rds"  for gse in ["GSE42861"] for newas in ["1000"]]
 
 
 localrules: target, R00_create_empty_expgrpwrapper, R00_create_empty_datawrapper

@@ -1,11 +1,8 @@
 cd ~/projects/dnamaging/vignettes
 rsync -auvP ~/projects/dnamaging/ cargo:~/projects/dnamaging/ --dry-run
+rsync -auvP ~/projects/dnamaging/ cargo:~/projects/dnamaging/ --exclude="gsea_out*" --exclude="*.rds" --exclude="*.grp" --exclude="*.bed" --exclude="*.html" --exclude="*.rnk" --dry-run 
 
-cp 00_aaa_README 00_aaa_custom_README
 
-cp 00_build_idat_studies.py 00_custom_build_idat_studies.py 
-snakemake --cores 1 -s 00_custom_build_idat_studies.py -pn 
-snakemake -k -s 00_custom_build_idat_studies.py --jobs 50 --cluster "oarsub --project epimed -l /nodes=1,walltime=10:00:00"  --latency-wait 60 -pn
 
 source config
 echo ${study}
