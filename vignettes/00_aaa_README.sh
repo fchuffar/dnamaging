@@ -5,12 +5,9 @@ rsync -auvP ~/projects/dnamaging/ cargo:~/projects/dnamaging/ --exclude="gsea_ou
 
 
 source config
-echo ${study}
 echo ${project}
+echo ${study}
 rsync -auvP ~/projects/${project}/results/${study}/ cargo:~/projects/${project}/results/${study}/
-
-# launch default pipeline
-snakemake --cores 1 -s wf.py -pn
 
 # launch custom pipeline
 cp 00_launch_epiclock_pipeline.py 00_custom_wf.py

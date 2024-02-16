@@ -109,6 +109,7 @@ gseidat_study_filename = paste0("./datashare/", gse, "/study_idat_", gse, ".rds"
 if (file.exists(gseidat_study_filename)) {
   study_gseidat = readRDS(gseidat_study_filename)
   s$data = study_gseidat$data
+  s$platform_name = study_gseidat$platform_name
   s$exp_grp = s$exp_grp[intersect(rownames(s$exp_grp), colnames(s$data)),]   
   s$stuffs$orig = "idat"
   tmp_data = s$data
