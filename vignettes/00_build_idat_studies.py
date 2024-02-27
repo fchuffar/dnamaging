@@ -8,7 +8,6 @@ gses = [
   # "GSE197305"   TO CHECK Epic, n=1221# Cortex DNA methylation profiles for the Brains for Dementia research cohort
   # "GSE117859"   TO CHECK 450k, n=608 # Smoking-associated DNA methylation features link to HIV outcomes [HumanMethylation450 BeadChip]
   # "GSE117860"   TO CHECK Epic, n=529 # Smoking-associated DNA methylation features link to HIV outcomes [Infinium MethylationEPIC]
-  # "GSE213478"   TO CHECK Epic, n=987 # Methylation data from nine tissues from GTEx samples profiled with Infinium HumanMethylationEPIC BeadChip
   # "GSE158063"   TO CHECK Epic, n=915 # Smaller stature in childhood following assisted reproductive technologies (ART) is not explained by... 
   # "GSE48472"    TO CHECK 450k, n=56  # Identification and systematic annotation of tissue-specific differentially methylated regions using the Illumina 450k array
   # "GSE64495"    TO CHECK 450k, n=113 # DNA methylation profiles of human blood samples from a severe developmental disorder and controls
@@ -48,13 +47,13 @@ gses = [
   "GSE147740",  # need more memory/space # Epic, n=1129 # DNA methylation analysis of human peripheral blood mononuclear cell collected in the AIRWAVE study
   # MDS/AML
   "GSE152710", #  450k, n=166 # : A methylation signature at diagnosis in patients with high-risk Myelodysplastic Syndromes and secondary Acute Myeloid Leukemia predicts azacitidine response but not relapse
-  "GSE119617", # Epic n=26    #: Epigenome analysis of normal and myelodysplastic sundrome (MDS) bone marrow derived mesenchymal stromal cells (MSCs)
+  # "GSE119617", # RENAMED IDAT Epic n=26    #: Epigenome analysis of normal and myelodysplastic sundrome (MDS) bone marrow derived mesenchymal stromal cells (MSCs)
   "GSE159907", # Epic, n=316  #  : DNA methylation analysis of acute myeloid leukemia (AML)
   # "GSE62298", # NOIDAT       : Genome-scale profiling of the DNA methylation landscape in human AML patients
+  "GSE124413",   # PROBLEM gse="GSE124413" ; source(knitr::purl("04_model"))    # Epic # n=500 # childhood acute myeloid leukemia (AML)
   
 
   "GSE197678",  # n=2000 # Childhood Cancer Survivors
-  # "GSE68838",       # TCGA COAD
   # PROBLEM in IDAT processing "GSE154566",  # need more memory/space #  WARNING mixed 450k & Epic (n=1177) only keep Epic (n=944) # DNA methylation signatures of adolescent victimization: Analysis of a longitudinal monozygotic twin sample.
   "GSE140686",  # need more memory/space # WARNING mixed 450k & Epic (n=1505) only keep Epic (n=1020) # Sarcoma Classification by DNA-methylation profiling
   "GSE90496"  , # need more memory/space # TO CHECK 450k, n=2801 # DNA methylation-based classification of human central nervous system tumors [reference set]
@@ -63,10 +62,10 @@ gses = [
   "GSE85210",    # PROBLEM no age # 450k # n=250 # tobacco
   "GSE43976",    # PROBLEM gse='GSE43976'  ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render('04_model.Rmd'); # 450k, PB, tobacco # error in
   "GSE104293",   # PROBLEM gse="GSE104293" ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render('04_model.Rmd'); # Glioma # n=130 # 450k
-  "GSE124413",   # PROBLEM gse="GSE124413" ; source(knitr::purl("04_model"))    # Epic # n=500 # childhood acute myeloid leukemia (AML)
   "GSE97362" , # 450k, n=235  # CHARGE and Kabuki syndromes: Gene-specific DNA methylation signatures
   "GSE87648" , # 450k, n=350  # DNA Methylation May Mediate Genetic Risk In Inflammatory Bowel Disease
-  "GSE151732", # Epic, n=250  # Racial Disparities in Epigenetic Aging of the Right versus the Left Colon
+  # "GSE68838",       # TCGA COAD
+  # "GSE151732", # Epic, n=250  # Racial Disparities in Epigenetic Aging of the Right versus the Left Colon
 ]
 
 

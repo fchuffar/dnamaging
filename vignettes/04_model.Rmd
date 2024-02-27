@@ -18,6 +18,7 @@ info = list(start_time = Sys.time())
 source("common.R")
 ```
 
+
 ```{r params_default, echo=FALSE}
 source("params_default.R")
 if (!exists("seed")) seed = 1
