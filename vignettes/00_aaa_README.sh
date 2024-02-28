@@ -42,8 +42,7 @@ snakemake -k --cores 1 -s 00_preproc_wf.py -pn
 rm -Rf info_desc_*.rds
 snakemake -k -s 00_preproc_wf.py --jobs 50 --cluster "oarsub --project epimed -l /nodes=1,walltime=10:00:00"  --latency-wait 60 -pn
 
-snakemake -k --cores 1 -s 00_models_wf.py -pn 
-snakemake -k -s 00_models_wf.py --jobs 50 --cluster "oarsub --project epimed -l /nodes=1,walltime=10:00:00"  --latency-wait 60 -pn
+snakemake -k -s 00_models_wf.py --jobs 50 --cluster "oarsub --project epimed -l /nodes=1,walltime=10:00:00 -t fat "  --latency-wait 60 -pn
 
 
 
