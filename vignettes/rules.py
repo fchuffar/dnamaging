@@ -1,33 +1,3 @@
-rule R02_stat_preproc: 
-    input: 
-      rmd = "{prefix}/02_stat_preproc.Rmd",   
-      study  = "{prefix}/datashare/{gse}/study_{gse}.rds",  
-    output:           
-      html =       "{prefix}/02_stat_preproc_{gse}.html"  ,         
-      info =       "{prefix}/info_desc_{gse}.rds"         ,           
-      study_preproc  = "{prefix}/datashare/{gse}/study_preproc_{gse}.rds",  
-    threads: 32
-    shell:"""
-export PATH="/summer/epistorage/opt/bin:$PATH"
-export PATH="/summer/epistorage/miniconda3/envs/dnamaging_env/bin:$PATH"
-export OMP_NUM_THREADS=1
-cd {wildcards.prefix}
-
-TMPDIR=/tmp/wd_{wildcards.gse}
-rm -Rf $TMPDIR
-mkdir -p $TMPDIR
-cd $TMPDIR
-ln -s {wildcards.prefix}/datashare 
-cp {input.rmd} {wildcards.prefix}/common.R {wildcards.prefix}/params_default.R  {wildcards.prefix}/params_{wildcards.gse}.R . || :
-
-RCODE="gse='{wildcards.gse}' ; rmarkdown::render('02_stat_preproc.Rmd',output_file=paste0('02_stat_preproc_',gse,'.html')) ;"
-echo $RCODE | Rscript - 2>&1 > 02_stat_preproc_{wildcards.gse}.Rout
-
-cp 02_stat_preproc_{wildcards.gse}.html 02_stat_preproc_{wildcards.gse}.Rout info_desc_{wildcards.gse}.rds {wildcards.prefix}/. 
-cd {wildcards.prefix}
-rm -Rf /tmp/wd_{wildcards.gse}
-"""
-
 rule R03_ewas_ewcpr:
     input:
       rmd = "{prefix}/03_ewas_ewcpr.Rmd",
