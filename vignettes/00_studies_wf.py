@@ -26,6 +26,15 @@ gses = [
   # CNS Tumors
   "GSE90496" , # PROBLEM no age # 450k, n=2801 # DNA methylation-based classification of human central nervous system tumors [reference set]
   "GSE109379", # PROBLEM no age # 450k, n=1104 # DNA methylation-based classification of human central nervous system tumors [validation set]
+  "GSE221745", # Epic, n=28  #  : Genomic and epigenomic profiling of GATA2 deficiency reveals aberrant hypermethylation pattern in Bone Marrow and Peripheral Blood
+  # Bariatric surgery
+  "GSE44798", # 450k,  # Gene methylation profiles in offspring born before vs. after maternal bariatric surgery
+  "GSE48325", # 450k,  # DNA methylation analysis in non-alcoholic fatty liver disease suggests distinct disease-specific and remodeling signatures after bariatric surgery
+  # GSE61454  # 450k,  # DNA methylation from severely obese samples in liver, muscle, visceral adipose tissue and subcutaneous adipose samples
+  "GSE61446", #	  Epigenome analysis of the human liver
+  "GSE61450", #	  Epigenome analysis of the human subqutaneous adipose tissue
+  "GSE61452", #	  Epigenome analysis of the human muscle
+  "GSE61453", #	  Epigenome analysis of the human visceral adipose tissue
 
 
   # "GSE72774",  # TO CHECK 450k, n=508 # DNA methylation profiles of human blood samples from Caucasian subjects with Parkinson's disease
@@ -42,7 +51,8 @@ gses = [
 ]
 
 prefix = os.getcwd()
-info_build = [f"{prefix}/info_build_{gse}.rds"                               for gse in gses]
+info_build =    [f"{prefix}/info_build_{gse}.rds"                               for gse in gses]
+idatstudy_rds = [f"{prefix}/datashare/{gse}/study_idat_{gse}.rds"                               for gse in gses]
 
 localrules: target, r00_create_empty_expgrpwrapper, r00_create_empty_datawrapper
 
@@ -51,6 +61,7 @@ rule target:
     message: "-- Rule target completed. --"
     input: 
       info_build,
+      # idatstudy_rds,
     shell:"""
 export PATH="/summer/epistorage/opt/bin:$PATH"
 export PATH="/summer/epistorage/miniconda3/envs/dnamaging_env/bin:$PATH"
@@ -82,11 +93,22 @@ cd {wildcards.prefix}
 touch {output.r_datawrapper}
 """        
 
+# rule r00_create_empty_idatstudy:
+#     input:
+#     output:
+#       idatstudy_rds = "{prefix}/datashare/{gse}/study_idat_{gse}.rds",
+#     threads: 1
+#     shell:"""
+# cd {wildcards.prefix}
+# touch {output.idatstudy_rds}
+# """
+
 rule r01_build_study:
     input: 
       rmd = "{prefix}/01_build_study_generic.Rmd",
       r_datawrapper   = "{prefix}/01_wrappers/01_datawrapper_{gse}.R",
       r_expgrpwrapper = "{prefix}/01_wrappers/01_expgrpwrapper_{gse}.R",
+      # idatstudy_rds = "{prefix}/datashare/{gse}/study_idat_{gse}.rds",
     output: 
       study_rds =   "{prefix}/datashare/{gse}/study_{gse}.rds",
       df_rds =      "{prefix}/datashare/{gse}/df_{gse}.rds"    ,           

@@ -41,6 +41,7 @@ gses = [
   "GSE156374", # Epic, n=96 , IDAT, **Epilepto** # DNA methylation and copy number profiling in polymicrogyria
   "GSE185090", # Epic, n=215, IDAT, **Epilepto** # DNA methylation-based classification of MCD in the human brain
   "GSE227239", # Epic, n=7  , IDAT, **Epilepto** # The specific DNA methylation landscape in Focal Cortical Dysplasia ILAE Type 3D
+  "GSEPISOMA",
   # Epigenetic  Clocks
   "GSE42861" , # 450k, n=689  # Differential DNA methylation in Rheumatoid arthritis
   "GSE87571" , # 450k, n=750  # Continuous Aging of the Human DNA Methylome Throughout the Human Lifespan
@@ -50,8 +51,8 @@ gses = [
   # "GSE119617", # RENAMED IDAT Epic n=26    #: Epigenome analysis of normal and myelodysplastic sundrome (MDS) bone marrow derived mesenchymal stromal cells (MSCs)
   "GSE159907", # Epic, n=316  #  : DNA methylation analysis of acute myeloid leukemia (AML)
   # "GSE62298", # NOIDAT       : Genome-scale profiling of the DNA methylation landscape in human AML patients
-  "GSE124413",   # PROBLEM gse="GSE124413" ; source(knitr::purl("04_model"))    # Epic # n=500 # childhood acute myeloid leukemia (AML)
-  
+  "GSE124413", # Epic, n=500 #  : Analysis of methylation In childhood acute myeloid leukemia (AML)
+  "GSE221745", # Epic, n=28  #  : Genomic and epigenomic profiling of GATA2 deficiency reveals aberrant hypermethylation pattern in Bone Marrow and Peripheral Blood
 
   "GSE197678",  # n=2000 # Childhood Cancer Survivors
   # PROBLEM in IDAT processing "GSE154566",  # need more memory/space #  WARNING mixed 450k & Epic (n=1177) only keep Epic (n=944) # DNA methylation signatures of adolescent victimization: Analysis of a longitudinal monozygotic twin sample.

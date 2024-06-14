@@ -12,23 +12,28 @@ gses = [
   "GSE87571" , # 450k, n=750  # Continuous Aging of the Human DNA Methylome Throughout the Human Lifespan
   "GSE147740", # Epic, n=1129 # DNA methylation analysis of human peripheral blood mononuclear cell collected in the AIRWAVE study
   "GSE152026", # Epic, n=934 # Blood DNA methylation profiles from first episode psychosis patients and controls I
+
   # GTex
   "GSE213478", # Epic, n=987 # Methylation data from nine tissues from GTEx samples profiled with Infinium HumanMethylationEPIC BeadChip
+
   # MDS/AML
   "GSE152710", #  450k, n=166 # : A methylation signature at diagnosis in patients with high-risk Myelodysplastic Syndromes and secondary Acute Myeloid Leukemia predicts azacitidine response but not relapse
   "GSE119617", # Epic n=26    #: Epigenome analysis of normal and myelodysplastic sundrome (MDS) bone marrow derived mesenchymal stromal cells (MSCs)
   "GSE159907", # Epic, n=316  #  : DNA methylation analysis of acute myeloid leukemia (AML)
   "GSE62298" , # NOIDAT       : Genome-scale profiling of the DNA methylation landscape in human AML patients
+  "GSE221745", # Epic, n=28  #  : Genomic and epigenomic profiling of GATA2 deficiency reveals aberrant hypermethylation pattern in Bone Marrow and Peripheral Blood
+
   # # Epilepto
   # "GSE156374", # Epic, n=96 , IDAT, **Epilepto** # DNA methylation and copy number profiling in polymicrogyria
   # "GSE185090", # Epic, n=215, IDAT, **Epilepto** # DNA methylation-based classification of MCD in the human brain
   # "GSE227239", # Epic, n=7  , IDAT, **Epilepto** # The specific DNA methylation landscape in Focal Cortical Dysplasia ILAE Type 3D
+  "EPISOMA",
   # CNS Tumors
   "GSE90496" , # PROBLEM no age # 450k, n=2801 # DNA methylation-based classification of human central nervous system tumors [reference set]
   "GSE109379", # PROBLEM no age # 450k, n=1104 # DNA methylation-based classification of human central nervous system tumors [validation set]
 
 
-  "GSE72774",  # TO CHECK 450k, n=508 # DNA methylation profiles of human blood samples from Caucasian subjects with Parkinson's disease
+  # "GSE72774",  # TO CHECK 450k, n=508 # DNA methylation profiles of human blood samples from Caucasian subjects with Parkinson's disease
   # "GSE197678", # Epic, n=2922 # Genome-wide association studies identify novel genetic loci for epigenetic age acceleration among survivors of childhood cancer
   "GSE50660" , # 450k, n=464  # Cigarette Smoking Reduces DNA Methylation Levels at Multiple Genomic Loci but the Effect is Partially Reversible upon Cessation
   "GSE97362" , # 450k, n=235  # CHARGE and Kabuki syndromes: Gene-specific DNA methylation signatures
@@ -87,6 +92,70 @@ RCODE="gse='{wildcards.gse}' ; rmarkdown::render('02_stat_preproc.Rmd',output_fi
 echo $RCODE | Rscript - 2>&1 > 02_stat_preproc_{wildcards.gse}.Rout
 
 cp 02_stat_preproc_{wildcards.gse}.html 02_stat_preproc_{wildcards.gse}.Rout info_desc_{wildcards.gse}.rds {wildcards.prefix}/. 
+cd {wildcards.prefix}
+rm -Rf /tmp/wd_{wildcards.gse}
+"""
+
+
+
+
+
+
+localrules: target, r00_create_empty_expgrpwrapper, r00_create_empty_datawrapper
+
+
+
+
+        
+rule r00_create_empty_expgrpwrapper:
+    input: 
+    output: 
+      r_expgrpwrapper="{prefix}/01_wrappers/01_expgrpwrapper_{gse}.R",
+    threads: 1
+    shell:"""
+cd {wildcards.prefix}
+touch {output.r_expgrpwrapper}
+"""
+
+rule r00_create_empty_datawrapper:
+    input: 
+    output: 
+      r_datawrapper="{prefix}/01_wrappers/01_datawrapper_{gse}.R",
+    threads: 1
+    shell:"""
+cd {wildcards.prefix}
+touch {output.r_datawrapper}
+"""        
+
+rule r01_build_study:
+    input: 
+      rmd = "{prefix}/01_build_study_generic.Rmd",
+      r_datawrapper   = "{prefix}/01_wrappers/01_datawrapper_{gse}.R",
+      r_expgrpwrapper = "{prefix}/01_wrappers/01_expgrpwrapper_{gse}.R",
+    output: 
+      study_rds =   "{prefix}/datashare/{gse}/study_{gse}.rds",
+      df_rds =      "{prefix}/datashare/{gse}/df_{gse}.rds"    ,           
+      html =        "{prefix}/01_build_study_{gse}.html"      ,           
+      info       =  "{prefix}/info_build_{gse}.rds"   ,
+    threads: 32
+    shell:"""
+export PATH="/summer/epistorage/opt/bin:$PATH"
+export PATH="/summer/epistorage/miniconda3/envs/buildstudy_env/bin:$PATH"
+export OMP_NUM_THREADS=1
+cd {wildcards.prefix}
+
+rm -Rf /tmp/wd_{wildcards.gse}
+mkdir -p /tmp/wd_{wildcards.gse}
+cd /tmp/wd_{wildcards.gse}
+ln -s {wildcards.prefix}/datashare 
+cp {input.rmd} .
+mkdir 01_wrappers
+cp {input.r_datawrapper} {input.r_expgrpwrapper} 01_wrappers/.
+
+RCODE="gse='{wildcards.gse}'; rmarkdown::render('01_build_study_generic.Rmd', output_file=paste0('01_build_study_',gse,'.html'));"
+echo $RCODE | Rscript - 2>&1 > 01_build_study_{wildcards.gse}.Rout
+
+cp 01_build_study_{wildcards.gse}.Rout info_build_{wildcards.gse}.rds 01_build_study_{wildcards.gse}.html {wildcards.prefix}/.
 cd {wildcards.prefix}
 rm -Rf /tmp/wd_{wildcards.gse}
 """

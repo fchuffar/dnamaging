@@ -138,6 +138,9 @@ library(grid)
 RnBeads::rnb.options(
   analysis.name        = gse,
   email = "florent.chuffart@univ-grenoble-alpes.fr",
+  filtering.greedycut=FALSE,
+  filtering.snp="no",
+  filtering.cross.reactive=FALSE,
   filtering.sex.chromosomes.removal=FALSE, 
   identifiers.column="Sample_ID",
   export.to.csv=TRUE,
