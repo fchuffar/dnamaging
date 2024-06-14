@@ -8,13 +8,16 @@ conda activate dnamaging_env
 # devtools::install_github("fchuffar/dnamaging")
 
 
+# cp 00_aaa_README.sh 00_aaa_custom_README.sh
 # source config
 # echo ${project}
 # echo ${study}
 # rsync -auvP ~/projects/${project}/results/${study}/ cargo:~/projects/${project}/results/${study}/
+# ln -s ~/projects/datashare .
+# cd datashare/${study}/raw
+# ln -s .../*.idat .
 
 ln -s 00_build_idat_studies.py 00_custom_build_idat_studies.py 
-source ~/conda_config.sh
 # conda create -n idat2study_env
 conda activate idat2study_env
 # mamba install -c anaconda -c bioconda -c conda-forge -c r r-base libopenblas bioconductor-geoquery bioconductor-affy bioconductor-biobase r-seqinr r-rcpparmadillo r-devtools r-fastmap r-matrix r-kernsmooth r-catools r-gtools r-nortest r-survival r-beanplot r-gplots bioconductor-rnbeads r-doparallel bioconductor-rnbeads.hg19 ghostscript bioconductor-watermelon bioconductor-illuminahumanmethylation450kanno.ilmn12.hg19 bioconductor-illuminahumanmethylationepicanno.ilm10b4.hg19 bioconductor-illuminahumanmethylation27kanno.ilmn12.hg19 snakemake=7.32.4
