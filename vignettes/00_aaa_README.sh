@@ -58,7 +58,7 @@ ln -s 00_models_wf.py 00_custom_models_wf.py
 source ~/conda_config.sh
 # conda create -n model_env
 conda activate model_env
-# mamba install -c anaconda -c bioconda -c conda-forge -c r r-base libopenblas bioconductor-geoquery bioconductor-affy bioconductor-biobase r-seqinr r-rcpparmadillo r-devtools r-fastmap r-matrix r-kernsmooth r-catools r-gtools r-nortest r-survival r-beanplot r-gplots r-dbi r-iterators r-codetools r-rcppeigen r-shape r-foreach r-glmnet r-writexls r-glmnetutils r-intervals bioconductor-epidish snakemake=7.32.4 python=3.9
+# mamba install -c anaconda -c bioconda -c conda-forge -c r r-base libopenblas bioconductor-geoquery bioconductor-affy bioconductor-biobase r-seqinr r-rcpparmadillo r-devtools r-fastmap r-matrix r-kernsmooth r-catools r-gtools r-nortest r-survival r-beanplot r-gplots r-dbi r-iterators r-codetools r-rcppeigen r-shape r-foreach r-glmnet r-writexls r-glmnetutils r-intervals bioconductor-epidish snakemake=7.32.4 python=3.9 scipy bedtools
 # devtools::install_github("fchuffar/epimedtools")
 # devtools::install_github("fchuffar/dnamaging")
 # gse='GSE41037_modelcalllm_meth~age_ewas1000000_nn1000' ; run=0 ; rmarkdown::render('04_model.Rmd', output_file=paste0('04_model_r', run, '_', gse, '.html'));
@@ -72,12 +72,12 @@ ln -s 00_models_wf.py 00_custom_models_wf.py
 source ~/conda_config.sh
 # conda create -n enrichment_env
 conda activate enrichment_env
-mamba install -c anaconda -c bioconda -c conda-forge -c r r-base libopenblas bioconductor-geoquery bioconductor-affy bioconductor-biobase r-seqinr r-rcpparmadillo r-devtools r-fastmap r-matrix r-kernsmooth r-catools r-gtools r-nortest r-survival r-beanplot r-gplots r-dbi  snakemake=7.32.4 python=3.9 r-intervals r-iterators r-codetools r-rcppeigen r-shape r-foreach r-glmnet r-writexls r-glmnetutils bioconductor-epidish bioconductor-illuminahumanmethylation450kanno.ilmn12.hg19 bioconductor-illuminahumanmethylationepicanno.ilm10b4.hg19 bioconductor-illuminahumanmethylation27kanno.ilmn12.hg19 bioconductor-annotatr bioconductor-txdb.hsapiens.ucsc.hg19.knowngene bioconductor-org.hs.eg.db
+# mamba install -c anaconda -c bioconda -c conda-forge -c r r-base libopenblas bioconductor-geoquery bioconductor-affy bioconductor-biobase r-seqinr r-rcpparmadillo r-devtools r-fastmap r-matrix r-kernsmooth r-catools r-gtools r-nortest r-survival r-beanplot r-gplots r-dbi  snakemake=7.32.4 python=3.9 r-intervals r-iterators r-codetools r-rcppeigen r-shape r-foreach r-glmnet r-writexls r-glmnetutils bioconductor-epidish bioconductor-illuminahumanmethylation450kanno.ilmn12.hg19 bioconductor-illuminahumanmethylationepicanno.ilm10b4.hg19 bioconductor-illuminahumanmethylation27kanno.ilmn12.hg19 bioconductor-annotatr bioconductor-txdb.hsapiens.ucsc.hg19.knowngene bioconductor-org.hs.eg.db r-ggvenn r-bedr bedtools
 # devtools::install_github("fchuffar/epimedtools")
-# gse='GSE41037_modelcalllm_meth~age_ewas1000000_nn1000' ; run=0 ; rmarkdown::render('04_model.Rmd', output_file=paste0('04_model_r', run, '_', gse, '.html'));
-# gse='GSE40279_modelcalllm_meth~age_ewas1000000_nn1000' ; run=0 ; rmarkdown::render('04_model.Rmd', output_file=paste0('04_model_r', run, '_', gse, '.html'));
-snakemake -k --cores 1 -s 00_custom_models_wf.py -pn 
-snakemake -k -s 00_custom_models_wf.py --jobs 50 --cluster "oarsub --project epimed -l /nodes=1,walltime=10:00:00 -t fat "  --latency-wait 60 -pn
+rmarkdown::render("05_visu.Rmd")
+for (gse in c("GSE42861", "GSE40279", "GSE87571", "GSE147740", "GSE152026")) {
+  rmarkdown::render("05_enrichment.Rmd", output_file=paste0("05_enrichment_", gse, ".html"))
+}
 
 
 
