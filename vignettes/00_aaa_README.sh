@@ -50,7 +50,7 @@ conda activate preproc_env
 # devtools::install_github("fchuffar/dnamaging")
 # gse='GSE41037' ; rmarkdown::render('02_stat_preproc.Rmd',output_file=paste0('02_stat_preproc_',gse,'.html')) ;
 # gse='GSE119617'; rmarkdown::render('02_stat_preproc.Rmd',output_file=paste0('02_stat_preproc_',gse,'.html')) ;
-snakemake -k --cores 1 -s 00_custom_preproc_wf.py -pn 
+snakemake -k --cores 1 -s 00_custom_preproc_wf.py -pn
 snakemake -k -s 00_custom_preproc_wf.py --jobs 50 --cluster "oarsub --project epimed -l /nodes=1,walltime=10:00:00"  --latency-wait 60 -pn
 
 

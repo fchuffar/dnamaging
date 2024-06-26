@@ -27,6 +27,10 @@ gses = [
   "GSE90496" , # PROBLEM no age # 450k, n=2801 # DNA methylation-based classification of human central nervous system tumors [reference set]
   "GSE109379", # PROBLEM no age # 450k, n=1104 # DNA methylation-based classification of human central nervous system tumors [validation set]
   "GSE221745", # Epic, n=28  #  : Genomic and epigenomic profiling of GATA2 deficiency reveals aberrant hypermethylation pattern in Bone Marrow and Peripheral Blood
+
+  # TCGA
+  "TCGA-LUSC",
+
   # Bariatric surgery
   "GSE44798", # 450k,  # Gene methylation profiles in offspring born before vs. after maternal bariatric surgery
   "GSE48325", # 450k,  # DNA methylation analysis in non-alcoholic fatty liver disease suggests distinct disease-specific and remodeling signatures after bariatric surgery
@@ -35,7 +39,6 @@ gses = [
   "GSE61450", #	  Epigenome analysis of the human subqutaneous adipose tissue
   "GSE61452", #	  Epigenome analysis of the human muscle
   "GSE61453", #	  Epigenome analysis of the human visceral adipose tissue
-
 
   # "GSE72774",  # TO CHECK 450k, n=508 # DNA methylation profiles of human blood samples from Caucasian subjects with Parkinson's disease
   # "GSE197678", # Epic, n=2922 # Genome-wide association studies identify novel genetic loci for epigenetic age acceleration among survivors of childhood cancer
