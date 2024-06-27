@@ -1,0 +1,553 @@
+---
+title: "GSEA data"
+author: "Fabien Jossaud, Florent Chuffart"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+
+
+```{r echo=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=10, fig.height=10, eval=TRUE, echo=FALSE)
+info = list(start_time = Sys.time())
+source("common.R")
+```
+
+```{r call data}
+
+if(!exists("data_type")){data_type = "TCGA-LUSC"}
+if(!exists("pred_gse")){pred_gse = "all"}
+
+check_tcga_type = (substr(data_type,1,4) == "TCGA")
+check_gse_type = (substr(data_type,1,3) == "GSE")
+check_bc_type = (substr(data_type,1,4) == "Cust")
+
+data_study = mreadRDS(paste0("datashare/", data_type, "/study_preproc_", data_type, ".rds"))
+
+predimeth = read.table(paste0("predimeth_probes_",pred_gse,"_10.bed"))
+predimeth = predimeth$V4
+
+
+avail_control = TRUE 
+
+```
+
+```{r create datasets} 
+
+if(data_type == "CustGSE152710mds" | data_type == "CustGSE152710aml"){
+	tissue_status = rep("disease", nrow(data_study$exp_grp))
+	tissue_status[data_study$exp_grp$disease == "CTR"] = "normal"
+	data_study$exp_grp$disease = tissue_status
+} else if (check_tcga_type | data_type == "BRB") { 
+	tissue_status = rep("disease", nrow(data_study$exp_grp))
+	tissue_status[data_study$exp_grp$disease == "normal"] = "normal"
+	data_study$exp_grp$disease = tissue_status
+} else if (data_type == "GSE42861"){
+	tissue_status = rep("disease", nrow(data_study$exp_grp))
+	tissue_status[data_study$exp_grp$disease == "control"] = "normal"
+	data_study$exp_grp$disease = tissue_status
+}
+
+table(data_study$exp_grp$disease)
+
+probe_is_pred = rownames(data_study$data) %in% predimeth
+names(probe_is_pred) = rownames(data_study$data)
+
+print(paste0(sum(probe_is_pred), "/", length(predimeth), " predimeth probes in ",data_type," study"))
+
+if(check_tcga_type){
+	normal_patient = data_study$exp_grp$id_patient[data_study$exp_grp$disease == "normal"]	
+	disease_patient = data_study$exp_grp$id_patient[data_study$exp_grp$disease == "disease"]
+	patient = intersect(disease_patient,normal_patient)
+	
+	healthy_data = data_study$data[,data_study$exp_grp$disease == "normal" & data_study$exp_grp$id_patient %in% patient]
+	disease_data = data_study$data[,data_study$exp_grp$disease == "disease" & data_study$exp_grp$id_patient %in% patient]
+} else {
+	healthy_data = data_study$data[,data_study$exp_grp$disease == "normal"]
+	disease_data = data_study$data[,data_study$exp_grp$disease == "disease"]
+}
+
+print(paste0(data_type," disease number : ", ncol(disease_data)))
+print(paste0(data_type," healthy number : ", ncol(healthy_data)))
+
+info$n_ind = ncol(healthy_data) + ncol(disease_data)
+
+if(is.null(ncol(healthy_data)) | is.null(ncol(disease_data))) {
+	avail_control = FALSE 
+	print(paste0("No controls in data ", data_type, " cohort, end of the script"))
+} else if(ncol(healthy_data) == 0 | ncol(disease_data) == 0){ 
+	avail_control = FALSE 
+	print(paste0("No controls in data ", data_type, " cohort, end of the script"))	
+}
+
+```
+
+```{r compute diff, eval = avail_control}
+
+mean_healthy_data = apply(healthy_data, 1, mean, na.rm = TRUE)
+print(paste0(sum(is.na(mean_healthy_data)), "/", length(mean_healthy_data), " (", round(sum(is.na(mean_healthy_data))/length(mean_healthy_data)*100, 1),"%) NA mean values for ",data_type," healthy probes"))
+
+mean_disease_data = apply(disease_data, 1, mean, na.rm = TRUE)
+print(paste0(sum(is.na(mean_disease_data)), "/", length(mean_disease_data), " (", round(sum(is.na(mean_disease_data))/length(mean_disease_data)*100, 1),"%) NA mean values for ",data_type," disease probes"))
+
+mean_healthy_data = mean_healthy_data[!is.na(mean_healthy_data)] 
+mean_disease_data = mean_disease_data[!is.na(mean_disease_data)]
+
+length(mean_healthy_data)
+length(mean_disease_data)
+
+common_cpg = intersect(names(mean_healthy_data),names(mean_disease_data))
+
+probe_is_pred = probe_is_pred[common_cpg]
+idx_pred = names(probe_is_pred)[probe_is_pred] 
+info$n_pred = length(idx_pred)
+
+mean_healthy_data = mean_healthy_data[common_cpg] 
+mean_disease_data = mean_disease_data[common_cpg]
+
+if(!(check_bc_type)){
+
+	d_age_healthy = density(data_study$exp_grp[colnames(healthy_data),"age"])
+	d_age_disease = density(data_study$exp_grp[colnames(disease_data),"age"], bw = d_age_healthy$bw)
+
+	plot(d_age_healthy, col = 4)
+	lines(d_age_disease, col = 2)
+
+}
+
+diff_mean = mean_disease_data - mean_healthy_data
+
+gsea_input = cbind(names(sort(diff_mean)), sort(diff_mean))
+gsea_input_filename = paste0(data_type, "_diff_mean_gsea_input.rnk")
+print(paste("gsea_input were exported in", gsea_input_filename, "file."))
+write.table(gsea_input, gsea_input_filename, sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
+
+
+### Call predimeth info in healthy gses ###
+
+if (pred_gse == "all") { 
+	total_resume_gse = data.frame(readRDS("total_resume_healthy_gses.rds"))
+	total_resume_gse = total_resume_gse[idx_pred,]
+} else if (pred_gse == "GSE147740") {
+	if(!file.exists(paste0("total_resume_",pred_gse,".rds"))) {
+		betas_gse = mreadRDS(paste0("ewas_",pred_gse,"_modelcalllm_meth~age.rds"))
+		df_gse = mreadRDS(paste0("datashare/",pred_gse,"/df_preproc_",pred_gse,".rds"))
+		markers_start = grep("cg",colnames(df_gse))[1]
+		idx_cpg = colnames(df_gse)[markers_start:ncol(df_gse)]
+		df_gse = t(df_gse[,idx_cpg])
+		mean_gse = apply(df_gse, 1, mean, na.rm = TRUE)
+		mean_gse = mean_gse[rownames(betas_gse)]
+		total_resume_gse = cbind.data.frame(betas_gse[,1], mean_gse)
+		saveRDS(total_resume_gse,paste0("total_resume_",pred_gse,".rds"))
+	} else { total_resume_gse = readRDS(paste0("total_resume_",pred_gse,".rds")) }
+}
+
+
+up_meth_age = rownames(total_resume_gse[total_resume_gse[,1] >= 0,])
+dw_meth_age = rownames(total_resume_gse[total_resume_gse[,1] < 0,])
+up_meth_age = up_meth_age[up_meth_age %in% idx_pred]
+dw_meth_age = dw_meth_age[dw_meth_age %in% idx_pred]
+
+grp_file_up = paste0("predimeth_probes_up_",data_type,"_",pred_gse,".grp")
+grp_file_dw = paste0("predimeth_probes_dw_",data_type,"_",pred_gse,".grp")
+
+write.table(up_meth_age, quote=FALSE, row.names=FALSE, col.names=FALSE, grp_file_up)
+write.table(dw_meth_age, quote=FALSE, row.names=FALSE, col.names=FALSE, grp_file_dw)
+
+srt_diff_mean = sort(diff_mean)
+
+tmp_rnk = which(names(srt_diff_mean) %in% idx_pred) 
+names(tmp_rnk) = names(srt_diff_mean)[names(srt_diff_mean) %in% idx_pred]
+total_resume_gse$rnk = tmp_rnk[rownames(total_resume_gse)]
+
+cpg_0_diff = names(diff_mean[idx_pred])[abs(diff_mean[idx_pred]) == min(abs(diff_mean[idx_pred]))]
+rnk_0_diff = total_resume_gse[cpg_0_diff,]$rnk
+
+```
+
+# Heatmap 
+
+```{r heatmap, eval = avail_control}
+
+layout(matrix(1:2,2),respect = TRUE)
+
+if(!(check_bc_type)){
+	idx_heatmap = rownames(data_study$exp_grp)[order(data_study$exp_grp$disease, data_study$exp_grp$age)]
+	idx_heatmap = idx_heatmap[idx_heatmap %in% colnames(healthy_data) | idx_heatmap %in% colnames(disease_data)]
+} else { idx_heatmap = rownames(data_study$exp_grp)[order(data_study$exp_grp$disease)] }
+
+data = data_study$data[c(up_meth_age,dw_meth_age),idx_heatmap]
+
+
+rsc = rep("white",nrow(data))
+names(rsc) = rownames(data)
+rsc[up_meth_age] = "red"
+rsc[dw_meth_age] = "blue"
+
+csc = rep("white",ncol(data))
+names(csc) = colnames(data)
+vec_disease = c(normal = "green", disease = "orange")
+csc = vec_disease[data_study$exp_grp[names(csc),"disease"]]
+
+qux = plot_meth_hm(data, 
+  main=paste0("PrediMeth probes variation in ", data_type, "\n"), 
+  rsc=rsc                         , 
+  csc=csc                         , 
+  nb_grp_row=4                     ,
+  nb_grp_col=4                     , 
+  hcmeth_cols=FALSE                , 
+  # hcmeth_cols="eucl_dist"                , 
+  # hcmeth_rows="eucl_dist"               , 
+  hcmeth_rows= FALSE               ,
+  # normalization="zscore_rows"      ,
+  normalization=FALSE              ,
+  ordering_func=median             , 
+  colors=c("cyan", "black", "red") , 
+  range_exp=c(-3,3)                ,
+  PCA=FALSE                        
+)
+
+qux = plot_meth_hm(data, 
+  main=paste0("PrediMeth probes variation in ", data_type, "\n"), 
+  rsc=rsc                         , 
+  csc=csc                         , 
+  nb_grp_row=4                     ,
+  nb_grp_col=4                     , 
+  # hcmeth_cols=FALSE                , 
+  hcmeth_cols="eucl_dist"                , 
+  # hcmeth_rows="eucl_dist"               , 
+  hcmeth_rows="cor"               ,
+  normalization="zscore_rows"      ,
+  # normalization=FALSE              ,
+  ordering_func=median             , 
+  colors=c("cyan", "black", "red") , 
+  range_exp=c(-3,3)                ,
+  PCA=FALSE                        
+)
+
+```
+
+# First graph 
+
+```{r first graph, eval = avail_control}
+
+layout(matrix(c(6,3,3,5,5,2,1,1,4,4,2,1,1,4,4), nrow = 3, ncol = 5, byrow = TRUE), respect = TRUE)
+
+## First mini plot
+
+par(mar = c(5.1,0,0,0))
+
+plot(total_resume_gse[,1], total_resume_gse[,2], col = "grey", yaxt = "n", xlab = "beta_age", ylab = "", pch = ".")
+points(total_resume_gse[idx_pred,1], total_resume_gse[idx_pred,2], col = ((total_resume_gse[idx_pred,1] <= 0)+1)*2)
+
+#### Density mean healthy
+
+par(mar = c(5.1,4.1,0,0))
+
+total_resume_gse_pred = total_resume_gse[idx_pred,]
+
+dg = density(total_resume_gse[,2])
+dg_up = density(total_resume_gse[(total_resume_gse[,1] >= 0),2], bw = dg$bw)
+dg_dw = density(total_resume_gse[!(total_resume_gse[,1] >= 0),2], bw = dg$bw)
+
+d = density(total_resume_gse_pred[,2])
+d_up = density(total_resume_gse_pred[(total_resume_gse_pred[,1] >= 0),2], bw = d$bw)
+d_dw = density(total_resume_gse_pred[!(total_resume_gse_pred[,1] >= 0),2], bw = d$bw)
+
+plot(d$y,d$x, xlim = c(max(d$y), 0), ylim = c(min(total_resume_gse[,2]), max(total_resume_gse[,2])), type = "l", xlab = "", xaxt="n", ylab = paste0(pred_gse, " methylation mean") , main = "", lty = 3)
+lines(d_up$y*(length(up_meth_age)/length(idx_pred)),d_up$x, type = "l",col = 2)
+lines(d_dw$y*(length(dw_meth_age)/length(idx_pred)),d_dw$x, type = "l",col=4)
+
+lines(dg$y,dg$x, type = "l", col="grey")
+
+#### Density beta age
+
+par(mar = c(0,0,4.1,0))
+
+dg = density(total_resume_gse[,1])
+
+d = density(total_resume_gse_pred[,1])
+d_up = density(total_resume_gse_pred[(total_resume_gse_pred[,1] >= 0),1], bw = d$bw)
+d_dw = density(total_resume_gse_pred[!(total_resume_gse_pred[,1] >= 0),1], bw = d$bw)
+
+plot(d$x,d$y, xlim = c(min(total_resume_gse[,1]), max(total_resume_gse[,1])), ylim = c(0, max(d$y)), type = "l", main = paste0(pred_gse, " mean methylation ~ beta_age"), xlab = "", xaxt="n", ylab = "", yaxt="n", lty = 3)
+lines(d_up$x, d_up$y*(length(up_meth_age)/length(idx_pred)), type = "l",col = 2)
+lines(d_dw$x, d_dw$y*(length(dw_meth_age)/length(idx_pred)), type = "l",col=4)
+
+lines(dg$x,dg$y, type = "l", col = "grey")
+
+
+## Second mini plot
+
+par(mar = c(5.1,0,0,0))
+
+common_cpg_data_gse = intersect(names(mean_healthy_data),rownames(total_resume_gse))
+common_mean_healthy_data = mean_healthy_data[common_cpg_data_gse]
+common_total_resume_gse = total_resume_gse[common_cpg_data_gse,]
+
+plot(common_mean_healthy_data, common_total_resume_gse[,2], xlab = paste0("healthy data-",data_type, " methylation mean"), ylab = "", yaxt = "n", pch = ".", col = "grey")
+points(mean_healthy_data[idx_pred], total_resume_gse[idx_pred,2], col = ((total_resume_gse[idx_pred,1] <= 0)+1)*2)
+
+ml = lm(mean_healthy_data[idx_pred]~total_resume_gse[idx_pred,2])
+info$r2_mean = summary(ml)$r.squared 
+
+#### Density data healthy
+
+par(mar = c(0,0,4.1,0))
+
+dg = density(common_mean_healthy_data)
+dg_up = density(common_mean_healthy_data[(common_total_resume_gse[,1] >= 0)], bw = dg$bw)
+dg_dw = density(common_mean_healthy_data[!(common_total_resume_gse[,1] >= 0)], bw = dg$bw)
+
+pred_mean_healthy_data = mean_healthy_data[idx_pred]
+d = density(pred_mean_healthy_data)
+d_up = density(pred_mean_healthy_data[up_meth_age], bw = d$bw)
+d_dw = density(pred_mean_healthy_data[dw_meth_age], bw = d$bw)
+
+plot(d$x,d$y, xlim = c(min(mean_healthy_data[idx_pred]), max(mean_healthy_data[idx_pred])), ylim = c(0, max(dg$y)), type = "l", main = paste0(pred_gse, " mean methylation ~ data-", data_type, " mean methylation \n R2 = ", info$r2_mean), xlab = "", xaxt="n", ylab = "", yaxt="n", lty = 3)
+lines(d_up$x, d_up$y*(length(up_meth_age)/length(idx_pred)), type = "l",col = 2)
+lines(d_dw$x, d_dw$y*(length(dw_meth_age)/length(idx_pred)), type = "l",col=4)
+
+lines(dg$x,dg$y, type = "l", col = "grey")
+
+
+plot.new()
+legend("center", c("gain of methylation with age", "loss of methylation with age"), col = c(2,4), pch = c(1,1), cex = 1, title = "Predimeth probes")
+
+```
+
+# Second Graph
+
+```{r second graph, eval = avail_control}
+
+layout(matrix(c(4,3,3,2,1,1,2,1,1), nrow = 3, ncol = 3, byrow = TRUE), respect = TRUE)
+
+## First mini plot
+
+par(mar = c(5.1,0,0,0))
+
+plot(mean_healthy_data, diff_mean, pch = ".", xlab = "mean healthy data", ylab = "", yaxt = "n", col = "grey")
+points(mean_healthy_data[up_meth_age], diff_mean[up_meth_age], col=2)
+points(mean_healthy_data[dw_meth_age], diff_mean[dw_meth_age], col=4)
+
+#### Density diff mean
+
+par(mar = c(5.1,4.1,0,0))
+
+dg = density(diff_mean)
+
+diff_mean_pred = diff_mean[idx_pred]
+d = density(diff_mean_pred)
+d_up = density(diff_mean_pred[up_meth_age], bw = d$bw)
+d_dw = density(diff_mean_pred[dw_meth_age], bw = d$bw) 
+
+plot(d$y,d$x, xlim = c(max(d$y), 0), ylim = c(min(diff_mean), max(diff_mean)), type = "l", xlab = "", xaxt="n", ylab = "diff meth disease/healthy", main = "", lty=3)
+lines(dg$y,dg$x, type = "l", col = "grey")
+lines(d_up$y*(length(up_meth_age)/length(idx_pred)),d_up$x, type = "l",col=2)
+lines(d_dw$y*(length(dw_meth_age)/length(idx_pred)),d_dw$x, type = "l",col=4)
+
+
+#### Density mean healthy
+
+par(mar = c(0,0,4.1,0))
+
+dg = density(mean_healthy_data)
+pred_mean_healthy_data = mean_healthy_data[idx_pred]
+d = density(pred_mean_healthy_data)
+d_up = density(pred_mean_healthy_data[up_meth_age], bw = d$bw)
+d_dw = density(pred_mean_healthy_data[dw_meth_age], bw = d$bw)
+
+
+plot(dg$x,dg$y, ylim = c(0, max(dg$y)), xlim = c(min(mean_healthy_data), max(mean_healthy_data)), type = "l", main = paste0("Difference of methylation between healthy and disease tissue on ", data_type), col = "grey", xlab = "", xaxt="n", ylab = "", yaxt="n")
+lines(d$x, d$y, type = "l", lty = 3)
+lines(d_up$x, d_up$y*(length(up_meth_age)/length(idx_pred)), type = "l",col=2)
+lines(d_dw$x, d_dw$y*(length(dw_meth_age)/length(idx_pred)), type = "l",col=4)
+
+plot.new()
+legend("center", c("gain of methylation with age", "loss of methylation with age"), col = c(2,4), pch = c(1,1), cex = 1.5, title = "Predimeth probes")
+
+```
+
+# Third graph 
+
+```{r third graph, eval = avail_control}
+
+layout(matrix(c(6,3,3,5,5,2,1,1,4,4,2,1,1,4,4), nrow = 3, ncol = 5, byrow = TRUE), respect = TRUE)
+
+# First mini plot 
+
+par(mar = c(5.1,0,0,0))
+
+plot(total_resume_gse$rnk, total_resume_gse[,1], col = ((total_resume_gse[,1] <= 0)+1)*2, ylab = "", xlab = "rnk_cancer", yaxt = "n")
+abline(v = rnk_0_diff, col = 2)
+abline(h = 0, col = 2)
+
+# Beta age density 
+
+par(mar = c(5.1,4.1,0,0))
+
+
+dg = density(total_resume_gse[,1])
+
+d = density(total_resume_gse_pred[,1])
+d_up = density(total_resume_gse_pred[(total_resume_gse_pred[,1] >= 0),1], bw = d$bw)
+d_dw = density(total_resume_gse_pred[!(total_resume_gse_pred[,1] >= 0),1], bw = d$bw)
+
+plot(d$y,d$x, ylim = c(min(total_resume_gse[,1]), max(total_resume_gse[,1])), xlim = c(max(d$y),0), type = "l", xlab = "", xaxt="n", ylab = "beta_age", lty = 3)
+lines(d_up$y*(length(up_meth_age)/length(idx_pred)), d_up$x, type = "l",col=2)
+lines(d_dw$y*(length(dw_meth_age)/length(idx_pred)), d_dw$x, type = "l",col=4)
+
+lines(dg$y,dg$x, type = "l", col = "grey")
+
+# rank density 
+
+par(mar = c(0,0,4.1,0))
+
+d = density(total_resume_gse[idx_pred,"rnk"])
+d_up = density(total_resume_gse[up_meth_age,"rnk"], bw = d$bw)
+d_dw = density(total_resume_gse[dw_meth_age,"rnk"], bw = d$bw)
+
+plot(d$x,d$y, xlim = c(min(total_resume_gse$rnk,na.rm = TRUE), max(total_resume_gse$rnk,na.rm = TRUE)), ylim = c(0, max(d$y)), type = "l", xlab = "", xaxt="n", ylab = "", yaxt="n", main = "beta_age ~ rank diff meth healthy/disease")
+lines(d_up$x, d_up$y*(length(up_meth_age)/length(idx_pred)), type = "l",col=2)
+lines(d_dw$x, d_dw$y*(length(dw_meth_age)/length(idx_pred)), type = "l",col=4)
+
+# Second mini plot 
+
+par(mar = c(5.1,0,0,0))
+
+ml = lm(total_resume_gse[idx_pred,1]~diff_mean[idx_pred])
+info$r2_beta = summary(ml)$r.squared 
+info$coeff_beta = ml$coefficients[2]
+
+plot(diff_mean[idx_pred], total_resume_gse[idx_pred,1], ylim = c(min(total_resume_gse[,1]), max(total_resume_gse[,1])), col = ((total_resume_gse[idx_pred,1] <= 0)+1)*2, ylab = "", yaxt = "n", xlab = "diff meth disease/healthy")
+abline(h = 0, col = 2)
+abline(v = 0, col = 2)
+abline(ml, lty = 3, col = 1)
+
+
+#### Density diff mean
+
+par(mar = c(0,0,4.1,0))
+
+dg = density(diff_mean)
+
+diff_mean_pred = diff_mean[idx_pred]
+d = density(diff_mean_pred)
+d_up = density(diff_mean_pred[up_meth_age], bw = d$bw)
+d_dw = density(diff_mean_pred[dw_meth_age], bw = d$bw) 
+
+plot(d$x,d$y, ylim = c(0, max(d$y)), xlim = c(min(diff_mean[idx_pred]), max(diff_mean[idx_pred])), type = "l", xlab = "", xaxt="n", main = paste0("beta_age ~ diff meth healthy/disease \n R2 = ", info$r2_beta, "\n Coeff = ", info$coeff_beta), lty=3)
+lines(dg$x,dg$y, type = "l", col = "grey")
+lines(d_up$x, d_up$y*(length(up_meth_age)/length(idx_pred)), type = "l",col=2)
+lines(d_dw$x, d_dw$y*(length(dw_meth_age)/length(idx_pred)), type = "l",col=4)
+
+plot.new()
+legend("center", c("gain of methylation with age", "loss of methylation with age"), col = c(2,4), pch = c(1,1), cex = 1, title = "Predimeth probes")
+
+```
+
+# GSEA 
+
+```{r gsea, eval = avail_control}
+
+gsea_plot = function(grp_file, rnk_file, out_dir, cmd="/summer/epistorage/opt/GSEA_4.1.0/gsea-cli.sh", nperm=1000, RMOUTDIR=TRUE) {
+  
+  info_gsea = list()
+  
+  if (missing(out_dir)) {
+    out_dir = tempfile(pattern="gsea_out_", tmpdir=".")
+  }
+  dir.create(out_dir)
+  arg = paste0("GSEAPreranked -gmx ", grp_file, " -collapse No_Collapse -mode Max_probe -norm meandiv -nperm ", nperm , " -rnk ", rnk_file, " -scoring_scheme weighted -rpt_label my_analysis -create_svgs false -include_only_symbols true -make_sets true -plot_top_x 20 -rnd_seed timestamp -set_max 5000 -set_min 15 -zip_report false -out ", out_dir)
+  print(paste(cmd, arg))
+  system2(cmd, arg)
+
+  suffix = strsplit(list.files(out_dir)[1], ".", fixed=TRUE)[[1]][3]
+  
+  endplot_filename = paste0(out_dir, "/my_analysis.GseaPreranked.", suffix, "/enplot_", grp_file, "_1.png")
+  endplot_filename
+  summary_neg = read.table(paste0(out_dir, "/my_analysis.GseaPreranked.", suffix, "/gsea_report_for_na_neg_", suffix, ".tsv"), sep="\t", header=TRUE) ;   
+  summary_pos = read.table(paste0(out_dir, "/my_analysis.GseaPreranked.", suffix, "/gsea_report_for_na_pos_", suffix, ".tsv"), sep="\t", header=TRUE) ;   
+  if (nrow(summary_pos)>0) {
+    s = summary_pos    
+  } else if (nrow(summary_neg)>0) {
+    s = summary_neg    
+  }
+  n =  s$SIZE
+  pv = s$NOM.p.val
+  if (pv == 0 | pv == "---") { pv = 1/nperm}
+  pv = signif(pv, 2)  
+  
+  info_gsea$pv = pv
+  info_gsea$n = n
+  
+  addImg <- function(
+    obj, # an image file imported as an array (e.g. png::readPNG, jpeg::readJPEG)
+    x = NULL, # mid x coordinate for image
+    y = NULL, # mid y coordinate for image
+    width = NULL, # width of image (in x coordinate units)
+    interpolate = TRUE # (passed to graphics::rasterImage) A logical vector (or scalar) indicating whether to apply linear interpolation to the image when drawing. 
+  ){
+    if(is.null(x) | is.null(y) | is.null(width)){stop("Must provide args 'x', 'y', and 'width'")}
+    USR <- par()$usr # A vector of the form c(x1, x2, y1, y2) giving the extremes of the user coordinates of the plotting region
+    PIN <- par()$pin # The current plot dimensions, (width, height), in inches
+    DIM <- dim(obj) # number of x-y pixels for the image
+    ARp <- DIM[1]/DIM[2] # pixel aspect ratio (y/x)
+    WIDi <- width/(USR[2]-USR[1])*PIN[1] # convert width units to inches
+    HEIi <- WIDi * ARp # height in inches
+    HEIu <- HEIi/PIN[2]*(USR[4]-USR[3]) # height in units
+    rasterImage(image = obj, 
+      xleft = x-(width/2), xright = x+(width/2),
+      ybottom = y-(HEIu/2), ytop = y+(HEIu/2), 
+      interpolate = interpolate)
+  }
+  plot.new()  
+  par(mar=c(0, 0, 0, 0))
+  addImg(png::readPNG(endplot_filename), x=0.5,y=0.5,width=1)
+  text(.3,-.02, paste0("n: ", n, " pv: ", pv, ""))
+  par(mar=c(5.1, 4.1, 4.1, 2.1))  
+  if (RMOUTDIR) {unlink(out_dir, recursive=TRUE)}    
+  return(info_gsea)
+}
+ 
+layout(matrix(1:2,1), respect=TRUE)
+info_gsea_up = gsea_plot(grp_file_up, gsea_input_filename)
+info_gsea_dw = gsea_plot(grp_file_dw, gsea_input_filename)
+
+info$n_up = info_gsea_up$n
+info$pv_up = info_gsea_up$pv
+info$n_dw = info_gsea_dw$n
+info$pv_dw = info_gsea_dw$pv 
+
+```
+
+
+
+```{r regions genes, eval = avail_control}
+
+if(!file.exists("genes_all_predimeth_prom.rds")) {
+	annot = readRDS("annotations_pred_all.rds")
+	genes = annot$annot.symbol[annot$annot.type == "hg19_genes_promoters"]
+	genes = genes[!is.na(genes)]
+	genes = unique(genes)
+	saveRDS(genes, "genes_all_predimeth_prom.rds")
+}
+
+```
+
+# Process Information 
+
+```{r info, eval = avail_control}
+
+info$stop_time = Sys.time()
+info$exec_time = round(difftime(info$stop_time, info$start_time, units="mins"),1)
+info$disease = data_type
+info$pred = pred_gse
+
+saveRDS(info, paste0("info_disease_", data_type, "_", pred_gse, ".rds"))
+```

@@ -24,14 +24,14 @@ if (!exists("mopenxlsx_read.xlsx")) {mopenxlsx_read.xlsx = memoise::memoise(open
 ```{r params_default, echo=FALSE}
 if (!exists("model_formula"))   { model_formula = "meth~age"            }
 if (!exists("model_func_name")) { model_func_name = "modelcalllm"       }
-if (!exists("newas"))           { newas = 300000                           }
+if (!exists("newas"))           { newas = 1000000                           }
 if (!exists("neighb"))          { neighb = 1000                         }
 if (!exists("nb_run"))          { nb_run = 50                           }
 if (!exists("pvals"))           { pvals = c(1e-05, 1e-10, 1e-20, 1e-30) }
+if (!exists("gse_short"))           { gse_short="GSE42861" }
 
-gse = paste0("GSE42861_modelcalllm_meth~age_ewas", newas, "_nn", neighb)
-study_filename = paste0("study_", gse,".rds") 
-gse_short = strsplit(gse, "_")[[1]][1]
+gse = paste0(gse_short,"_modelcalllm_meth~age_ewas", newas, "_nn", neighb)
+study_filename = paste0("study_preproc_", gse,".rds") 
 ```
 
 
@@ -58,7 +58,7 @@ for (newas in c("200", "1000", "2000", "3000", "5000", "10000", "20000", "30000"
 
 
 ```{r run comparative function, eval=TRUE}
-recap_it_DMR = function(newas=2000, neighb=1000, run=0, pval=1e-30, study_filename, gse) { 
+recap_it_DMR = function(newas=1000000, neighb=1000, run=0, pval=1e-30, study_filename, gse, gse_short) { 
 	foo = mreadRDS(paste0("./datashare/", gse_short, "/", study_filename))
 	platform = foo$platform
 	
@@ -68,11 +68,11 @@ recap_it_DMR = function(newas=2000, neighb=1000, run=0, pval=1e-30, study_filena
 
 
 	probes_it = list(probes = c(), it = c(), chr = c(), pos = c(), pos_tot = c())
-  rds_model_file = paste0("models_r",run,"_ewas",newas, "_nn", neighb, "_", gse, ".rds")
-  if (!file.exists(rds_model_file)) {print(paste0("no file ", rds_model_file)) ; return()}
-	for (i in 0:run) { 
-    rds_model_file = paste0("models_r",i,"_ewas",newas, "_nn", neighb, "_", gse, ".rds")
-    print(rds_model_file)
+  	rds_model_file = paste0("models_r",run,"_", gse,".rds")
+  	if (!file.exists(rds_model_file)) {print(paste0("no file ", rds_model_file)) ; return()}
+  	for (i in 0:run) { 
+  		rds_model_file = paste0("models_r",i,"_", gse, ".rds")
+  		print(rds_model_file)
 		modele = mreadRDS(rds_model_file)
 		modele = modele[[2]]$coeff$probes
 		probes_it$probes = c(probes_it$probes,modele)

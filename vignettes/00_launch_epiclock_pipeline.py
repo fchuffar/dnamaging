@@ -22,7 +22,9 @@ gses = [
   # "GSE154566", # WARNING mixed 450k & Epic (n=1177) only keep Epic (n=944) # DNA methylation signatures of adolescent victimization: Analysis of a longitudinal monozygotic twin sample.
   # "GSE156374",  NO GO # GSE Epilepto # TODO Fabien: few probes on GEO matrix need to used IDAT 
   # "GSE68838",       # TCGA COAD
-  "GSE41037"   # **************27k***************
+  "GSE87571" , # 450k, n=750  # Continuous Aging of the Human DNA Methylome Throughout the Human Lifespan
+
+  #"GSE41037"   # **************27k***************
 ]
 
 gses_descs = [
@@ -32,7 +34,7 @@ gses_descs = [
   #"GSE90496" ,   # PROBLEM no age # 450k, n=2801 # DNA methylation-based classification of human central nervous system tumors [reference set]
   #"GSE109379",   # PROBLEM no age # 450k, n=1104 # DNA methylation-based classification of human central nervous system tumors [validation set]
   #"GSE185090",   # PROBLEM no age # EPic # n=215  # MCD in the human brain
-  "GSE41037"   # **************27k***************
+  #"GSE41037"   # **************27k***************
 ]
 
 gses_ewas = [
@@ -42,7 +44,7 @@ gses_ewas = [
   #"GSE104293",   # PROBLEM gse="GSE104293" ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render('04_model.Rmd'); # Glioma # n=130 # 450k
   #"GSE124413",   # PROBLEM gse="GSE124413" ; source(knitr::purl("04_model"))    # Epic # n=500 # childhood acute myeloid leukemia (AML)
   #"GSE197678",  # Epic, n=2922 # Genome-wide association studies identify novel genetic loci for epigenetic age acceleration among survivors of childhood cancer
-  "GSE41037"   # **************27k***************
+  #"GSE41037"   # **************27k***************
 ]
 
 gses_model = [
@@ -56,7 +58,6 @@ gses_model = [
   #"GSE72680",   # 450k, n=422 # DNA Methylation of African Americans from the Grady Trauma Project
   #"GSE72775" , # 450k, n=335  # DNA methylation profiles of human blood samples from Hispanics and Caucasians
   #"GSE97362" , # 450k, n=235  # CHARGE and Kabuki syndromes: Gene-specific DNA methylation signatures
-  #"GSE87571" , # 450k, n=750  # Continuous Aging of the Human DNA Methylome Throughout the Human Lifespan
   #"GSE87648" , # 450k, n=350  # DNA Methylation May Mediate Genetic Risk In Inflammatory Bowel Disease
   #"GSE89353" , # 450k, n=600  # Proband : Epimutations as a novel cause of congenital disorders
   #"GSE106648", # 450k, n=279  # Differential DNA methylation in Multiple Sclerosis
@@ -64,13 +65,13 @@ gses_model = [
   #"GSE147740", # Epic, n=1129 # DNA methylation analysis of human peripheral blood mononuclear cell collected in the AIRWAVE study
   #"GSE151732", # Epic, n=250  # Racial Disparities in Epigenetic Aging of the Right versus the Left Colon
   #"GSE152026",  # Epic, n=934 # Blood DNA methylation profiles from first episode psychosis patients and controls I
-    "GSE41037"   # **************27k*************** Aging effects on DNA methylation modules in blood tissue
+    #"GSE41037"   # **************27k*************** Aging effects on DNA methylation modules in blood tissue
 ]
 
 
 
 prefix = os.getcwd()
-nbewasprobes=3000
+nbewasprobes=500000
 runmax=2
 html_models = [f"{prefix}/04_model_r{runmax}_ewas{nbewasprobes}_{gse}.html" for gse in gses]
 info_descs = [f"{prefix}/info_desc_{gse}.rds"                               for gse in gses_descs]
