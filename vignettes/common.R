@@ -113,7 +113,10 @@ plot_meth_hm = function(data,
     ColSideColors = csc
   }
 
-  
+  if (!is.null(rsc)) {
+      RowSideColors = rsc
+  }
+      
   if (PCA) {
     tmp_d = t(data)
     
@@ -157,6 +160,10 @@ plot_meth_hm = function(data,
       ColSideColors = csc
     }
 
+    if (!is.null(rsc)) {
+      RowSideColors = rsc
+    }
+    
     # PCA on tissues
     pca = prcomp(tmp_d, scale=FALSE)
     PLOT_SAMPLE_LABELS = length(unique(rownames(pca$x))) < nrow(pca$x)
