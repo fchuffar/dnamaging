@@ -1,12 +1,13 @@
 import os 
 import os.path
 
+
+
 gses = [
   # "GSE62969"    TO CHECK 450k, n=-100# Predicting genome-wide DNA methylation
   # "GSE197305"   TO CHECK Epic, n=1221# Cortex DNA methylation profiles for the Brains for Dementia research cohort
   # "GSE117859"   TO CHECK 450k, n=608 # Smoking-associated DNA methylation features link to HIV outcomes [HumanMethylation450 BeadChip]
   # "GSE117860"   TO CHECK Epic, n=529 # Smoking-associated DNA methylation features link to HIV outcomes [Infinium MethylationEPIC]
-  # "GSE213478"   TO CHECK Epic, n=987 # Methylation data from nine tissues from GTEx samples profiled with Infinium HumanMethylationEPIC BeadChip
   # "GSE158063"   TO CHECK Epic, n=915 # Smaller stature in childhood following assisted reproductive technologies (ART) is not explained by... 
   # "GSE48472"    TO CHECK 450k, n=56  # Identification and systematic annotation of tissue-specific differentially methylated regions using the Illumina 450k array
   # "GSE64495"    TO CHECK 450k, n=113 # DNA methylation profiles of human blood samples from a severe developmental disorder and controls
@@ -36,28 +37,39 @@ gses = [
   # NOIDAT "GSE72775" , # 450k, n=335  # DNA methylation profiles of human blood samples from Hispanics and Caucasians
   # NOIDAT "GSE72680",   # 450k, n=422 # DNA Methylation of African Americans from the Grady Trauma Project
   # NOIDAT "GSE152026",  # Epic, n=934 # Blood DNA methylation profiles from first episode psychosis patients and controls I
-  "GSE156374",  # NO GO # GSE Epilepto # TODO Fabien: few probes on GEO matrix need to used IDAT
-  "GSE197678",  # n=2000 # Childhood Cancer Survivors
-  # "GSE68838",       # TCGA COAD
-
-  # PROBLEM in IDAT processing "GSE154566",  # need more memory/space #  WARNING mixed 450k & Epic (n=1177) only keep Epic (n=944) # DNA methylation signatures of adolescent victimization: Analysis of a longitudinal monozygotic twin sample.
+  # Epilepto
+  "GSE156374", # Epic, n=96 , IDAT, **Epilepto** # DNA methylation and copy number profiling in polymicrogyria
+  "GSE185090", # Epic, n=215, IDAT, **Epilepto** # DNA methylation-based classification of MCD in the human brain
+  "GSE227239", # Epic, n=7  , IDAT, **Epilepto** # The specific DNA methylation landscape in Focal Cortical Dysplasia ILAE Type 3D
+  "GSEPISOMA",
+  # Epigenetic  Clocks
+  "GSE42861" , # 450k, n=689  # Differential DNA methylation in Rheumatoid arthritis
+  "GSE87571" , # 450k, n=750  # Continuous Aging of the Human DNA Methylome Throughout the Human Lifespan
   "GSE147740",  # need more memory/space # Epic, n=1129 # DNA methylation analysis of human peripheral blood mononuclear cell collected in the AIRWAVE study
+  # MDS/AML
+  "GSE152710", #  450k, n=166 # : A methylation signature at diagnosis in patients with high-risk Myelodysplastic Syndromes and secondary Acute Myeloid Leukemia predicts azacitidine response but not relapse
+  # "GSE119617", # RENAMED IDAT Epic n=26    #: Epigenome analysis of normal and myelodysplastic sundrome (MDS) bone marrow derived mesenchymal stromal cells (MSCs)
+  "GSE159907", # Epic, n=316  #  : DNA methylation analysis of acute myeloid leukemia (AML)
+  # "GSE62298", # NOIDAT       : Genome-scale profiling of the DNA methylation landscape in human AML patients
+  "GSE124413", # Epic, n=500 #  : Analysis of methylation In childhood acute myeloid leukemia (AML)
+  "GSE221745", # Epic, n=28  #  : Genomic and epigenomic profiling of GATA2 deficiency reveals aberrant hypermethylation pattern in Bone Marrow and Peripheral Blood
+
+  "GSE197678",  # n=2000 # Childhood Cancer Survivors
+  # PROBLEM in IDAT processing "GSE154566",  # need more memory/space #  WARNING mixed 450k & Epic (n=1177) only keep Epic (n=944) # DNA methylation signatures of adolescent victimization: Analysis of a longitudinal monozygotic twin sample.
   "GSE140686",  # need more memory/space # WARNING mixed 450k & Epic (n=1505) only keep Epic (n=1020) # Sarcoma Classification by DNA-methylation profiling
   "GSE90496"  , # need more memory/space # TO CHECK 450k, n=2801 # DNA methylation-based classification of human central nervous system tumors [reference set]
 
-
   "GSE109379" ,  # TO CHECK 450k, n=1104 # DNA methylation-based classification of human central nervous system tumors [validation set]
   "GSE85210",    # PROBLEM no age # 450k # n=250 # tobacco
-  "GSE185090",   # PROBLEM no age # EPic # n=215  # MCD in the human brain
   "GSE43976",    # PROBLEM gse='GSE43976'  ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render('04_model.Rmd'); # 450k, PB, tobacco # error in
   "GSE104293",   # PROBLEM gse="GSE104293" ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render('04_model.Rmd'); # Glioma # n=130 # 450k
-  "GSE124413",   # PROBLEM gse="GSE124413" ; source(knitr::purl("04_model"))    # Epic # n=500 # childhood acute myeloid leukemia (AML)
-  "GSE42861" , # 450k, n=689  # Differential DNA methylation in Rheumatoid arthritis
   "GSE97362" , # 450k, n=235  # CHARGE and Kabuki syndromes: Gene-specific DNA methylation signatures
-  "GSE87571" , # 450k, n=750  # Continuous Aging of the Human DNA Methylome Throughout the Human Lifespan
   "GSE87648" , # 450k, n=350  # DNA Methylation May Mediate Genetic Risk In Inflammatory Bowel Disease
-  "GSE151732", # Epic, n=250  # Racial Disparities in Epigenetic Aging of the Right versus the Left Colon
+  # "GSE68838",       # TCGA COAD
+  # "GSE151732", # Epic, n=250  # Racial Disparities in Epigenetic Aging of the Right versus the Left Colon
 ]
+
+
 
 
 
@@ -73,7 +85,7 @@ rule target:
       info_idat,
     shell:"""
 export PATH="/summer/epistorage/opt/bin:$PATH"
-export PATH="/summer/epistorage/miniconda3/envs/R3.6.1_env/bin:$PATH"
+export PATH="/summer/epistorage/miniconda3/envs/idat2study_env/bin:$PATH"
 pwd
 # RCODE="source('data_info.R')"
 # echo $RCODE | Rscript - 2>&1 > data_info.Rout
@@ -92,7 +104,7 @@ rule R01_idat2study:
     threads: 32
     shell:"""
 export PATH="/summer/epistorage/opt/bin:$PATH"
-export PATH="/summer/epistorage/miniconda3/envs/R3.6.1_env/bin:$PATH"
+export PATH="/summer/epistorage/miniconda3/envs/idat2study_env/bin:$PATH"
 export OMP_NUM_THREADS=1
 cd {wildcards.prefix}
 

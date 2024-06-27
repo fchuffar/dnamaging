@@ -11,30 +11,34 @@ gses = [
   "GSE42861" , # 450k, n=689  # Differential DNA methylation in Rheumatoid arthritis
   "GSE87571" , # 450k, n=750  # Continuous Aging of the Human DNA Methylome Throughout the Human Lifespan
   "GSE147740", # Epic, n=1129 # DNA methylation analysis of human peripheral blood mononuclear cell collected in the AIRWAVE study
-  "GSE152026", # Epic, n=934 # Blood DNA methylation profiles from first episode psychosis patients and controls I
-
+  "GSE152026", # Epic, n=934  # Blood DNA methylation profiles from first episode psychosis patients and controls I
   # GTex
-  "GSE213478", # Epic, n=987 # Methylation data from nine tissues from GTEx samples profiled with Infinium HumanMethylationEPIC BeadChip
-
+  "GSE213478", # Epic, n=987  # Methylation data from nine tissues from GTEx samples profiled with Infinium HumanMethylationEPIC BeadChip
   # MDS/AML
-  "GSE152710", #  450k, n=166 # : A methylation signature at diagnosis in patients with high-risk Myelodysplastic Syndromes and secondary Acute Myeloid Leukemia predicts azacitidine response but not relapse
   "GSE119617", # Epic n=26    #: Epigenome analysis of normal and myelodysplastic sundrome (MDS) bone marrow derived mesenchymal stromal cells (MSCs)
+  "GSE152710", #  450k, n=166 # : A methylation signature at diagnosis in patients with high-risk Myelodysplastic Syndromes and secondary Acute Myeloid Leukemia predicts azacitidine response but not relapse
   "GSE159907", # Epic, n=316  #  : DNA methylation analysis of acute myeloid leukemia (AML)
-  "GSE62298" , # NOIDAT       : Genome-scale profiling of the DNA methylation landscape in human AML patients
-  "GSE221745", # Epic, n=28  #  : Genomic and epigenomic profiling of GATA2 deficiency reveals aberrant hypermethylation pattern in Bone Marrow and Peripheral Blood
-
-  # # Epilepto
-  # "GSE156374", # Epic, n=96 , IDAT, **Epilepto** # DNA methylation and copy number profiling in polymicrogyria
-  # "GSE185090", # Epic, n=215, IDAT, **Epilepto** # DNA methylation-based classification of MCD in the human brain
-  # "GSE227239", # Epic, n=7  , IDAT, **Epilepto** # The specific DNA methylation landscape in Focal Cortical Dysplasia ILAE Type 3D
-  "EPISOMA",
+  "GSE62298" , # 450k, n=68   # NOIDAT       : Genome-scale profiling of the DNA methylation landscape in human AML patients
+  # Epilepto
+  "GSE156374", # Epic, n=96 , IDAT, **Epilepto** # DNA methylation and copy number profiling in polymicrogyria
+  "GSE185090", # Epic, n=215, IDAT, **Epilepto** # DNA methylation-based classification of MCD in the human brain
+  "GSE227239", # Epic, n=7  , IDAT, **Epilepto** # The specific DNA methylation landscape in Focal Cortical Dysplasia ILAE Type 3D
   # CNS Tumors
   "GSE90496" , # PROBLEM no age # 450k, n=2801 # DNA methylation-based classification of human central nervous system tumors [reference set]
   "GSE109379", # PROBLEM no age # 450k, n=1104 # DNA methylation-based classification of human central nervous system tumors [validation set]
+  "GSE221745", # Epic, n=28  #  : Genomic and epigenomic profiling of GATA2 deficiency reveals aberrant hypermethylation pattern in Bone Marrow and Peripheral Blood
 
   # TCGA
   "TCGA-LUSC",
 
+  # Bariatric surgery
+  "GSE44798", # 450k,  # Gene methylation profiles in offspring born before vs. after maternal bariatric surgery
+  "GSE48325", # 450k,  # DNA methylation analysis in non-alcoholic fatty liver disease suggests distinct disease-specific and remodeling signatures after bariatric surgery
+  # GSE61454  # 450k,  # DNA methylation from severely obese samples in liver, muscle, visceral adipose tissue and subcutaneous adipose samples
+  "GSE61446", #	  Epigenome analysis of the human liver
+  "GSE61450", #	  Epigenome analysis of the human subqutaneous adipose tissue
+  "GSE61452", #	  Epigenome analysis of the human muscle
+  "GSE61453", #	  Epigenome analysis of the human visceral adipose tissue
 
   # "GSE72774",  # TO CHECK 450k, n=508 # DNA methylation profiles of human blood samples from Caucasian subjects with Parkinson's disease
   # "GSE197678", # Epic, n=2922 # Genome-wide association studies identify novel genetic loci for epigenetic age acceleration among survivors of childhood cancer
@@ -49,18 +53,18 @@ gses = [
   "GSE41037"   # **************27k*************** Aging effects on DNA methylation modules in blood tissue
 ]
 
-gses
-
 prefix = os.getcwd()
-info_descs = [f"{prefix}/info_desc_{gse}.rds"                               for gse in gses]
+info_build =    [f"{prefix}/info_build_{gse}.rds"                               for gse in gses]
+idatstudy_rds = [f"{prefix}/datashare/{gse}/study_idat_{gse}.rds"                               for gse in gses]
 
-localrules: target
+localrules: target, r00_create_empty_expgrpwrapper, r00_create_empty_datawrapper
 
 rule target:
     threads: 1
     message: "-- Rule target completed. --"
     input: 
-      info_descs,
+      info_build,
+      # idatstudy_rds,
     shell:"""
 export PATH="/summer/epistorage/opt/bin:$PATH"
 export PATH="/summer/epistorage/miniconda3/envs/dnamaging_env/bin:$PATH"
@@ -68,44 +72,6 @@ pwd
 RCODE="source('data_info.R')"
 echo $RCODE | Rscript - 2>&1 > data_info.Rout
           """
-
-rule R02_stat_preproc: 
-    input: 
-      rmd = "{prefix}/02_stat_preproc.Rmd",   
-      study  = "{prefix}/datashare/{gse}/study_{gse}.rds",  
-    output:           
-      html =       "{prefix}/02_stat_preproc_{gse}.html"  ,         
-      info =       "{prefix}/info_desc_{gse}.rds"         ,           
-      study_preproc  = "{prefix}/datashare/{gse}/study_preproc_{gse}.rds",  
-    threads: 32
-    shell:"""
-export PATH="/summer/epistorage/opt/bin:$PATH"
-export PATH="/summer/epistorage/miniconda3/envs/dnamaging_env/bin:$PATH"
-export OMP_NUM_THREADS=1
-cd {wildcards.prefix}
-
-TMPDIR=/tmp/wd_{wildcards.gse}
-rm -Rf $TMPDIR
-mkdir -p $TMPDIR
-cd $TMPDIR
-ln -s {wildcards.prefix}/datashare 
-cp {input.rmd} {wildcards.prefix}/common.R {wildcards.prefix}/params_default.R  {wildcards.prefix}/params_{wildcards.gse}.R . || :
-
-RCODE="gse='{wildcards.gse}' ; rmarkdown::render('02_stat_preproc.Rmd',output_file=paste0('02_stat_preproc_',gse,'.html')) ;"
-echo $RCODE | Rscript - 2>&1 > 02_stat_preproc_{wildcards.gse}.Rout
-
-cp 02_stat_preproc_{wildcards.gse}.html 02_stat_preproc_{wildcards.gse}.Rout info_desc_{wildcards.gse}.rds {wildcards.prefix}/. 
-cd {wildcards.prefix}
-rm -Rf /tmp/wd_{wildcards.gse}
-"""
-
-
-
-
-
-
-localrules: target, r00_create_empty_expgrpwrapper, r00_create_empty_datawrapper
-
 
 
 
@@ -130,11 +96,22 @@ cd {wildcards.prefix}
 touch {output.r_datawrapper}
 """        
 
+# rule r00_create_empty_idatstudy:
+#     input:
+#     output:
+#       idatstudy_rds = "{prefix}/datashare/{gse}/study_idat_{gse}.rds",
+#     threads: 1
+#     shell:"""
+# cd {wildcards.prefix}
+# touch {output.idatstudy_rds}
+# """
+
 rule r01_build_study:
     input: 
       rmd = "{prefix}/01_build_study_generic.Rmd",
       r_datawrapper   = "{prefix}/01_wrappers/01_datawrapper_{gse}.R",
       r_expgrpwrapper = "{prefix}/01_wrappers/01_expgrpwrapper_{gse}.R",
+      # idatstudy_rds = "{prefix}/datashare/{gse}/study_idat_{gse}.rds",
     output: 
       study_rds =   "{prefix}/datashare/{gse}/study_{gse}.rds",
       df_rds =      "{prefix}/datashare/{gse}/df_{gse}.rds"    ,           

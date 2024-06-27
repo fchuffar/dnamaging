@@ -217,6 +217,7 @@ plot_model_eval = function(m, df, covariate, Xtrain, Xtest, Ytrain, Ytest) {
   rmseTr = sqrt(mean((m0Tr$residuals)^2))
   m0Te = lm(Ytest~predTe, data.frame(Ytest=Ytest, predTe=predTe))
   rmseTe = sqrt(mean((m0Te$residuals)^2))
+  r2Te = summary(m0Te)$r.squared
 
 
   plot(predTr, Ytrain, 
@@ -328,7 +329,8 @@ plot_model_eval = function(m, df, covariate, Xtrain, Xtest, Ytrain, Ytest) {
   }
   legend(x="topright", legend=levls, col=1:length(levls), lty = 1, title=covariate)  
   # ADD
-  info = list(RMSE = rmseTe, 
+  info = list(RMSE = rmseTe,
+              R2 = r2Te, 
               pvalAMAR = pval, 
               pvalRR = pvalR, 
               nb_probes_mod = nrow(m$coeff) )

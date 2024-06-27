@@ -51,7 +51,7 @@ detect_infinium_platform = function (idat_filename) { # inspired by RnBeads:::rn
       if (inf450kEPIC.idats.present) {
           stop("Undefined platform; detected HumanMethylation27 and HumanMethylation450")
       }
-      return("probes27")
+      return("GPL8490")
   }
   if (inf450kEPIC.idats.present) {
       file.sizes = as.numeric(na.omit(file.info(idat_filename)[, 
@@ -60,10 +60,10 @@ detect_infinium_platform = function (idat_filename) { # inspired by RnBeads:::rn
           stop("Undefined platform; cannot read the specified IDAT files")
       }
       if (all(file.sizes > 1e+07)) {
-          return("probesEPIC")
+          return("GPL21145")
       }
       if (all(file.sizes < 1e+07)) {
-          return("probes450")
+          return("GPL13534")
       }
       stop("Undefined platform; detected HumanMethylation450 and MethylationEPIC")
   }
@@ -138,10 +138,12 @@ library(grid)
 RnBeads::rnb.options(
   analysis.name        = gse,
   email = "florent.chuffart@univ-grenoble-alpes.fr",
+  filtering.greedycut=FALSE,
+  filtering.snp="no",
+  filtering.cross.reactive=FALSE,
   filtering.sex.chromosomes.removal=FALSE, 
   identifiers.column="Sample_ID",
   export.to.csv=TRUE,
-  # import.idat.platform = "probesEPIC",
   # replicate.id.column = "treatment",
   # import.table.separator = ";",
   # import.bed.style     = "bismarkCov",
@@ -186,9 +188,9 @@ dim(exp_grp)
 # exp_grp = exp_grp[c(1:10,1:10),]
 # dim(exp_grp)
 
-if (pf_idx=="probesEPIC") {
+if (pf_idx=="GPL21145") {
   nb_sample_max = 2477 
-} else if (pf_idx=="probes450") {
+} else if (pf_idx=="GPL13534") {
   nb_sample_max = 5000  
 } else {
   nb_sample_max = 80000    
@@ -219,7 +221,7 @@ dfs = lapply(levels(exp_grp$batch), function(batch) {
   dir.reports = file.path(analysis.dir, "reports")
   data.type="infinium.idat.dir"
   dir.create(dir.reports, showWarnings=FALSE)
-  num.cores = 32
+  num.cores = parallel::detectCores()
   parallel.setup(num.cores)
   unlink(dir.reports, recursive=TRUE)
   RnBeads::rnb.run.analysis(
@@ -299,6 +301,7 @@ s = epimedtools::create_study()
 s$data     = data
 s$exp_grp  = exp_grp
 s$platform = pf
+s$platform_name = pf_idx
 s_filename = paste0("datashare/", gse, "/study_idat_", gse, ".rds")
 print(paste0("Writing ", s_filename, "..."))
 s$save(s_filename)
@@ -310,7 +313,7 @@ s$save(s_filename)
 info$stop_time = Sys.time()
 info$n   = nrow(s$data)
 info$p   = ncol(s$data)
-info$stop_timeexec_time = difftime(stop_time, start_time, units="mins")
+info$stop_timeexec_time = difftime(info$stop_time, info$start_time, units="mins")
 print(info)
 saveRDS(info, paste0("info_idat2study_",gse,".rds"))
 ```
