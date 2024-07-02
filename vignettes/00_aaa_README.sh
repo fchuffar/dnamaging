@@ -37,7 +37,7 @@ conda activate buildstudy_env
 # gse='GSE40279'; rmarkdown::render('01_build_study_generic.Rmd', output_file=paste0('01_build_study_',gse,'.html'));
 # gse='GSE42861'; rmarkdown::render('01_build_study_generic.Rmd', output_file=paste0('01_build_study_',gse,'.html'));
 # dim(s$data) # problem with GSE42861 : only 374449 probes. not the case with R3.6.1 
-snakemake -k --cores 1 -s 00_custom_studies_wf.py -pn 
+snakemake -k --cores 1 -s 00_custom_studies_wf.py -pn
 snakemake -k -s 00_custom_studies_wf.py  --jobs 50 --cluster "oarsub --project epimed -l /nodes=1,walltime=10:00:00"  --latency-wait 60 -pn
 
 

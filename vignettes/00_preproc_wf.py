@@ -18,6 +18,8 @@ gses = [
 
   # MDS/AML
   "GSE152710", #  450k, n=166 # : A methylation signature at diagnosis in patients with high-risk Myelodysplastic Syndromes and secondary Acute Myeloid Leukemia predicts azacitidine response but not relapse
+  "CustGSE152710aml",
+  "CustGSE152710mds",
   "GSE119617", # Epic n=26    #: Epigenome analysis of normal and myelodysplastic sundrome (MDS) bone marrow derived mesenchymal stromal cells (MSCs)
   "GSE159907", # Epic, n=316  #  : DNA methylation analysis of acute myeloid leukemia (AML)
   "GSE62298" , # NOIDAT       : Genome-scale profiling of the DNA methylation landscape in human AML patients
@@ -34,7 +36,16 @@ gses = [
 
   # TCGA
   "TCGA-LUSC",
-
+  "TCGA-LUAD",
+  "BRB",
+  "TCGA-KIRC", 
+  "TCGA-BRCA", 
+  "TCGA-COAD", 
+  "TCGA-THCA", 
+  "TCGA-PRAD", 
+  "TCGA-LIHC", 
+  "TCGA-KIRP", 
+  "TCGA-HNSC", 
 
   # "GSE72774",  # TO CHECK 450k, n=508 # DNA methylation profiles of human blood samples from Caucasian subjects with Parkinson's disease
   # "GSE197678", # Epic, n=2922 # Genome-wide association studies identify novel genetic loci for epigenetic age acceleration among survivors of childhood cancer

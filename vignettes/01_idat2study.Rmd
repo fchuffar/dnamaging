@@ -169,7 +169,6 @@ RnBeads::rnb.options(
   qc.cnv	= FALSE            , 
   qc.cnv.refbased	= FALSE    , 
 
-  # export.to.csv        = "yes",
   export.to.bed        = FALSE,
   export.to.trackhub   = NULL,
   # export.to.ewasher    = "no",

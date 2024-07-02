@@ -13,6 +13,63 @@ if (!exists("mepimedtools_monitored_apply")) {mepimedtools_monitored_apply = mem
 
 
 
+# HERE ALGO FAT_FEAT
+get_fat_feats = function(pf, pf_chr_colname, pf_pos_colname, extend_region_dist) {
+  table(pf[,pf_chr_colname], useNA="always")
+  # pf = pf[pf[,pf_pos_colname]>0,]
+  # pf = pf[order(pf[[pf_chr_colname]],pf[[pf_pos_colname]]), ]
+  ## index meth probes by chr
+  chrs = unique(pf[[pf_chr_colname]])
+  chrs_indexed_methpf = lapply(chrs, function(chr) {
+      print(chr)
+      idx = rownames(pf)[!is.na(pf[[pf_chr_colname]]) & pf[[pf_chr_colname]]==chr]
+      ret = pf[idx,]
+      return(ret)
+  })
+  names(chrs_indexed_methpf) = chrs
+
+  fat_feats = lapply(unique(pf[,pf_chr_colname]), function(chr) {
+    d = pf[pf[,pf_chr_colname]==chr,c(pf_chr_colname, pf_pos_colname)]
+    i = intervals::Intervals(c(d[,2], d[,2]+1), type="Z")
+    # enlarge your fat feat
+    l = extend_region_dist
+    c = intervals::close_intervals( intervals::contract( intervals::reduce(intervals::expand(i, l)), l) )
+    dim(c)
+    df = data.frame(chr, c[,1], c[,2])
+    return(df)
+  })
+  fat_feats = do.call(rbind, fat_feats)
+  dim(fat_feats)
+  fat_feats[,4] = paste0(fat_feats[,1], ":", fat_feats[,2], "-", fat_feats[,3])
+  fat_feats[,5] = fat_feats[,3] - fat_feats[,2]
+  fat_feats[,6] = "+"
+  # fat_feats = fat_feats[fat_feats[,5]>1,]
+  rownames(fat_feats) = fat_feats[,4]
+  colnames(fat_feats)  = c("chr", "start", "end", "id", "score", "strand")
+  dim(fat_feats)
+  head(fat_feats)
+
+  ## index probes by feat name
+  print("# indexing probes by feat name")
+  fat_feats_indexed_probes = epimedtools::monitored_apply(fat_feats, 1, function(feat) {
+    # feat = fat_feats[3,]
+    # print(feat)
+    chr = feat[[1]]
+    len = as.numeric(feat[[5]])
+    meth_platform = chrs_indexed_methpf[[chr]]
+    ret = dmprocr_get_probe_names(feat, meth_platform, pf_chr_colname, pf_pos_colname, 0, len)
+    # meth_platform[ret,1:3]
+    # feat
+    return(ret)
+  })
+
+  sum(rownames(fat_feats) != names(fat_feats_indexed_probes))
+
+  fat_feats$probes = fat_feats_indexed_probes
+  fat_feats$n_probes = sapply(fat_feats_indexed_probes, length) 
+  return(fat_feats)
+}
+if (!exists("mget_fat_feats")) {mget_fat_feats = memoise::memoise(get_fat_feats)}
 
 
 plot_meth_hm = function(data, 

@@ -17,6 +17,8 @@ gses = [
   # MDS/AML
   "GSE119617", # Epic n=26    #: Epigenome analysis of normal and myelodysplastic sundrome (MDS) bone marrow derived mesenchymal stromal cells (MSCs)
   "GSE152710", #  450k, n=166 # : A methylation signature at diagnosis in patients with high-risk Myelodysplastic Syndromes and secondary Acute Myeloid Leukemia predicts azacitidine response but not relapse
+  "CustGSE152710aml",
+  "CustGSE152710mds",
   "GSE159907", # Epic, n=316  #  : DNA methylation analysis of acute myeloid leukemia (AML)
   "GSE62298" , # 450k, n=68   # NOIDAT       : Genome-scale profiling of the DNA methylation landscape in human AML patients
   # Epilepto
@@ -30,6 +32,16 @@ gses = [
 
   # TCGA
   "TCGA-LUSC",
+  "TCGA-LUAD",
+  "BRB",
+  "TCGA-KIRC", 
+  "TCGA-BRCA", 
+  "TCGA-COAD", 
+  "TCGA-THCA", 
+  "TCGA-PRAD", 
+  "TCGA-LIHC", 
+  "TCGA-KIRP", 
+  "TCGA-HNSC", 
 
   # Bariatric surgery
   "GSE44798", # 450k,  # Gene methylation profiles in offspring born before vs. after maternal bariatric surgery
