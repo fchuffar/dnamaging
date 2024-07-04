@@ -1,0 +1,78 @@
+---
+title: "GSEA resume graphs"
+author: "Fabien Jossaud, Florent Chuffart"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+```{r echo=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=10, fig.height=10, eval=TRUE, echo=FALSE)
+source("common.R")
+```
+
+```{r first graph}
+
+foo = sapply(paste0("info_disease_",data_list,"_",pred_gse,".rds"), function (f) {
+	readRDS(f)
+})
+foo = t(foo)
+foo = data.frame(lapply(data.frame(foo, stringsAsFactors=FALSE), unlist), stringsAsFactors=FALSE)
+rownames(foo) = foo$disease
+
+layout(matrix(1:6,2), respect=TRUE)
+
+r2 = foo$r2_mean
+names(r2) = foo$disease
+r2 = sort(r2, decreasing = TRUE)
+barplot(r2, las = 2, ylim = c(0,1))
+
+n_ctr = foo$n_ctr_ind
+names(n_ctr) = foo$disease
+
+
+plot(n_ctr,-log10(foo$pv_dw), ylim = c(0,3.5), col = 0)
+text(n_ctr, -log10(foo$pv_dw), foo$disease)
+abline(h= -log10(0.05), lty = 3)
+
+plot(r2,-log10(foo$pv_dw), xlim = c(0,1), ylim = c(0,3.5), col = 0)
+text(r2, -log10(foo$pv_dw), foo$disease)
+abline(h= -log10(0.05), lty = 3)
+
+plot(-log10(foo$pv_up),-log10(foo$pv_dw), xlim = c(0,3.5), ylim = c(0,3.5), col = 0)
+text(-log10(foo$pv_up), -log10(foo$pv_dw), foo$disease)
+abline(h= -log10(0.05), lty = 3)
+abline(v= -log10(0.05), lty = 3)
+
+ind = foo$n_ind
+names(ind) = foo$disease
+ind = sort(ind, decreasing = TRUE)
+barplot(ind, las = 2)
+
+```
+
+```{r pairing rnk}
+
+predimeth = read.table(paste0("predimeth_probes_",pred_gse,"_10.bed"))
+predimeth = predimeth$V4
+
+rnk_up_gses = list()
+for (data_type in data_list) {
+	rnk_up_gses[[data_type]] = mreadRDS(paste0("rnk_up_", data_type, "_", pred_gse, ".rds"))
+}
+
+mat_rnk_up_gses = matrix(NA, nrow=length(predimeth), ncol=length(data_list), dimnames = list(predimeth,data_list))
+
+for (data_type in data_list) {
+	mat_rnk_up_gses[names(rnk_up_gses[[data_type]]), data_type] = rnk_up_gses[[data_type]]
+}
+
+my_points = function(...) {points(...) ; abline(a=0,b=1, lty=2, col=2);}
+pairs(mat_rnk_up_gses, main = paste0("corrélation des rang pour les sondes Predimeth dans différents cancers"),panel=my_points )
+
+```
+
