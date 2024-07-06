@@ -150,13 +150,15 @@ if (s$platform_name=="GPL8490") {
   library(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)  
   pfepic = data.frame(getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b4.hg19))
   s$platform = pfepic  
+} else if (s$platform_name%in%"RRBS") {
+  print("RRBS")
 } else {
   stop(paste0("platform problem ", gse, " ", s$platform_name))
 }
 s$platform = s$platform[rownames(s$platform) %in% rownames(s$data),]
 
 # A. cell composition
-if (!s$platform_name=="GPL8490") {
+if (s$platform_name %in% c("GPL21145", "GPL23976", "GPL13534")) {
   library(EpiDISH)
   betaData.m = s$data
   dim(s$data)
