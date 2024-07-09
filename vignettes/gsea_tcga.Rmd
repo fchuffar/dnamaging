@@ -21,7 +21,7 @@ source("common.R")
 ```{r call data}
 
 if(!exists("data_type")){data_type = "TCGA-LUSC"}
-if(!exists("pred_gse")){pred_gse = "all"}
+if(!exists("pred_gse")){pred_gse = "GSE147740"}
 
 check_tcga_type = (substr(data_type,1,4) == "TCGA")
 check_gse_type = (substr(data_type,1,3) == "GSE")
@@ -29,11 +29,18 @@ check_bc_type = (substr(data_type,1,4) == "Cust")
 
 data_study = mreadRDS(paste0("datashare/", data_type, "/study_preproc_", data_type, ".rds"))
 
-predimeth = read.table(paste0("predimeth_probes_",pred_gse,"_10.bed"))
-predimeth = predimeth$V4
+if(pred_gse == "avmps") {
+	predimeth = openxlsx::read.xlsx("avmps_probes.xlsx",cols = 4)
+	predimeth = predimeth[[1]]
+} else if (pred_gse == "combp") {
+	predimeth = read.table("combp_probes_GSE147740_10e-30.txt")
+	predimeth = predimeth[[1]]
+} else {
+	predimeth = read.table(paste0("predimeth_probes_",pred_gse,"_10.bed"))
+	predimeth = predimeth$V4
+}
 
-
-avail_control = TRUE 
+if(pred_gse == "avmps") { heatmaps_verif = FALSE } else { heatmaps_verif = TRUE }
 
 ```
 
@@ -76,6 +83,8 @@ print(paste0(data_type," disease number : ", ncol(disease_data)))
 print(paste0(data_type," healthy number : ", ncol(healthy_data)))
 
 info$n_ind = ncol(healthy_data) + ncol(disease_data)
+info$n_ctr_ind = ncol(healthy_data)
+info$n_dis_ind = ncol(disease_data)
 
 if(is.null(ncol(healthy_data)) | is.null(ncol(disease_data))) {
 	avail_control = FALSE 
@@ -87,7 +96,7 @@ if(is.null(ncol(healthy_data)) | is.null(ncol(disease_data))) {
 
 ```
 
-```{r compute diff, eval = avail_control}
+```{r compute diff}
 
 mean_healthy_data = apply(healthy_data, 1, mean, na.rm = TRUE)
 print(paste0(sum(is.na(mean_healthy_data)), "/", length(mean_healthy_data), " (", round(sum(is.na(mean_healthy_data))/length(mean_healthy_data)*100, 1),"%) NA mean values for ",data_type," healthy probes"))
@@ -130,17 +139,34 @@ write.table(gsea_input, gsea_input_filename, sep="\t", row.names=FALSE, col.name
 
 ### Call predimeth info in healthy gses ###
 
-if (pred_gse == "all") { 
-	total_resume_gse = data.frame(readRDS("total_resume_healthy_gses.rds"))
-	total_resume_gse = total_resume_gse[idx_pred,]
-} else if (pred_gse == "GSE147740") {
+if (pred_gse == "avmps") {
 	if(!file.exists(paste0("total_resume_",pred_gse,".rds"))) {
-		betas_gse = mreadRDS(paste0("ewas_",pred_gse,"_modelcalllm_meth~age.rds"))
-		df_gse = mreadRDS(paste0("datashare/",pred_gse,"/df_preproc_",pred_gse,".rds"))
-		markers_start = grep("cg",colnames(df_gse))[1]
-		idx_cpg = colnames(df_gse)[markers_start:ncol(df_gse)]
-		df_gse = t(df_gse[,idx_cpg])
-		mean_gse = apply(df_gse, 1, mean, na.rm = TRUE)
+		betas_gse = mreadRDS("ewas_GSE40279_modelcalllm_meth~age.rds")
+		study_gse = mreadRDS("datashare/GSE40279/study_preproc_GSE40279.rds")
+		study_gse = study_gse$data
+		mean_gse = apply(study_gse, 1, mean, na.rm = TRUE)
+		mean_gse = mean_gse[rownames(betas_gse)]
+		total_resume_gse = cbind.data.frame(betas_gse[,1], mean_gse)
+		saveRDS(total_resume_gse,paste0("total_resume_",pred_gse,".rds"))
+	} else { total_resume_gse = readRDS(paste0("total_resume_",pred_gse,".rds")) }
+
+} else if (pred_gse == "CustGSE147740rr") {
+	if(!file.exists(paste0("total_resume_",pred_gse,".rds"))) {
+		betas_gse = mreadRDS(paste0("ewas_", pred_gse, "_modelcalllm_meth~age.rds"))
+		study_gse = mreadRDS(paste0("datashare/", pred_gse, "/study_preproc_", pred_gse, ".rds"))
+		study_gse = study_gse$data
+		mean_gse = apply(study_gse, 1, mean, na.rm = TRUE)
+		mean_gse = mean_gse[rownames(betas_gse)]
+		total_resume_gse = cbind.data.frame(betas_gse[,1], mean_gse)
+		saveRDS(total_resume_gse,paste0("total_resume_",pred_gse,".rds"))
+	} else { total_resume_gse = readRDS(paste0("total_resume_",pred_gse,".rds")) }
+
+} else {
+	if(!file.exists(paste0("total_resume_",pred_gse,".rds"))) {
+		betas_gse = mreadRDS("ewas_GSE147740_modelcalllm_meth~age.rds")
+		study_gse = mreadRDS("datashare/GSE147740/study_preproc_GSE147740.rds")
+		study_gse = study_gse$data
+		mean_gse = apply(study_gse, 1, mean, na.rm = TRUE)
 		mean_gse = mean_gse[rownames(betas_gse)]
 		total_resume_gse = cbind.data.frame(betas_gse[,1], mean_gse)
 		saveRDS(total_resume_gse,paste0("total_resume_",pred_gse,".rds"))
@@ -165,6 +191,10 @@ tmp_rnk = which(names(srt_diff_mean) %in% idx_pred)
 names(tmp_rnk) = names(srt_diff_mean)[names(srt_diff_mean) %in% idx_pred]
 total_resume_gse$rnk = tmp_rnk[rownames(total_resume_gse)]
 
+rnk_up = total_resume_gse[up_meth_age,"rnk"]
+names(rnk_up) = up_meth_age
+saveRDS(rnk_up, paste0("rnk_up_",data_type,"_",pred_gse,".rds"))
+ 
 cpg_0_diff = names(diff_mean[idx_pred])[abs(diff_mean[idx_pred]) == min(abs(diff_mean[idx_pred]))]
 rnk_0_diff = total_resume_gse[cpg_0_diff,]$rnk
 
@@ -172,7 +202,7 @@ rnk_0_diff = total_resume_gse[cpg_0_diff,]$rnk
 
 # Heatmap 
 
-```{r heatmap, eval = avail_control}
+```{r heatmap, eval = heatmaps_verif}
 
 layout(matrix(1:2,2),respect = TRUE)
 
@@ -195,7 +225,7 @@ vec_disease = c(normal = "green", disease = "orange")
 csc = vec_disease[data_study$exp_grp[names(csc),"disease"]]
 
 qux = plot_meth_hm(data, 
-  main=paste0("PrediMeth probes variation in ", data_type, "\n"), 
+  main=paste0(pred_gse, " probes variation in ", data_type, "\n"), 
   rsc=rsc                         , 
   csc=csc                         , 
   nb_grp_row=4                     ,
@@ -213,7 +243,7 @@ qux = plot_meth_hm(data,
 )
 
 qux = plot_meth_hm(data, 
-  main=paste0("PrediMeth probes variation in ", data_type, "\n"), 
+  main=paste0(pred_gse, " probes variation in ", data_type, "\n"), 
   rsc=rsc                         , 
   csc=csc                         , 
   nb_grp_row=4                     ,
@@ -234,7 +264,7 @@ qux = plot_meth_hm(data,
 
 # First graph 
 
-```{r first graph, eval = avail_control}
+```{r first graph}
 
 layout(matrix(c(6,3,3,5,5,2,1,1,4,4,2,1,1,4,4), nrow = 3, ncol = 5, byrow = TRUE), respect = TRUE)
 
@@ -323,7 +353,7 @@ legend("center", c("gain of methylation with age", "loss of methylation with age
 
 # Second Graph
 
-```{r second graph, eval = avail_control}
+```{r second graph}
 
 layout(matrix(c(4,3,3,2,1,1,2,1,1), nrow = 3, ncol = 3, byrow = TRUE), respect = TRUE)
 
@@ -375,7 +405,7 @@ legend("center", c("gain of methylation with age", "loss of methylation with age
 
 # Third graph 
 
-```{r third graph, eval = avail_control}
+```{r third graph}
 
 layout(matrix(c(6,3,3,5,5,2,1,1,4,4,2,1,1,4,4), nrow = 3, ncol = 5, byrow = TRUE), respect = TRUE)
 
@@ -453,7 +483,7 @@ legend("center", c("gain of methylation with age", "loss of methylation with age
 
 # GSEA 
 
-```{r gsea, eval = avail_control}
+```{r gsea}
 
 gsea_plot = function(grp_file, rnk_file, out_dir, cmd="/summer/epistorage/opt/GSEA_4.1.0/gsea-cli.sh", nperm=1000, RMOUTDIR=TRUE) {
   
@@ -527,22 +557,9 @@ info$pv_dw = info_gsea_dw$pv
 ```
 
 
-
-```{r regions genes, eval = avail_control}
-
-if(!file.exists("genes_all_predimeth_prom.rds")) {
-	annot = readRDS("annotations_pred_all.rds")
-	genes = annot$annot.symbol[annot$annot.type == "hg19_genes_promoters"]
-	genes = genes[!is.na(genes)]
-	genes = unique(genes)
-	saveRDS(genes, "genes_all_predimeth_prom.rds")
-}
-
-```
-
 # Process Information 
 
-```{r info, eval = avail_control}
+```{r info}
 
 info$stop_time = Sys.time()
 info$exec_time = round(difftime(info$stop_time, info$start_time, units="mins"),1)

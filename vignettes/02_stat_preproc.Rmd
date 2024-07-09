@@ -165,12 +165,13 @@ legend("topright", c("all", paste0("sd>", sd_thresh), paste0("sd<=", sd_thresh))
 **TODO**, adding description, what appends there?
 
 ```{r acp, results="verbatim"}
+if (!exists("PCA_REMOVE")) {PCA_REMOVE=TRUE}
 padj = 0
 covariate = covariates[1]
 s$exp_grp[,covariate] = as.factor(s$exp_grp[,covariate])
 levls = levels(s$exp_grp[,covariate])
 it=1
-while(sum(padj < 0.2) != 0) {
+while(PCA_REMOVE & sum(padj < 0.2) != 0) {
   print(paste0("******* iteration #", it, "..."))
   it = it+1
   mat = t(as.matrix(s$data[idx_cpg, idx_samples]))
