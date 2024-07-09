@@ -1,0 +1,1134 @@
+---
+title: "*PrediMeth*: Iterative Method for the Discovery of Health <u>Predi</u>ctor <u>Meth</u>ylated Loci"
+author: "Fabien Jossaud, Florent Chuffart"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+
+
+```{r echo=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide")
+info = list(start_time = Sys.time())
+source("common.R")
+stoda_locate <-
+function(gs,chrtss, col=2, ...){
+#   Takes a gene set gs as a vector of character strings.
+#   Takes a list chrtss of named numeric. Each element of the list gives
+#   the transciption starting sites of the genes inside a chromosome.
+#   Represents the genes in gs on the chromosomes.
+#   Computes and prints p-values for the following tests:
+#     - global: whether the proportions chromosomes match the global proportions 
+#     - local: whether the proportion in a given chromosome is large
+#     - distr: whether the distribution in a given chromosome is random.
+#
+chrn <- lapply(chrtss,names)                # get gene names
+chrm <- unlist(lapply(chrtss,max))          # get chromosome lengths
+chrl <- unlist(lapply(chrtss,length))       # genes in each chromosome
+chrp <- chrl/sum(chrl)                      # proportion in each chromosome
+mgchr <- unlist(lapply(chrn, function(v)    # for each chromosome
+           {length(intersect(gs,v))}))      # number of genes in chromosome
+mgtot <- sum(mgchr)                         # number of genes found
+mgt <- paste(as.character(mgtot)," probes",sep="")
+#-------------------------------------------- global test
+pp <- {suppressWarnings(                    # without warnings
+       chisq.test(mgchr,p=chrp)$p.value)}   # chi squared test
+ppt <- {format(pp,                          # format for printing
+   digits=3,scientific=TRUE)}               # 3 digits, scientific notation
+if(pp<1e-100){ppt <- "<1e-100"}
+#-------------------------------------------- local test
+n.1 <- chrl                                 # inside chr
+n.0 <- sum(chrl)-chrl                       # outside chrl
+n11 <- mgchr                                # inside gs, inside chr
+n1. <- sum(n11)                             # inside gs
+                                            # compute p-value vector
+pfe <- phyper(n11-1,n.1,n.0,n1.,lower.tail=FALSE)
+pfet <- {format(pfe,                        # format for printing
+   digits=3,scientific=TRUE)}               # 3 digits, scientific notation
+ind <- which(pfe<1e-100)
+pfet[ind] <- "<1e-100"
+#-------------------------------------------- distribution test
+pks <- unlist(lapply(chrn,function(chr){    # vector of p-values
+   dist <- which(chr%in%gs)                 # get ranks of genes in gs
+   if (length(dist>0)){                     # if any
+      dist <- dist/length(chr)              # normalize to (0,1)
+      pv <- ks.test(dist,punif)$p.value     # get KS p-value
+   }else{pv <- 1}
+   return(pv)}))
+pkst <- {format(pks,                        # format for printing
+   digits=3,scientific=TRUE)}               # 3 digits, scientific notation
+ind <- which(pks<1e-100)
+pkst[ind] <- "<1e-100"
+#-------------------------------------------- plot chromosomes
+mx <- max(chrm)                             # maximal length of a chromosome
+nbchr <- length(chrm)                       # number of chromosomes
+xlim <- mx*c(-0.15,1.4)                     # bounds for graphics
+ylim <- c(1,nbchr*1.1)
+X <- rbind(rep(1,nbchr),chrm)               # make matrix of abscissas
+Y <- rbind(rev(1:nbchr),rev(1:nbchr))       # make matrix of ordinates
+{matplot(X,Y,type="l",lty=1,col="black",    # plot horizontal lines
+    xlim=xlim,ylim=ylim,
+    xlab = "base pairs",
+    ylab = "chromosomes",
+    axes=FALSE,frame.plot=TRUE,...)}
+a1 <- axis(1,labels=FALSE,col="white")      # get ticks
+box(lty=1,col="black")                      # restore frame
+axis(1,at=a1[1:(length(a1)-1)])             # plot new axis
+X <- rep(mx*(-0.2),nbchr)                   # abscissas for text
+Y <- Y[1,]                                  # ordinates for text
+{text(X,Y,labels=names(chrm),               # write chromosome names
+     col="black",cex=1,pos=4)}
+mtext(mgt)                                  # write number of genes
+#-------------------------------------------- write chi-squared test p-value
+x <- mx*0.48; y <- nbchr*1.08               # coordinates for graphic
+text(x,y,labels="global: ")
+if(pp<0.05){colpv="red"}else{colpv="black"}     # red if significant
+x <- mx*0.55                                # global test p-value
+text(x,y,labels=ppt,col=colpv,pos=4)
+#-------------------------------------------- write FE p-values
+x <- mx*1.04
+text(x,y,labels="local",pos=4)
+colpv <- rep("black",nbchr)                   # initialize color to black
+colpv[pfe<0.05] <- "red"                      # red for significant p-values
+X <- rep(mx*1,nbchr)                        # abscissas for text
+{text(X,Y,labels=pfet,                      # write p-values
+     col=colpv,cex=0.9,pos=4)}
+#-------------------------------------------- write KS p-values
+x <- mx*1.29
+text(x,y,labels="distr",pos=4)
+colpv <- rep("black",nbchr)                   # initialize color to black
+colpv[pks<0.05] <- "red"                      # red for significant p-values
+X <- rep(mx*1.25,nbchr)                     # abscissas for text
+{text(X,Y,labels=pkst,                      # write p-values
+     col=colpv,cex=0.9,pos=4)}
+#-------------------------------------------- plot locations
+lsv <- lapply(chrtss,function(lv){          # for each tss vector
+   return(lv[names(lv)%in%gs])})            # locations of genes in gs
+for (i in 1:nbchr){                         # for each chromosome
+   glv <- lsv[[i]]                          # gene locations on that chomosome
+   nglv <- length(glv)                      # number of genes on that chromosome
+   if (nglv>0){                             # if any gene of v for that chromosome
+      X <- rbind(glv,glv)                   # abscissas
+      Y <- rep(nbchr+1-i,nglv)
+      Y <- rbind(Y,Y+0.4)                   # ordinates
+      {matlines(X,Y,type="l",lty=1,         # plot ticks at gene positions
+          col=col)}                       # in red
+   }                                        # end if
+}                                           # end for
+#-------------------------------------------- results
+res <- list(global=pp,local=pfe,distr=pks)
+return(res)
+}
+
+# source("gses.R")
+```
+
+```{r params}
+source("params_default.R")
+```
+
+```
+gse = "GSE42861"; rmarkdown::render("05_enrichment.Rmd", output_file=paste0("05_enrichment_", gse, ".html"))
+gse = "GSE40279"; rmarkdown::render("05_enrichment.Rmd", output_file=paste0("05_enrichment_", gse, ".html"))
+gse = "GSE87571"; rmarkdown::render("05_enrichment.Rmd", output_file=paste0("05_enrichment_", gse, ".html"))
+gse = "GSE147740"; rmarkdown::render("05_enrichment.Rmd", output_file=paste0("05_enrichment_", gse, ".html"))
+gse = "GSE152026"; rmarkdown::render("05_enrichment.Rmd", output_file=paste0("05_enrichment_", gse, ".html"))
+```
+
+```{r inputs}
+if (!exists("gse"))             gse = "GSE42861"  ;
+if (!exists("model_formula"))   model_formula = paste0("meth~", y_key)  ;
+if (!exists("model_func_name")) model_func_name = "modelcalllm"         ;
+if (file.exists(paste0(model_func_name, ".R"))) {
+  source(paste0(model_func_name, ".R"))
+}
+study_filename = paste0("./datashare/", gse, "/study_preproc_", gse, ".rds")
+
+if (!exists("newas"))           newas = "1000000"                            ;
+if (!exists("neighb"))          neighb = "1000"                           ;
+
+bed_ewas_filename = paste0("ewas4combp_", gse, "_", model_func_name, "_", model_formula, ".bed")
+rds_ewas_filename = paste0("ewas_", gse, "_", model_func_name, "_", model_formula, ".rds")
+study_filename = paste0("~/projects/datashare/", gse, "/study_preproc_", gse, "_", model_func_name, "_", model_formula, "_ewas", newas, "_nn", neighb, ".rds")
+s = mreadRDS(study_filename)
+ewas = mreadRDS(rds_ewas_filename)
+```
+
+# Plateform
+
+```{r platform}
+s = mreadRDS(study_filename)
+if (s$platform_name %in% c("GPL13534")) {
+  library(IlluminaHumanMethylation450kanno.ilmn12.hg19)
+  pf450k = data.frame(getAnnotation(IlluminaHumanMethylation450kanno.ilmn12.hg19))
+  pforig = pf450k  
+} else {
+  library(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
+  pfepic = data.frame(getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b4.hg19))
+  pforig = pfepic
+} 
+```
+
+```{r fat_feat}
+# HERE ALGO FAT_FEAT
+get_fat_feats = function(pf, pf_chr_colname, pf_pos_colname, extend_region_dist) {
+  table(pf[,pf_chr_colname], useNA="always")
+  # pf = pf[pf[,pf_pos_colname]>0,]
+  # pf = pf[order(pf[[pf_chr_colname]],pf[[pf_pos_colname]]), ]
+  ## index meth probes by chr
+  chrs = unique(pf[[pf_chr_colname]])
+  chrs_indexed_methpf = lapply(chrs, function(chr) {
+      print(chr)
+      idx = rownames(pf)[!is.na(pf[[pf_chr_colname]]) & pf[[pf_chr_colname]]==chr]
+      ret = pf[idx,]
+      return(ret)
+  })
+  names(chrs_indexed_methpf) = chrs
+
+  fat_feats = lapply(unique(pf[,pf_chr_colname]), function(chr) {
+    d = pf[pf[,pf_chr_colname]==chr,c(pf_chr_colname, pf_pos_colname)]
+    i = intervals::Intervals(c(d[,2], d[,2]+1), type="Z")
+    # enlarge your fat feat
+    l = extend_region_dist
+    c = intervals::close_intervals( intervals::contract( intervals::reduce(intervals::expand(i, l)), l) )
+    dim(c)
+    df = data.frame(chr, c[,1], c[,2])
+    return(df)
+  })
+  fat_feats = do.call(rbind, fat_feats)
+  dim(fat_feats)
+  fat_feats[,4] = paste0(fat_feats[,1], ":", fat_feats[,2], "-", fat_feats[,3])
+  fat_feats[,5] = fat_feats[,3] - fat_feats[,2]
+  fat_feats[,6] = "+"
+  # fat_feats = fat_feats[fat_feats[,5]>1,]
+  rownames(fat_feats) = fat_feats[,4]
+  colnames(fat_feats)  = c("chr", "start", "end", "id", "score", "strand")
+  dim(fat_feats)
+  head(fat_feats)
+
+  ## index probes by feat name
+  print("# indexing probes by feat name")
+  fat_feats_indexed_probes = epimedtools::monitored_apply(fat_feats, 1, function(feat) {
+    # feat = fat_feats[3,]
+    # print(feat)
+    chr = feat[[1]]
+    len = as.numeric(feat[[5]])
+    meth_platform = chrs_indexed_methpf[[chr]]
+    ret = dmprocr_get_probe_names(feat, meth_platform, pf_chr_colname, pf_pos_colname, 0, len)
+    # meth_platform[ret,1:3]
+    # feat
+    return(ret)
+  })
+
+  sum(rownames(fat_feats) != names(fat_feats_indexed_probes))
+
+  fat_feats$probes = fat_feats_indexed_probes
+  fat_feats$n_probes = sapply(fat_feats_indexed_probes, length) 
+  return(fat_feats)
+}
+if (!exists("mget_fat_feats")) {mget_fat_feats = memoise::memoise(get_fat_feats)}
+
+pf = pforig
+pf_chr_colname = 1 
+pf_pos_colname = 2
+extend_region_dist = 1000/2 - 1
+fat_feats = mget_fat_feats(pf, pf_chr_colname, pf_pos_colname, extend_region_dist) 
+head(fat_feats)
+dim(fat_feats)
+
+
+# foo = mepimedtools_monitored_apply(mod=5000, fat_feats, 1, function(ff) {
+#   data.frame(names=ff$id, probes=ff$probes)
+# })
+# foo = do.call(rbind, foo)
+# head(foo)
+# rownames(foo) = foo$probes
+# dim(foo)
+# dim(pf)
+# pf$ff_1000 = foo[rownames(pf),]$names
+# head(pf)
+layout(matrix(1:2,1), respect=TRUE)
+breaks = c(0, 100, 200, 300, 500, 1000, 2000, 3000, 5000, 10000, 20000, 30000, 50000, 100000, 200000, 50000000)
+breaks = c(breaks[breaks<max(fat_feats$score)], max(fat_feats$score))
+barplot(table(cut(fat_feats$score, breaks=breaks, include.lowest=TRUE)), las=2,main="locus length distribution")
+barplot(table(cut(fat_feats$score[fat_feats$score>1], breaks=breaks, include.lowest=TRUE)), las=2,main="locus length distribution")
+```
+
+
+# RepeatMasker
+
+```{r repeatmasker, eval=TRUE}
+# https://zenbu-wiki.gsc.riken.jp/zenbu/wiki/index.php/Uploading_UCSC_repetitive_elements_track
+# downloading UCSC rmsk data as BED
+# BED formatted UCSC track content can be obtained from UCSC table broswer.
+# The rmsk RepeatMasker (rmsk) track can be exported as BED file by selecting
+#
+# the assembly "Feb.2009 GRCh37/hg19"
+# the group "repeats and variations"
+# the track "RepeatMasker"
+# and finally the table "rmsk"
+# As we desire the complete repetitive elements genome-wide to be loaded into ZENBU, therefore we select
+#
+# region: "genome"
+# ZENBU enable gzip compressed bed files to be loaded directly, so we will further select :
+#
+# output format: "BED - browser extensible data"
+# output file: we will name the file "UCSC_rmsk.hg19.bed.gz"
+# file type returned: "gzip compressed"
+
+rmsk = mreadtablegz("~/projects/datashare/genomes/Homo_sapiens/UCSC/hg19/UCSC_rmsk.hg19.bed.gz", skip=1, stringsAsFactors=FALSE)
+head(rmsk)
+dim(rmsk)
+
+head(pf[,1:6])
+dim(pf)
+pfbed = pf[,1:6]
+pfbed[,6] = pfbed[,3]
+pfbed[,3] = pfbed[,2]+1
+pfbed[,5] = 1
+# pfbed[,7] = pf$Forward_Sequence
+colnames(pfbed)[6] = "strand"
+colnames(pfbed)[3] = "end"
+colnames(pfbed)[5] = "score"
+# colnames(pfbed)[7] = "Forward_Sequence"
+head(pfbed)
+tmp_pfbed_filename = "tmp_pfbed.bed"
+print(tmp_pfbed_filename)
+write.table(pfbed, file=tmp_pfbed_filename, sep="\t", quote=FALSE, row.names=FALSE, col.names=FALSE)
+pf_regions = annotatr::read_regions(con=tmp_pfbed_filename, genome="hg19", format="bed")
+
+if (!exists("annotations_rmsk")) {
+  # annots = c("mm10_lncrna_gencode")
+  # annots = c('mm10_cpgs', 'mm10_basicgenes', "mm10_lncrna_gencode", "mm10_enhancers_fantom")
+  # annots = c('mm10_cpgs', 'mm10_basicgenes', "mm10_enhancers_fantom")
+  # annots = c( 'mm10_basicgenes', 'mm10_cpgs')
+  # write.table(rmsk[rmsk[,4]=="GSAT_MM",]  , file="gsat.mm10.bed"  , sep="\t", quote=FALSE,row.names=FALSE, col.names=FALSE)
+  # write.table(rmsk[rmsk[,4]=="SYNREP_MM",], file="synrep.mm10.bed", sep="\t", quote=FALSE,row.names=FALSE, col.names=FALSE)
+  write.table(pfbed[grep("TTC[CG]GAA", pf[pfbed[,4],]$Forward_Sequence, fixed=TRUE),] , file="ttc[cg]gaa.hg19.bed", sep="\t", quote=FALSE,row.names=FALSE, col.names=FALSE)
+  write.table(rmsk[grep("AATGG|ATGGA|ATTCC|CATTC|GAATG|TCCAT|TGGAA", rmsk[,4]),]      , file="ggaat.hg19.bed"     , sep="\t", quote=FALSE,row.names=FALSE, col.names=FALSE)
+  write.table(rmsk[grep("LTR", rmsk[,4]),]                                            , file="ltr.hg19.bed"       , sep="\t", quote=FALSE,row.names=FALSE, col.names=FALSE)
+  write.table(rmsk[grep("ALR/Alpha", rmsk[,4]),]                                      , file="alralpha.hg19.bed"  , sep="\t", quote=FALSE,row.names=FALSE, col.names=FALSE)
+  write.table(rmsk[grep("line", rmsk[,4], ignore.case=TRUE),]                         , file="line.hg19.bed"      , sep="\t", quote=FALSE,row.names=FALSE, col.names=FALSE)
+  write.table(rmsk[grep("sine", rmsk[,4], ignore.case=TRUE),]                         , file="sine.hg19.bed"      , sep="\t", quote=FALSE,row.names=FALSE, col.names=FALSE)
+  write.table(rmsk[grep("alu", rmsk[,4], ignore.case=TRUE),]                          , file="alu.hg19.bed"       , sep="\t", quote=FALSE,row.names=FALSE, col.names=FALSE)
+  annots_bed_files = c(
+    "ttc[cg]gaa.hg19.bed",
+    "ggaat.hg19.bed"     ,
+    "ltr.hg19.bed"       ,
+    "alralpha.hg19.bed"  ,
+    "line.hg19.bed"      ,
+    "sine.hg19.bed"      ,
+    "alu.hg19.bed"       ,
+    NULL    
+  )
+  annots = sapply(gsub(".hg19.bed", "", annots_bed_files, fixed=TRUE), function(tag) {
+    print(tag)
+    annotatr::read_annotations(con=paste0(tag, ".hg19.bed"), genome = "hg19", name = tag   , format = "bed")    
+    paste0("hg19_custom_", tag)
+  })
+  annots = c(annots, "hg19_basicgenes", "hg19_cpgs")
+  annotations_rmsk = annotatr::build_annotations(genome = 'hg19', annotations = annots)
+}
+
+probes_annotated = annotatr::annotate_regions(
+    regions = pf_regions,
+    annotations = annotations_rmsk,
+    ignore.strand = TRUE,
+    quiet = FALSE)
+# A GRanges object is returned
+df_probes_annotated = data.frame(probes_annotated)
+# dedup
+# df_probes_annotated$annot.type = factor(df_probes_annotated$annot.type, levels=paste0(genome, c("_genes_promoters", "_genes_1to5kb", "_genes_5UTRs", "_genes_exons", "_genes_introns", "_genes_3UTRs")))
+table(df_probes_annotated$annot.type)
+dim(df_probes_annotated)
+```
+
+
+
+
+
+
+# Ewas 
+
+```{r ewas}
+s = mreadRDS(study_filename)
+ewas = mreadRDS(rds_ewas_filename)
+ewas = data.frame(ewas)
+
+ewas$mean = mepimedtools_monitored_apply(mod=10000, s$data, 1, mean)[rownames(ewas)]
+head(ewas)
+dim(ewas)
+
+
+
+layout(matrix(1:2, 1), respect=TRUE)
+smoothScatter(ewas$beta, ewas$lpv)
+tmp_idx = abs(ewas$beta)>0.0003 | ewas$lpv>3
+sum(tmp_idx)
+smoothScatter(ewas[tmp_idx,]$beta, ewas[tmp_idx,]$lpv)
+
+# plot(ewas$beta, ewas$lpv , col=adjustcolor(1, alpha.f=.005), pch=16)
+# plot(ewas$beta, ewas$mean, col=adjustcolor(1, alpha.f=.005), pch=16)
+# abline(v=0, col=2)
+
+plot(ewas$beta, ewas$lpv , pch=".")
+plot(ewas$beta, ewas$mean, pch=".")
+abline(v=0, col=2)
+
+plot(ewas[tmp_idx,]$beta, ewas[tmp_idx,]$lpv , pch=".")
+plot(ewas[tmp_idx,]$beta, ewas[tmp_idx,]$mean, pch=".")
+abline(v=0, col=2)
+```
+
+# GSEA 
+
+```{r gsea}
+gsea_input = cbind(rownames(ewas), ewas$beta)
+head(gsea_input)
+dim(gsea_input)
+gsea_input_filename = paste0("gsea_input_", gse, ".rnk")
+print(paste("gsea_input were exported in", gsea_input_filename, "file."))
+write.table(gsea_input, gsea_input_filename, sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
+
+
+for (tag in unique(df_probes_annotated$annot.type)) {
+  print(tag)
+  tmp_probes = unique(df_probes_annotated[df_probes_annotated$annot.type == tag,]$name)
+  print(length(tmp_probes))
+  write.table(tmp_probes, quote=FALSE, row.names=FALSE, col.names=FALSE, paste0(tag, ".grp"))
+  cmd = "/Applications/GSEA_4.1.0/gsea-cli.sh"
+  arg = paste0("GSEAPreranked -gmx ", tag ,".grp -collapse No_Collapse -mode Max_probe -norm meandiv -nperm 1000 -rnk gsea_input_", gse, ".rnk -scoring_scheme weighted -rpt_label ", tag ," -create_svgs false -include_only_symbols true -make_sets true -plot_top_x 20 -rnd_seed 1 -set_max 1000 -set_min 15 -zip_report false -out gsea_out_", gse, "")
+  # system2(cmd, arg)
+}
+```
+
+
+# PrediMeth
+
+```{r predimeth_probes, fig.height=9}
+predimeth_probes = read.table(paste0("predimeth_probes_", gse, "_10.bed"), comment="@", header=TRUE)
+rownames(predimeth_probes) = predimeth_probes[,4]
+head(predimeth_probes)
+probes_oi = rownames(predimeth_probes)
+
+s = mreadRDS(study_filename)
+
+idx_samples = rownames(s$exp_grp)[order(s$exp_grp[, y_key])]
+data = s$data[probes_oi,idx_samples]
+
+foo = plot_meth_hm(data,
+  main=paste0("PrediMeth probes variation (", gse, ")\n"), 
+  rsc=NULL                         , 
+  csc=NULL                         , 
+  nb_grp_row=4                     ,
+  nb_grp_col=4                     , 
+  hcmeth_cols=FALSE                , 
+  hcmeth_rows="cor"                , 
+  normalization="zscore_rows"      ,
+  # normalization=FALSE              ,
+  ordering_func=median             , 
+  colors=c("cyan", "black", "red") , 
+  range_exp=c(-3,3)                ,
+  PCA=FALSE                        
+)
+
+
+up_probes = dw_probes = cutree(foo$hc_row,2)
+up_probes = names(up_probes)[up_probes==2]
+dw_probes = names(dw_probes)[dw_probes==1]
+
+features = predimeth_probes
+dim(features)
+chrtss = unique(features[,1])
+names(chrtss) = chrtss
+chrtss = as.list(chrtss)
+chrtss = sapply(names(chrtss), function(chr) {
+  idx = features[,1]==chr
+  ret = features[idx,2]
+  names(ret) = rownames(features)[idx]
+  ret
+})
+chrtss = chrtss[order(as.numeric(substr(names(chrtss),4, 1000)))]
+
+layout(matrix(1:2, 1), respect=TRUE)
+features = predimeth_probes[up_probes,]
+gs = rownames(features)
+stoda_locate(gs, chrtss[-(23:24)], col=2)
+features = predimeth_probes[dw_probes,]
+gs = rownames(features)
+stoda_locate(gs, chrtss[-(23:24)], col=4)
+
+
+
+predimeth_probes$up_dw_probes = NA
+predimeth_probes[up_probes,]$up_dw_probes = "UP"
+predimeth_probes[dw_probes,]$up_dw_probes = "DW"
+
+data = s$data[up_probes,idx_samples]
+bar = plot_meth_hm(data,
+  main=paste0("PrediMeth probes variation (", gse, ")\n"), 
+  rsc=NULL                         , 
+  csc=NULL                         , 
+  nb_grp_row=4                     ,
+  nb_grp_col=4                     , 
+  hcmeth_cols=FALSE                , 
+    hcmeth_rows="cor"                , 
+  normalization="zscore_rows"      ,
+  # normalization=FALSE              ,
+  ordering_func=median             , 
+  colors=c("cyan", "black", "red") , 
+  range_exp=c(-3,3)                ,
+  PCA=FALSE                        
+)
+
+baz = plot_meth_hm(data,
+  main=paste0("PrediMeth probes values (", gse, ")\n"), 
+  rsc=NULL                         , 
+  csc=NULL                         , 
+  nb_grp_row=4                     ,
+  nb_grp_col=4                     , 
+  hcmeth_cols=FALSE                , 
+  hcmeth_rows="eucl_dist"          , 
+  # normalization="raw"              ,
+  normalization=FALSE              ,
+  ordering_func=median             , 
+  colors=c("cyan", "black", "red") , 
+  # range_exp=c(-3,3)                ,
+  PCA=FALSE                        
+)
+
+tmp_idx_probes = rev(baz$hc_row$labels[baz$hc_row$order])
+
+qux = plot_meth_hm(data[tmp_idx_probes,],
+  main=paste0("PrediMeth probes values (", gse, ")\n"), 
+  rsc=NULL                         , 
+  csc=NULL                         , 
+  nb_grp_row=4                     ,
+  nb_grp_col=4                     , 
+  hcmeth_cols=FALSE                , 
+  hcmeth_rows=FALSE          , 
+  # normalization="raw"              ,
+  normalization=FALSE              ,
+  ordering_func=median             , 
+  colors=c("cyan", "black", "red") , 
+  # range_exp=c(-3,3)                ,
+  PCA=FALSE                        
+)
+
+s2 = mreadRDS("~/projects/datashare/GSE213478/study_preproc_GSE213478.rds")
+idx_samples = rownames(s2$exp_grp)[order(s2$exp_grp$tissue, s2$exp_grp$age)]
+s2$exp_grp[idx_samples, c("tissue", "age")]
+data = s2$data[intersect(tmp_idx_probes, rownames(s2$data)),idx_samples]
+
+qux = plot_meth_hm(data,
+  main=paste0("PrediMeth probes variation (", gse, ")\n"), 
+  rsc=NULL                         , 
+  csc=NULL                         , 
+  nb_grp_row=4                     ,
+  nb_grp_col=4                     , 
+  hcmeth_cols=FALSE                , 
+  hcmeth_rows=FALSE                , 
+  # normalization="zscore_rows"      ,
+  normalization=FALSE              ,
+  ordering_func=median             , 
+  colors=c("cyan", "black", "red") , 
+  range_exp=c(-3,3)                ,
+  PCA=FALSE                        
+)
+
+
+
+idx_samples = rownames(s$exp_grp)[order(s$exp_grp[, y_key])]
+data = s$data[dw_probes,idx_samples]
+bar = plot_meth_hm(data,
+  main=paste0("PrediMeth probes variation (", gse, ")\n"), 
+  rsc=NULL                         , 
+  csc=NULL                         , 
+  nb_grp_row=4                     ,
+  nb_grp_col=4                     , 
+  hcmeth_cols=FALSE                , 
+    hcmeth_rows="cor"                , 
+  normalization="zscore_rows"      ,
+  # normalization=FALSE              ,
+  ordering_func=median             , 
+  colors=c("cyan", "black", "red") , 
+  range_exp=c(-3,3)                ,
+  PCA=FALSE                        
+)
+
+baz = plot_meth_hm(data,
+  main=paste0("PrediMeth probes values (", gse, ")\n"), 
+  rsc=NULL                         , 
+  csc=NULL                         , 
+  nb_grp_row=4                     ,
+  nb_grp_col=4                     , 
+  hcmeth_cols=FALSE                , 
+  hcmeth_rows="eucl_dist"          , 
+  # normalization="raw"              ,
+  normalization=FALSE              ,
+  ordering_func=median             , 
+  colors=c("cyan", "black", "red") , 
+  # range_exp=c(-3,3)                ,
+  PCA=FALSE                        
+)
+
+tmp_idx_probes = rev(baz$hc_row$labels[baz$hc_row$order])
+
+qux = plot_meth_hm(data[tmp_idx_probes,],
+  main=paste0("PrediMeth probes values (", gse, ")\n"), 
+  rsc=NULL                         , 
+  csc=NULL                         , 
+  nb_grp_row=4                     ,
+  nb_grp_col=4                     , 
+  hcmeth_cols=FALSE                , 
+  hcmeth_rows=FALSE          , 
+  # normalization="raw"              ,
+  normalization=FALSE              ,
+  ordering_func=median             , 
+  colors=c("cyan", "black", "red") , 
+  # range_exp=c(-3,3)                ,
+  PCA=FALSE                        
+)
+
+s2 = mreadRDS("~/projects/datashare/GSE213478/study_preproc_GSE213478.rds")
+idx_samples = rownames(s2$exp_grp)[order(s2$exp_grp$tissue, s2$exp_grp$age)]
+s2$exp_grp[idx_samples, c("tissue", "age")]
+data = s2$data[intersect(tmp_idx_probes, rownames(s2$data)),idx_samples]
+
+qux = plot_meth_hm(data,
+  main=paste0("PrediMeth probes variation (", gse, ")\n"), 
+  rsc=NULL                         , 
+  csc=NULL                         , 
+  nb_grp_row=4                     ,
+  nb_grp_col=4                     , 
+  hcmeth_cols=FALSE                , 
+  hcmeth_rows=FALSE                , 
+  # normalization="zscore_rows"      ,
+  normalization=FALSE              ,
+  ordering_func=median             , 
+  colors=c("cyan", "black", "red") , 
+  range_exp=c(-3,3)                ,
+  PCA=FALSE                        
+)
+```
+
+## *vs.* Ewas
+
+```{r predimeth_vs_ewas, eval=TRUE, fig.height=9}
+layout(matrix(1:4, 2), respect=TRUE)
+smoothScatter(ewas$beta, ewas$lpv)
+points(ewas[probes_oi,]$beta, ewas[probes_oi,]$lpv, col=adjustcolor(2, alpha.f=.3))
+smoothScatter(ewas$beta, ewas$mean, pch=".")
+points(ewas[probes_oi,]$beta, ewas[probes_oi,]$mean, co=adjustcolor(2, alpha.f=.3))
+
+foo = ewas[order(ewas$beta),]
+plot(foo$beta, col=1, pch=".")
+tmp_idx = intersect(rownames(foo), probes_oi)
+points(which(rownames(foo) %in% tmp_idx), foo[tmp_idx,]$beta, col=2)
+abline(v=which(rownames(foo) %in% probes_oi), col=adjustcolor(2, alpha.f=.3))
+plot(which(rownames(foo) %in% tmp_idx), predimeth_probes[tmp_idx,]$score, col=adjustcolor(2, alpha.f=.3), xlab="Index", ylab="run")
+```
+
+
+```{r eval=FALSE}
+ewas = mreadRDS(rds_ewas_filename)
+ewas = data.frame(ewas)
+
+layout(matrix(1:4, 2), respect=TRUE)
+foo = ewas[order(ewas$beta),]
+plot(foo$beta, col=1, pch=".")
+tmp_idx = intersect(rownames(foo), probes_oi)
+points(which(rownames(foo) %in% tmp_idx), foo[tmp_idx,]$beta, col=2)
+abline(v=which(rownames(foo) %in% probes_oi), col=adjustcolor(2, alpha.f=.3))
+plot(which(rownames(foo) %in% tmp_idx), predimeth_probes[tmp_idx,]$score, col=adjustcolor(2, alpha.f=.3), xlab="Index", ylab="run")
+
+foo = ewas[order(ewas$beta),]
+plot(foo$beta, col=1, pch=".")
+# Published in Advance March 11, 2021, doi:10.1101/gr.269233.120 Genome Res. 2021. 31: 747-761
+bar = openxlsx::read.xlsx("Supplemental_Tables_S1_S2_S8-11.xlsx", sheet=1, colNames=TRUE, startRow=2)
+tmp_idx = intersect(rownames(foo), bar[,1])
+points(which(rownames(foo) %in% tmp_idx), foo[tmp_idx,]$beta, col=2)
+abline(v=which(rownames(foo) %in% tmp_idx), col=adjustcolor(2, alpha.f=.3))
+plot(which(rownames(foo) %in% tmp_idx), predimeth_probes[tmp_idx,]$score, col=adjustcolor(2, alpha.f=.3), xlab="Index", ylab="run")
+
+
+layout(matrix(1:10,2), respect=TRUE)
+s = mreadRDS(study_filename)
+m_gl  = epimedtools::monitored_apply(mod=5000, s$data, 1, mean, na.rm=TRUE)
+m_gl = m_gl[!is.na(m_gl)]
+s$data = s$data[names(m_gl),]
+sd_gl = epimedtools::monitored_apply(mod=5000, s$data, 1, sd  , na.rm=TRUE)
+tmp_idx = intersect(rownames(s$data), rownames(predimeth_probes))
+m_pm  = apply(s$data[tmp_idx, ], 1, mean, na.rm=TRUE)
+sd_pm = apply(s$data[tmp_idx, ], 1, sd  , na.rm=TRUE)
+plot(density(m_gl))
+lines(density(m_pm), col=2)
+plot(density(sd_gl))
+lines(density(sd_pm), col=2)
+for (kc in c("LAML", "BRCA", "LUAD", "LUSC")) {
+  s = readRDS(paste0("~/projects/tcga_studies/study_TCGA-", kc, "_meth.rds"))
+  m_gl  = epimedtools::monitored_apply(mod=5000, s$data, 1, mean, na.rm=TRUE)
+  m_gl = m_gl[!is.na(m_gl)]
+  s$data = s$data[names(m_gl),]
+  sd_gl = epimedtools::monitored_apply(mod=5000, s$data, 1, sd  , na.rm=TRUE)
+  tmp_idx = intersect(rownames(s$data), rownames(predimeth_probes))
+  m_pm  = apply(s$data[tmp_idx, ], 1, mean, na.rm=TRUE)
+  sd_pm = apply(s$data[tmp_idx, ], 1, sd  , na.rm=TRUE)
+  plot(density(m_gl), main=kc)
+  lines(density(m_pm), col=2)
+  plot(density(sd_gl))
+  lines(density(sd_pm), col=2)
+  rm("s")
+}
+
+
+```
+
+## Loci
+
+
+```{r predimeth_loci}
+pf = pforig[rownames(predimeth_probes),]
+pf_chr_colname = 1 
+pf_pos_colname = 2
+extend_region_dist = 1000/2 - 1
+predimeth_fat_feats = mget_fat_feats(pf, pf_chr_colname, pf_pos_colname, extend_region_dist) 
+head(predimeth_fat_feats)
+dim(predimeth_fat_feats)
+
+
+# foo = mepimedtools_monitored_apply(mod=5000, predimeth_fat_feats, 1, function(ff) {
+#   data.frame(names=ff$id, probes=ff$probes)
+# })
+# foo = do.call(rbind, foo)
+# head(foo)
+# rownames(foo) = foo$probes
+# dim(foo)
+# dim(pf)
+# pf$ff_1000 = foo[rownames(pf),]$names
+# head(pf)
+
+breaks = c(0, 1,  100, 200, 300, 500, 1000, 2000, 3000, 5000, 10000, 20000, 30000, 50000, 100000, 200000, 50000000)
+breaks = c(breaks[breaks<max(predimeth_fat_feats$score)], max(predimeth_fat_feats$score))
+barplot(table(cut(predimeth_fat_feats$score, breaks=breaks, include.lowest=TRUE)), las=2,main="locus length distribution")
+barplot(table(cut(predimeth_fat_feats$score[predimeth_fat_feats$score>1], breaks=breaks, include.lowest=TRUE)), las=2,main="locus length distribution")
+
+layout(matrix(1:2,1), respect=TRUE)
+barplot(table(predimeth_fat_feats$n_probes), las=2, main="locus #probes distribution")
+barplot(table(predimeth_fat_feats[predimeth_fat_feats$n_probes>1,]$n_probes), las=2, main="locus #probes distribution")
+
+layout(matrix(1:2,1), respect=TRUE)
+barplot(table(predimeth_fat_feats[predimeth_fat_feats$n_probes>2,]$n_probes), las=2, main="locus #probes distribution")
+plot(predimeth_fat_feats$score, predimeth_fat_feats$n_probes, xlab="length (bp)", ylab="#probes")
+text(predimeth_fat_feats$score, predimeth_fat_feats$n_probes, rownames(predimeth_fat_feats), pos=3, cex=.4)
+```
+
+### Results
+```{r results="verbatim"}
+foo = predimeth_fat_feats[predimeth_fat_feats$n_probes>=4,]
+foo = foo[rev(order(foo$n_probes)),c("score", "n_probes")]
+print(foo)
+```
+# CGI
+
+
+```{r}
+foo = do.call(rbind,strsplit(names(table(pfepic$Islands_Name)), ":|-"))[, 2:3]
+barplot(table(cut(as.numeric(foo[,2]) - as.numeric(foo[,1]), breaks=c((0:20)*100,100000) )), las=2)
+```
+
+# Isolated probes
+
+```{r predimeth_probes_isolated, echo=TRUE, results="verbatim"}
+pf = pforig
+predimeth_probes_isolated = rownames(predimeth_probes[unlist(fat_feats[intersect(rownames(predimeth_fat_feats[predimeth_fat_feats$n_probes==1,]), rownames(fat_feats)),]$probes),])
+probes_isolated           = rownames(pf[unlist(fat_feats[rownames(fat_feats[fat_feats$n_probes==1,]),]$probes),])
+length(predimeth_probes_isolated)
+length(probes_isolated)
+saveRDS(predimeth_probes_isolated, paste0("predimeth_probes_isolated_", gse, ".rds"))
+```
+
+```{r chi2, results="verbatim", eval=FALSE}
+cn = c(
+  "Enhancer"                   ,
+  "DHS"                        ,
+  NULL  
+)
+pf_iso = pf[probes_isolated,cn]
+head(pf_iso)
+dim(pf_iso)
+for (tag in cn) {
+  print(paste0("*******************", tag))
+  print(table(pf_iso[predimeth_probes_isolated,][,tag]))
+  print(table(pf_iso[probes_isolated,tag]))
+  a = table(pf[predimeth_probes_isolated,tag])[1]
+  b = table(pf[predimeth_probes_isolated,tag])[2]
+  c = table(pf[probes_isolated,tag])          [1]
+  d = table(pf[probes_isolated,tag])          [2]
+  mat = matrix(c(a,b,c,d),2,2, byrow=TRUE)
+  mat
+  test = chisq.test(mat, correct=FALSE)
+  if (test$p.value<0.05) {
+    print(test)
+    print(prop.table(table(pf[probes_isolated,tag])))
+    print(prop.table(table(pf[predimeth_probes_isolated,tag])))
+  }
+}
+```
+
+
+```{r eval=FALSE}
+fat_feat_oi = fat_feat[unique(pf[probes_oi,]$fat_feat_1000),]
+isolated_probes_oi =  as.vector(unlist(fat_feat_oi[fat_feat_oi$n_probes==1,]$probes))
+notisolated_probes_oi =  setdiff(probes_oi, isolated_probes_oi)
+isolated_probes =  as.vector(unlist(fat_feat[fat_feat$n_probes==1,]$probes))
+notisolated_probes_oi =  setdiff(probes_oi, isolated_probes_oi)
+
+# tags = c(
+# "alralpha",
+# "alu"     ,
+# "line"    ,
+# "sine"
+# )
+#
+# for (tag in tags) {
+#   pf[,tag] = ""
+#   pf[df_probes_annotated[df_probes_annotated$annot.type == paste0("hg19_custom_", tag)    ,]$name,tag]     = tag
+#   print(tag)
+#   print(prop.table(table(pf[         ,tag])))
+#   print(prop.table(table(pf[probes_oi,tag])))
+# }
+
+
+
+
+tags = c(
+"hg19_custom_alralpha",
+"hg19_custom_alu"     ,
+"hg19_custom_line"    ,
+"hg19_custom_sine"    ,
+"hg19_cpg_inter"      , 
+"hg19_cpg_islands"    , 
+"hg19_cpg_shelves"    , 
+"hg19_cpg_shores"     , 
+"hg19_genes_1to5kb"   , 
+"hg19_genes_3UTRs"    , 
+"hg19_genes_5UTRs"    , 
+"hg19_genes_exons"    , 
+"hg19_genes_introns"  , 
+"hg19_genes_promoters"
+)
+
+for (tag in tags) {
+  pf[,tag] = "" 
+  pf[df_probes_annotated[df_probes_annotated$annot.type == tag    ,]$name,tag]     = tag    
+  print(tag)
+  a = table(pf[         ,tag])[1]
+  b = table(pf[         ,tag])[2]
+  c = table(pf[probes_oi,tag])[1]
+  d = table(pf[probes_oi,tag])[2]
+  test = chisq.test(matrix(c(a,b,c,d),2,2, byrow=TRUE), correct=FALSE)
+  if (test$p.value<0.05) {
+    print(test)
+    print(prop.table(table(pf[         ,tag])))
+    print(prop.table(table(pf[probes_oi,tag])))    
+  }
+}
+
+for (probe_idx in list(probes_oi, isolated_probes_oi, notisolated_probes_oi)) {
+  print("***********")
+  for (tag in tags) {
+    print(tag)
+    a = table(pf[         ,tag])[1]
+    b = table(pf[         ,tag])[2]
+    c = table(pf[probes_oi,tag])[1]
+    d = table(pf[probes_oi,tag])[2]
+    test = chisq.test(matrix(c(a,b,c,d),2,2, byrow=TRUE), correct=FALSE)
+    if (test$p.value<0.05) {
+      print(test)
+      print(prop.table(table(pf[         ,tag])))
+      print(prop.table(table(pf[probe_idx,tag])))    
+    }
+  }  
+}
+```
+
+```{r eval=FALSE}
+
+sort(table(pf[probes_oi,]$fat_feat_1000))
+
+fat_feat_oi = fat_feat[unique(pf[probes_oi,]$fat_feat_1000),]
+fat_feat_oi[fat_feat_oi$n_probes==1,]
+
+
+isolated_probes_oi =  as.vector(unlist(fat_feat_oi[fat_feat_oi$n_probes==1,]$probes))
+notisolated_probes_oi =  setdiff(probes_oi, isolated_probes_oi)
+
+pf[isolated_probes_oi,]
+prop.table(table(pf$DHS))
+prop.table(table(pf[isolated_probes_oi,]$DHS))
+
+
+# DNase-I hypersensitive site
+prop.table(table(pf[                  ,"DHS"]))
+prop.table(table(pf[isolated_probes_oi,"DHS"]))
+# Enhancer
+prop.table(table(pf[                  ,"Enhancer"]))
+prop.table(table(pf[isolated_probes_oi,"Enhancer"]))
+prop.table(table(pf[                  ,"DMR"]))
+prop.table(table(pf[isolated_probes_oi,"DMR"]))
+prop.table(table(pf[                  ,"Phantom"]))
+prop.table(table(pf[isolated_probes_oi,"Phantom"]))
+
+
+# reprogramming-specific DMR (rDMR),
+prop.table(table(pf[                     ,"DMR"]))
+prop.table(table(pf[notisolated_probes_oi,"DMR"]))
+
+
+
+pf[isolated_probes_oi,c("UCSC_RefGene_Name", "UCSC_RefGene_Group")]
+
+
+
+
+
+pf[fat_feat["chr22:38092643-38093208",]$probes[[1]],]
+
+
+pf[fat_feat["chr6:32114490-32123702"  ,]$probes[[1]],]
+pf[fat_feat["chr7:2643258-2650133"    ,]$probes[[1]],]
+pf[fat_feat["chr17:7832479-7835520"   ,]$probes[[1]],]
+pf[fat_feat["chr3:51739481-51741474"  ,]$probes[[1]],]
+pf[fat_feat["chr1:68511835-68513064"  ,]$probes[[1]],]
+pf[fat_feat["chr7:130417715-130419933",]$probes[[1]],]
+pf[fat_feat["chr22:38092643-38093208" ,]$probes[[1]],]
+
+
+
+
+s = mreadRDS(study_filename)
+plot(density(s$data))
+plot(density(s$data[probes_oi,]))
+
+s$data[probes_oi,]
+idx_samples = rownames(s$exp_grp[order(s$exp_grp$age),])
+# s$exp_grp[idx_samples,]$age
+idx_probes = names(sort(apply(s$data[probes_oi,], 1, mean)))
+mat = s$data[idx_probes,idx_samples]
+matplot(t(mat), type="l", col=adjustcolor(1, alpha.f=0.01), lty=1)
+
+ages = sort(unique(s$exp_grp$age))
+foo = sapply(ages, function(age) {
+  print(age)
+  idx = rownames(s$exp_grp)[s$exp_grp$age==age]
+  if (length(idx)>1) {
+    ret = apply(s$data[idx_probes,idx], 1, mean)
+  } else {
+    ret = s$data[idx_probes,idx]
+  }
+  ret
+})
+
+dim(foo)
+matplot(ages, t(foo), type="l", col=adjustcolor(1, alpha.f=0.1), lty=1)
+
+ages = sort(unique(s$exp_grp$age))
+foo = lapply(ages, function(age) {
+  print(age)
+  idx = rownames(s$exp_grp)[s$exp_grp$age==age]
+  if (length(idx)>1) {
+    ret = apply(s$data[idx_probes,idx], 1, mean)
+  } else {
+    ret = s$data[idx_probes,idx]
+  }
+  data.frame(age=age, beta=ret, probes=idx_probes)
+})
+foo = do.call(rbind,foo)
+boxplot(beta~age, foo)
+```
+
+
+# Combp
+
+```{r bedr, eval=FALSE}
+bed_ewas = read.table(paste0("ewas4combp_", gse, "_modelcalllm_meth~age.bed"), header=TRUE, comment="@")
+head(bed_ewas)
+dim(bed_ewas)
+
+pval_thresh = "1e-20"
+combp_dmp_file = paste0("dmr_", gse, "_modelcalllm_meth~age_", pval_thresh, ".fdr.bed.gz")
+combp_dmp = mreadtablegz(combp_dmp_file, comment="@", header=TRUE)
+if (!all(bed_ewas[,1]==combp_dmp[,1]) & all(bed_ewas[,2]==combp_dmp[,2])) {
+  stop("ewas files not concordants")
+} else {
+  rownames(combp_dmp) = bed_ewas[,4]
+}
+head(combp_dmp)
+dim(combp_dmp)
+
+
+ewas = mreadRDS(rds_ewas_filename)
+dim(ewas)
+
+
+combp_dmr_file = paste0("dmr_", gse, "_modelcalllm_meth~age_", pval_thresh, ".regions-t.bed")
+combp_dmr = read.table(combp_dmr_file, comment="@", header=TRUE)
+rownames(combp_dmr) = paste0(combp_dmr[,1], ":", combp_dmr[,2], "-", combp_dmr[,3])
+head(combp_dmr)
+dim(combp_dmr)
+
+a = rownames(predimeth_fat_feats)[predimeth_fat_feats$n_probes>1]
+b = rownames(combp_dmr)
+
+
+
+
+
+
+
+# # get example regions
+# index <- bedr::get.example.regions();
+# a <- index[[1]];
+# b <- index[[2]];
+
+# region validation
+is.a.valid  <- bedr::is.valid.region(a);
+is.b.valid  <- bedr::is.valid.region(b);
+a <- a[is.a.valid];
+b <- b[is.b.valid];
+    
+# print
+cat(" REGION a: ", a, "\n");
+cat(" REGION b: ", b, "\n");
+
+
+
+
+# check if already sorted
+is.sorted <- bedr::is.sorted.region(a);
+
+# sort lexographically
+a.sort <- bedr::bedr.sort.region(a);
+
+# sort naturally
+a.sort.natural <- bedr::bedr.sort.region(a, method = "natural");
+
+# sort - explicit call using primary API function bedr()
+b.sort <- bedr::bedr(
+    engine = "bedtools", 
+    input = list(i = b), 
+    method = "sort", 
+    params = ""
+    );
+
+# print
+cat(" REGION a: ", a.sort, "\n");
+cat(" REGION b: ", a.sort.natural, "\n");
+cat(" REGION c: ", b.sort, "\n");
+
+
+
+
+
+# check if already merged (non-overlapping regions)
+is.merged <- bedr::is.merged.region(a.sort);
+is.merged <- bedr::is.merged.region(b.sort);
+
+# merge
+a.merge <- bedr::bedr.merge.region(a.sort);
+
+# merge - explicit call using primary API function bedr()
+b.merge <- bedr::bedr(
+    engine = "bedtools", 
+    input = list(i = b.sort), 
+    method = "merge", 
+    params = ""
+    );
+
+# print
+cat(" REGION a: ", a.merge, "\n");
+cat(" REGION b: ", b.merge, "\n");
+
+
+
+
+
+
+# check if present in a region
+is.region <- bedr::in.region(a.merge, b.merge);
+
+# # or alternatively R-like in command
+# is.region <- a.merge %in.region% b.merge
+
+# print
+cat(" is.region: ", is.region, "\n");
+
+
+foo = predimeth_fat_feats[a.merge,]
+foo$isdmr = is.region
+foo = foo[order(foo$n_probes),]
+foo[,c("score", "n_probes", "isdmr")]
+
+
+
+
+
+# # compare a and b set of sequences
+# jaccard.stats <- bedr::jaccard(a.sort, b.sort);
+# reldist.stats <- bedr::reldist(a.sort, b.sort);
+#
+# # print
+# cat(" JACCARD a & b: \n"); print(jaccard.stats); cat("\n");
+# cat(" RELDIST a & b: \n"); print(reldist.stats); cat("\n");
+#
+# # even better way to run both jaccard and reldist, as well as estimate P value through random permutations
+# jaccard.reldist.stats <- bedr::test.region.similarity(a.sort, b.sort, n = 40);
+#
+# cat(" JACCARD/RELDIST a & b: \n"); print(jaccard.reldist.stats); cat("\n");
+
+
+```
+
+
+# locate
+```{r locate}
+features = pf
+dim(features)
+chrtss = unique(features[,1])
+names(chrtss) = chrtss
+chrtss = as.list(chrtss)
+chrtss = sapply(names(chrtss), function(chr) {
+  idx = features[,1]==chr
+  ret = features[idx,2]
+  names(ret) = rownames(features)[idx]
+  ret
+})
+chrtss = chrtss[order(as.numeric(substr(names(chrtss),4, 1000)))]
+
+features = predimeth_probes
+# features = combp_dmp[combp_dmp[,"region.q"]<=10^-50,]
+# dim(features)
+# # features = combp_dmr
+
+gs = rownames(features)
+chrtss = chrtss[-(23:24)]
+stoda_locate(gs, chrtss[-(23:24)])
+
+sum(gs %in% unlist(sapply(chrtss, names)))
+
+chrtss = foo
+```
+
+
+# Session Information
+
+```{r, results="verbatim"}
+sessionInfo()
+```
+
