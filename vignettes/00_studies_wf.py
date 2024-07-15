@@ -11,6 +11,7 @@ gses = [
   "GSE42861" , # 450k, n=689  # Differential DNA methylation in Rheumatoid arthritis
   "GSE87571" , # 450k, n=750  # Continuous Aging of the Human DNA Methylome Throughout the Human Lifespan
   "GSE147740", # Epic, n=1129 # DNA methylation analysis of human peripheral blood mononuclear cell collected in the AIRWAVE study
+  "CustGSE147740rr",
   "GSE152026", # Epic, n=934  # Blood DNA methylation profiles from first episode psychosis patients and controls I
   # GTex
   "GSE213478", # Epic, n=987  # Methylation data from nine tissues from GTEx samples profiled with Infinium HumanMethylationEPIC BeadChip

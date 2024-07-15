@@ -7,13 +7,14 @@ gses_model = []
 
 gses = [
   # Epigentic clocks
-  "GSE40279" , # 450k, n=656  # Genome-wide Methylation Profiles Reveal Quantitative Views of Human Aging Rates
-  "GSE42861" , # 450k, n=689  # Differential DNA methylation in Rheumatoid arthritis
-  "GSE87571" , # 450k, n=750  # Continuous Aging of the Human DNA Methylome Throughout the Human Lifespan
-  "GSE147740", # Epic, n=1129 # DNA methylation analysis of human peripheral blood mononuclear cell collected in the AIRWAVE study
-  "GSE152026", # Epic, n=934 # Blood DNA methylation profiles from first episode psychosis patients and controls I
-  # 27k
-  "GSE41037"   # **************27k*************** Aging effects on DNA methylation modules in blood tissue
+  # "GSE40279" , # 450k, n=656  # Genome-wide Methylation Profiles Reveal Quantitative Views of Human Aging Rates
+  # "GSE42861" , # 450k, n=689  # Differential DNA methylation in Rheumatoid arthritis
+  # "GSE87571" , # 450k, n=750  # Continuous Aging of the Human DNA Methylome Throughout the Human Lifespan
+  # "GSE147740", # Epic, n=1129 # DNA methylation analysis of human peripheral blood mononuclear cell collected in the AIRWAVE study
+  "CustGSE147740rr",
+  # "GSE152026", # Epic, n=934 # Blood DNA methylation profiles from first episode psychosis patients and controls I
+  # # 27k
+  # "GSE41037"   # **************27k*************** Aging effects on DNA methylation modules in blood tissue
 ]
 
 
@@ -272,7 +273,7 @@ cd $TMPDIR
 ln -s {wildcards.prefix}/datashare 
 cp {input.rmd} {wildcards.prefix}/common.R {wildcards.prefix}/params_default.R  {wildcards.prefix}/params_{wildcards.gse}.R {wildcards.prefix}/litterature_models.rds . || :
 
-RCODE="gse='{wildcards.gse}_{wildcards.modelcall}_meth~{wildcards.model_formula}_ewas{wildcards.newas}_nn{wildcards.neighb}' ; run={wildcards.runid} ; rmarkdown::render('04_model.Rmd', output_file=paste0('04_model_r', run, '_', gse, '.html'));"
+RCODE="gse='{wildcards.gse}_{wildcards.modelcall}_meth~{wildcards.model_formula}_ewas{wildcards.newas}_nn{wildcards.neighb}' ;  nb_core=10 ;run={wildcards.runid} ; rmarkdown::render('04_model.Rmd', output_file=paste0('04_model_r', run, '_', gse, '.html'));"
 echo $RCODE | Rscript - 2>&1 > 04_model_r{wildcards.runid}_{wildcards.gse}_{wildcards.modelcall}_meth~{wildcards.model_formula}_ewas{wildcards.newas}_nn{wildcards.neighb}.Rout
 
 cp  04_model_r{wildcards.runid}_{wildcards.gse}_{wildcards.modelcall}_meth~{wildcards.model_formula}_ewas{wildcards.newas}_nn{wildcards.neighb}.html  04_model_r{wildcards.runid}_{wildcards.gse}_{wildcards.modelcall}_meth~{wildcards.model_formula}_ewas{wildcards.newas}_nn{wildcards.neighb}.Rout info_model_r{wildcards.runid}_{wildcards.gse}_{wildcards.modelcall}_meth~{wildcards.model_formula}_ewas{wildcards.newas}_nn{wildcards.neighb}.rds models_r{wildcards.runid}_{wildcards.gse}_{wildcards.modelcall}_meth~{wildcards.model_formula}_ewas{wildcards.newas}_nn{wildcards.neighb}.rds {wildcards.prefix}/. 

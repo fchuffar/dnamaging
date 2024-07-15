@@ -1,0 +1,176 @@
+---
+title: "Build predictive visu"
+author: "Fabien Jossaud, Florent Chuffart"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+
+
+```{r echo=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide")
+info = list(start_time = Sys.time())
+source("common.R")
+neighb = 1000
+runmax=14
+gses = c(
+  "GSE40279" , # 450k, n=656  # Genome-wide Methylation Profiles Reveal Quantitative Views of Human Aging Rates
+  "GSE42861" , # 450k, n=689  # Differential DNA methylation in Rheumatoid arthritis
+  "GSE87571" , # 450k, n=750  # Continuous Aging of the Human DNA Methylome Throughout the Human Lifespan
+  "GSE147740", # Epic, n=1129 # DNA methylation analysis of human peripheral blood mononuclear cell collected in the AIRWAVE study
+  "CustGSE147740rr", # Epic, n=1129 # DNA methylation analysis of human peripheral blood mononuclear cell collected in the AIRWAVE study
+  "GSE152026", # Epic, n=934 # Blood DNA methylation profiles from first episode psychosis patients and controls I
+  NULL
+)
+newass = c("1000", "2000", "3000", "5000", "10000", "20000", "30000", "50000", "100000", "200000", "300000", "500000")
+newass = c("500000", "1000000")
+newass = c("1000000")
+```
+
+rsync -auvP cargo:~/projects/dnamaging/vignettes/info_model_r*_*_modelcalllm_meth~age_ewas*_nn*.rds ~/projects/dnamaging/vignettes/. --dry-run
+
+```{r}
+res = lapply(gses, function(gse) {
+  print(gse)
+  res = lapply(newass, function(newas) {
+    print(newas)
+    res = lapply(0:runmax, function(run) {
+      print(run)
+      res = data.frame(gse=gse, newas=newas, run=run)
+      info_file = paste0("info_model_r", run, "_", gse, "_modelcalllm_meth~age_ewas", newas, "_nn", neighb, ".rds")
+      models_file = paste0("models_r", run, "_", gse, "_modelcalllm_meth~age_ewas", newas, "_nn", neighb, ".rds")
+      if (file.exists(info_file)) {
+        res$done=TRUE
+        # print(info_file)
+        # info_file = "info_model_r0_GSE40279_modelcalllm_meth~age_ewas500000_nn1000.rds"
+        infomodel = readRDS(info_file)
+        # models_file = "models_r0_GSE40279_modelcalllm_meth~age_ewas500000_nn1000.rds"
+        models = readRDS(models_file)
+        res$exec_time = as.numeric(infomodel$exec_time)
+        res$rmse = infomodel$gender.bootstrap.RMSE
+        res$nbprobes = infomodel$gender.bootstrap.nb_probes_mod
+        res$probes = list(models[[2]]$coeff$probes)
+      } else {
+        print(paste0(info_file, " missing"))
+        res$done=FALSE
+        res$exec_time = 0.1
+        res$rmse = 0
+        res$nbprobes = 0
+        res$probes = list()
+      }
+      res
+    })
+    res = do.call(rbind, res)
+    # res = data.frame(lapply(data.frame(res, stringsAsFactors=FALSE), unlist), stringsAsFactors=FALSE)
+    print(dim(res))
+    res
+  })
+  # cn = intersect(colnames(res[[1]]),colnames(res[[2]]))
+  # res[[1]] = res[[1]][,cn]
+  # res[[2]] = res[[2]][,cn]
+  res = do.call(rbind, res)
+  print(dim(res))
+  res
+})
+res = do.call(rbind, res)
+res = data.frame(res)
+res
+
+res = res[res$newas=="1000000",]
+
+# layout(matrix(1:2, 1), respect=TRUE)
+# plot(res$run, jitter(log(res$newas)), las=1, ylab="", col=2*(res$done+1))
+# plot(res$run, res$exec_time,   las=1, ylab="", col=as.numeric(as.factor(res$gse)), log="y")
+
+
+library(ggplot2)
+# layout(matrix(1:2, 1), respect=TRUE)
+# ggplot2::qplot(res$run, jitter(log(res$newas)), las=1, ylab="", col=2*(res$done+1))
+# ggplot2::qplot(run, exec_time,  data=res, col=gse) + geom_point() + geom_line()
+  
+ggplot2::qplot(run, jitter(log(as.numeric(newas))),  data=res, col=done) + geom_point() + geom_line(aes(group=interaction(newas,gse)))
+ggplot2::qplot(run, exec_time,  data=res, col=gse, log="y") + geom_point() + geom_line(aes(group=interaction(newas,gse)))
+ggplot2::qplot(run, rmse,  data=res, col=gse, log="y") + geom_point() + geom_line(aes(group=interaction(newas,gse)))
+ggplot2::qplot(run, nbprobes,  data=res, col=gse) + geom_point() + geom_line(aes(group=interaction(newas,gse)))
+
+
+
+```
+
+
+```{r, results="verbatim"}
+library(ggvenn)
+for (run in 0:runmax) {
+  print(run)
+  newas = "1000000"
+  foo = lapply(gses, function(gse) {
+    unlist(res[res$gse==gse & res$run<=run & res$newas==newas, ]$probes)
+  })
+  names(foo) = gses
+  plt = ggvenn::ggvenn(foo)
+  grid::grid.draw(plt)
+}
+
+
+
+# library(IlluminaHumanMethylationEPICmanifest)
+# library(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
+# pf = pfepic = data.frame(getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b4.hg19))
+# pf$cg_id = rownames(pf)
+#
+library(IlluminaHumanMethylation450kanno.ilmn12.hg19)
+pf450k = data.frame(getAnnotation(IlluminaHumanMethylation450kanno.ilmn12.hg19))
+library(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
+pfepic = data.frame(getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b4.hg19))
+
+newas = "1000000"
+lastrun = 10
+for (gse in gses) {
+  print(gse)
+  bed_filename = paste0("predimeth_probes_", gse, "_", lastrun, ".bed")
+  sub_res = res[res$gse==gse & res$run<=lastrun & res$newas==newas, ]
+  foo = apply(sub_res, 1, function(row) {
+    data.frame(run=row$run, probes=row$probes)
+  })
+  foo = do.call(rbind, foo)
+  head(foo)
+  dim(foo)
+  if (all(foo$probes %in% rownames(pf450k))) {
+    pforig = pf450k
+  } else {
+    pforig = pfepic  
+  }   
+  bed = cbind(pforig[foo$probes,1:4], run=foo$run)
+  bed = cbind(bed, strand=bed[,3])
+  bed[,3] = bed[,2]+1
+  colnames(bed) = c("#chrom", "start", "end", "name", "score", "strand")
+  head(bed)
+
+  # write ewas res for combp
+  bed[,1] = as.character(bed[,1])
+  bed = bed[order(bed[,1], bed[,2]),]
+  write.table(bed, file=bed_filename , sep="\t", quote=FALSE, row.names=FALSE, col.names=TRUE)
+}
+```
+
+
+
+# Process Information 
+
+```{r, results="verbatim"}
+info$stop_time = Sys.time()
+info$exec_time = round(difftime(info$stop_time, info$start_time, units="mins"),1)
+saveRDS(info, paste0("info_visu.rds"))
+print(info)
+```
+# Session Information
+
+```{r, results="verbatim"}
+sessionInfo()
+```
+
