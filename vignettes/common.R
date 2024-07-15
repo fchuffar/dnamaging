@@ -11,10 +11,89 @@ if (!exists("mepimedtools_monitored_apply")) {mepimedtools_monitored_apply = mem
 
 
 
+annotate_bed = function(results, genome, prefix) {
+  if (!exists("mannotatr_read_regions")) {mannotatr_read_regions <<- memoise::memoise(annotatr::read_regions)}
+  if (!exists("mannotatr_build_annotations")) {mannotatr_build_annotations <<- memoise::memoise(annotatr::build_annotations)}
+  if (!exists("mannotatr_annotate_regions")) {mannotatr_annotate_regions <<- memoise::memoise(annotatr::annotate_regions)}
+  tmp_results_filename = paste0("results_", prefix, ".bed")
+  print(tmp_results_filename)
+  write.table(results[,1:6], file=tmp_results_filename, sep="\t", quote=FALSE,row.names=FALSE, col.names=FALSE)
+  dm_regions = mannotatr_read_regions(con=tmp_results_filename, genome=genome, format="bed")
+  # Build the annotations (a single GRanges object)
+  # annots = paste0(genome, c("_lncrna_gencode"))
+  # annots = paste0(genome, c('_cpgs', '_basicgenes', "_lncrna_gencode", "_enhancers_fantom"))
+  # annots = paste0(genome, c('_cpgs', '_basicgenes', "_enhancers_fantom"))
+  # annots = paste0(genome, c('_cpgs', '_basicgenes'))
+  annots = paste0(genome, c("_basicgenes"))
+  annotations_list = list()
+  annotations_list[[genome]] = mannotatr_build_annotations(genome=genome, annotations=annots)
+  annotations = annotations_list[[genome]]
+  # Intersect the regions we read in with the annotations
+  dm_annotated = mannotatr_annotate_regions(
+      regions = dm_regions,
+      annotations = annotations,
+      ignore.strand = TRUE,
+      quiet = FALSE)
+  # A GRanges object is returned
+  df_dm_annotated = data.frame(dm_annotated)
+  # dedup
+  df_dm_annotated$annot.type = factor(df_dm_annotated$annot.type, levels=paste0(genome, c("_genes_promoters", "_genes_1to5kb", "_genes_5UTRs", "_genes_exons", "_genes_introns", "_genes_3UTRs")))
+  table(df_dm_annotated$annot.type)
+  table(df_dm_annotated$name)
+  df_dm_annotated = df_dm_annotated[order(df_dm_annotated$name, df_dm_annotated$annot.type),]
+  df_dm_annotated = df_dm_annotated[!duplicated(paste(df_dm_annotated$name, df_dm_annotated$annot.symbol)),]
+  dim(df_dm_annotated)
+  table(df_dm_annotated$annot.type)
+  # aggregat by fat_feat
+  agg_annotations = lapply(unique(df_dm_annotated$name), function(n) {
+    # n = "chr7:2661785-2662169"
+    foo = df_dm_annotated[df_dm_annotated$name==n,]
+    if (sum(df_dm_annotated$name==n) == 1) {
+      return(foo)
+    } else {
+      foo[["annot.symbol"]] = paste0(foo[["annot.symbol"]],collapse=";")
+      foo[["annot.type"]] = paste0(foo[["annot.type"]],collapse=";")
+      foo[["annot.tx_id"]] = paste0(foo[["annot.tx_id"]],collapse=";")
+      return(foo[1,])
+    }
+  })
+  agg_annotations = do.call(rbind, agg_annotations)
+  rownames(agg_annotations) = agg_annotations$name
+  head(agg_annotations)
+  rownames(agg_annotations) %in% rownames(results)
+  rownames(agg_annotations)[!rownames(agg_annotations) %in% rownames(results)]
+  rownames(results) %in% rownames(agg_annotations)
+  rownames(results)[!rownames(results) %in% rownames(agg_annotations)]
+  # inject into results
+  results$annot.type   = NA
+  results$annot.symbol = NA
+  results$annot.tx_id  = NA
+  for (idx in rownames(agg_annotations)) {
+    results[idx,"annot.type"  ] = as.character(agg_annotations[idx,"annot.type"  ])
+    results[idx,"annot.symbol"] = as.character(agg_annotations[idx,"annot.symbol"])
+    results[idx,"annot.tx_id" ] = as.character(agg_annotations[idx,"annot.tx_id" ])
+  }
+
+  results = results[rev(order(results$n_probes)),]
+
+  # tmpidx = order(results[,"z_sidak_p"])
+  # results = results[tmpidx,]
+
+  # results$url = sapply(results[,4], function(i){
+  #   output_pdf_filename = paste0("global_results/", prefix, "_", i, ".pdf")
+  #   paste0("http://epimed.univ-grenoble-alpes.fr/downloads/florent/expedition_5300/results/meth/", output_pdf_filename)
+  # })
+
+  results_filename = paste0("results_annotated_", prefix, ".xlsx")
+  print(results_filename)
+  results_out = results[,-7]
+  WriteXLS::WriteXLS(results_out, results_filename, FreezeCol=6, FreezeRow=1, BoldHeaderRow=TRUE, AdjWidth=TRUE)
+}
+
 
 
 # HERE ALGO FAT_FEAT
-get_fat_feats = function(pf, pf_chr_colname, pf_pos_colname, extend_region_dist) {
+get_fat_feats = function(pf, pf_chr_colname, pf_pos_colname, extend_region_dist, re_extend_region_dist=NULL) {
   table(pf[,pf_chr_colname], useNA="always")
   # pf = pf[pf[,pf_pos_colname]>0,]
   # pf = pf[order(pf[[pf_chr_colname]],pf[[pf_pos_colname]]), ]
@@ -34,6 +113,10 @@ get_fat_feats = function(pf, pf_chr_colname, pf_pos_colname, extend_region_dist)
     # enlarge your fat feat
     l = extend_region_dist
     c = intervals::close_intervals( intervals::contract( intervals::reduce(intervals::expand(i, l)), l) )
+    if (!is.null(re_extend_region_dist)) {
+      l2 = re_extend_region_dist
+      c = intervals::close_intervals( intervals::reduce(intervals::expand(c, l2)) )      
+    }
     dim(c)
     df = data.frame(chr, c[,1], c[,2])
     return(df)
