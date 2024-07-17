@@ -1,6 +1,6 @@
 source("common.R")
 
-avmps = openxlsx::read.xlsx("avmps_probes.xlsx",cols = 4)
+avmps = openxlsx::read.xlsx("../misc/avmps_probes.xlsx",cols = 4)
 avmps = avmps[[1]]
 
 predimeth = read.table(paste0("predimeth_probes_GSE147740_10.bed"))
