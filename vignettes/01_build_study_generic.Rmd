@@ -145,7 +145,7 @@ if (s$platform_name=="GPL8490") {
   library(IlluminaHumanMethylation450kanno.ilmn12.hg19)
   pf450k = data.frame(getAnnotation(IlluminaHumanMethylation450kanno.ilmn12.hg19))
   s$platform = pf450k  
-} else if (s$platform_name%in%c("GPL21145", "GPL23976")) {
+} else if (s$platform_name%in%c("GPL21145", "GPL23976", "GPL33022")) {
   print("epic")
   library(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)  
   pfepic = data.frame(getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b4.hg19))
