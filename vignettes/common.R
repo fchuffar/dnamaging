@@ -6,6 +6,7 @@ if (!exists("mcall_glmnet_mod")) {mcall_glmnet_mod = memoise::memoise(dnamaging:
 if (!exists("mcvaglmnet")) {mcvaglmnet = memoise::memoise(dnamaging::cvaglmnet)}   # Memoise for cvaglmnet
 if (!exists("mlimma_lmFit")) {mlimma_lmFit = memoise::memoise(limma::lmFit)}  
 if (!exists("mreadtablegz")) {mreadtablegz = memoise::memoise(function(gz_file, ...){read.table(file=gzfile(gz_file), ...)})}  
+if (!exists("mreadtable")) {mreadtable = memoise::memoise(read.table, cache=cachem::cache_mem(max_size = 10*1024 * 1024^2))}  
 if (!exists("mepimedtools_monitored_apply")) {mepimedtools_monitored_apply = memoise::memoise(epimedtools::monitored_apply)}  
 # if (!exists("mopenxlsx_read.xlsx")) {mopenxlsx_read.xlsx = memoise::memoise(openxlsx::read.xlsx)}
 

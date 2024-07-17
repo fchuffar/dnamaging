@@ -1,0 +1,7 @@
+project="expedition_5300"
+study="dnamaging"
+species="Homo_sapiens"  
+genome="hg38"
+annotation="UCSC"
+FILTER_EWAS_FOR_DMR_CANDIDATE=FALSE
+FILTER_SEXUAL_CHR=FALSE
