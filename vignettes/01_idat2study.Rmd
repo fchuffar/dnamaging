@@ -59,11 +59,17 @@ detect_infinium_platform = function (idat_filename) { # inspired by RnBeads:::rn
       if (length(file.sizes) == 0) {
           stop("Undefined platform; cannot read the specified IDAT files")
       }
+      if (all(file.sizes > 1.4e+07)) {
+        return("GPL33022") # EPICV2
+      }
       if (all(file.sizes > 1e+07)) {
-          return("GPL21145")
+          return("GPL21145") # EPIC
+      }
+      if (all(file.sizes < 5e+06)) {
+             return("GPL31950") # Mouse
       }
       if (all(file.sizes < 1e+07)) {
-          return("GPL13534")
+          return("GPL13534") # 450k
       }
       stop("Undefined platform; detected HumanMethylation450 and MethylationEPIC")
   }
@@ -147,7 +153,8 @@ RnBeads::rnb.options(
   # replicate.id.column = "treatment",
   # import.table.separator = ";",
   # import.bed.style     = "bismarkCov",
-  # assembly             = version,
+  assembly             = "hg38",
+  import.idat.platform = "probesEPICv2",
   # region.types=c("promoters", "genes", "tiling", "cpgislands", "sites"),
   region.types=c("sites"),
   # region.aggregation="coverage.weighted",
@@ -240,7 +247,7 @@ dfs = lapply(levels(exp_grp$batch), function(batch) {
   beta_matrixcsv_file = paste0(analysis.dir, "/reports/tracks_and_tables_data/csv/betas_1.csv.gz")
   print(beta_matrixcsv_file)
   res = read.table(beta_matrixcsv_file, sep=",", row.names=1, header=TRUE)
-  head(res[,1:10])
+  head(res[,1:6])
   dim(res)
   return(res)
 })
@@ -266,11 +273,11 @@ if (length(dfs) >= 2) {
 sapply(dfs, dim)
 length(idx_probes)
 dim(df)
-head(df[,1:10])
+head(df[,1:6])
 rownames(exp_grp)[!rownames(exp_grp) %in% colnames(df)]
 
 # ===> df out
-head(df[,1:10])
+head(df[,1:6])
 dim(df)
 ```
 
@@ -293,7 +300,7 @@ head(exp_grp)
 dim(exp_grp)
 
 data = as.matrix(df[,rownames(exp_grp)])
-head(data[,1:6])
+# head(data[,1:6])
 dim(data)
 
 s = epimedtools::create_study()
