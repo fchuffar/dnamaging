@@ -1,0 +1,183 @@
+---
+title: "Missmethyl analysis"
+author: "Fabien Jossaud, Florent Chuffart"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+```{r, echo=FALSE, eval=TRUE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=9, eval=TRUE, echo=FALSE, warning=FALSE)
+info = list(start_time = Sys.time())
+source("common.R")
+options(scipen = 6)
+```
+
+```{r data}
+
+#Calling EWAS 
+
+nb_ewas = c(10000,50000,100000)
+
+ewas = mreadRDS("ewas_GSE147740_modelcalllm_meth~age.rds")
+ewas = as.data.frame(ewas)
+ewas$fdr = p.adjust(ewas$pv, method = "BH")
+ewas = ewas[order(ewas$fdr),]
+
+# Calling Predimeth probes
+predimeth_table = read.table("predimeth_probes_GSE147740_10.bed")
+predimeth = predimeth_table$V4
+
+```
+
+```{r selection}
+
+# Select top probes from EWAS
+
+for (i in nb_ewas){
+    slct_ewas_cpg = rownames(ewas)[1:i]
+    write.table(slct_ewas_cpg,paste0("ewas_GSE147740_",i,".txt"),row.names = FALSE,col.names = FALSE)
+}
+
+# Select FDR probes from EWAS
+
+slct_ewas_cpg_fdr = rownames(ewas)[ewas$fdr <= 0.05]
+
+```
+
+```{r missMethyl}
+
+library("missMethyl")
+
+# Launch and save missMethyl on Predimeth
+
+enriched_terms_pred <- missMethyl::gometh(sig.cpg = predimeth, all.cpg = rownames(ewas), array.type = "EPIC", collection = "GO")
+enriched_terms_pred = enriched_terms_pred[enriched_terms_pred$ONT == "BP",]
+enriched_terms_sign_pv = enriched_terms_pred[enriched_terms_pred$P.DE < 0.05,]
+enriched_terms_sign_pv = enriched_terms_sign_pv[order(enriched_terms_sign_pv$P.DE),]    
+dim(enriched_terms_sign_pv)
+write.table(enriched_terms_sign_pv,paste0("GSE147740_predimeth_GOpv.txt"))
+enriched_terms_sign_fdr = enriched_terms_pred[enriched_terms_pred$FDR < 0.05,]
+enriched_terms_sign_fdr = enriched_terms_sign_fdr[order(enriched_terms_sign_fdr$FDR),]
+dim(enriched_terms_sign_fdr)
+write.table(enriched_terms_sign_fdr,paste0("GSE147740_predimeth_GOfdr.txt"))
+
+# Launch and save missMethyl on topEWAS probes
+
+for (i in nb_ewas){
+    ewas_cpg = read.table(paste0("ewas_GSE147740_",i,".txt"))
+    ewas_cpg = ewas_cpg$V1
+    enriched_terms_ewas <- missMethyl::gometh(sig.cpg = ewas_cpg, all.cpg = rownames(ewas), array.type = "EPIC", collection = "GO")
+    enriched_terms_ewas = enriched_terms_ewas[enriched_terms_ewas$ONT == "BP" & enriched_terms_ewas$FDR < 0.05,]
+    enriched_terms_ewas = enriched_terms_ewas[order(enriched_terms_ewas$FDR),]
+    print(dim(enriched_terms_ewas))
+    write.table(enriched_terms_ewas,paste0("GSE147740_ewas",i,"_GOfdr.txt"))
+
+    go_in_pred = rownames(enriched_terms_pred[enriched_terms_pred$DE >= 1,])
+    go_ewas_pred = enriched_terms_sign_fdr[rownames(enriched_terms_sign_fdr) %in% go_in_pred,]
+    print(dim(go_ewas_pred))
+    write.table(go_ewas_pred,paste0("GSE147740_ewas",i,"_pred_GO.txt"))
+
+}
+
+# Launch and save missMethyl on FDR EWAS
+
+enriched_terms_ewas <- missMethyl::gometh(sig.cpg = slct_ewas_cpg_fdr, all.cpg = rownames(ewas), array.type = "EPIC", collection = "GO")
+enriched_terms_ewas = enriched_terms_ewas[enriched_terms_ewas$ONT == "BP" & enriched_terms_ewas$FDR < 0.05,]
+enriched_terms_ewas = enriched_terms_ewas[order(enriched_terms_ewas$FDR),]
+print(dim(enriched_terms_ewas))
+write.table(enriched_terms_ewas,paste0("GSE147740_ewasfdr_GOfdr.txt"))
+
+# If you want genes associated to GO, make on gometh param Sig.genes = TRUE
+
+# genes_assoc = unique(unlist(strsplit(enriched_terms_ewas$SigGenesInSet,",")))
+
+```
+
+```{r hallmarks of cancer enrichment analysis}
+
+# Choose personalised Genesets 
+
+if(!exists("geneset_type")){ geneset_type = "hallmarks" } 
+
+#geneset_type = "hallmarks"
+#geneset_type = "curated" 
+
+if(geneset_type == "hallmarks") {
+    cancer_geneset = clusterProfiler::read.gmt("h.all.v2024.1.Hs.entrez.gmt")
+} else if (geneset_type == "curated") {
+    cancer_geneset = clusterProfiler::read.gmt("c2.all.v2024.1.Hs.entrez.gmt")
+}
+
+list_of_hallmark_geneset = unique(cancer_geneset$term)
+print(length(list_of_hallmark_geneset))
+
+# Launch missMethyl on each geneset choose and collapse every geneset results in a table for Predimeth et EWAS FDR
+
+list_enriched_pred_cancer = list()
+list_enriched_ewas_cancer = list()
+
+count = 1:length(list_of_hallmark_geneset)
+for (gs in list_of_hallmark_geneset) {
+    geneset = cancer_geneset$gene[cancer_geneset$term == gs]
+    tmp_enriched_pred_cancer = missMethyl::gsameth(sig.cpg = predimeth, all.cpg = rownames(ewas), array.type = "EPIC", collection = geneset)
+    list_enriched_pred_cancer[[gs]] = tmp_enriched_pred_cancer
+    tmp_enriched_ewas_cancer = missMethyl::gsameth(sig.cpg = slct_ewas_cpg_fdr, all.cpg = rownames(ewas), array.type = "EPIC", collection = geneset)
+    list_enriched_ewas_cancer[[gs]] = tmp_enriched_ewas_cancer
+    print(paste0("Operations effectué : ", count[list_of_hallmark_geneset == gs], "/", length(list_of_hallmark_geneset)))
+}
+
+enriched_pred_cancer = as.data.frame(do.call(rbind, list_enriched_pred_cancer))
+enriched_pred_cancer = enriched_pred_cancer[order(enriched_pred_cancer$FDR),]
+write.table(enriched_pred_cancer,paste0("enriched_pred_cancer_",geneset_type,".txt"))
+
+enriched_ewas_cancer = as.data.frame(do.call(rbind, list_enriched_ewas_cancer))
+enriched_ewas_cancer = enriched_ewas_cancer[order(enriched_ewas_cancer$FDR),]
+write.table(enriched_ewas_cancer,paste0("enriched_ewas_cancer_",geneset_type,".txt"))
+
+```
+```{r intersect pred/ewas}
+
+# Venn between top ewas and predimeth 
+
+library(gplots)
+
+for (i in nb_ewas){
+    ewas_cpg = read.table(paste0("ewas_GSE147740_",i,".txt"))
+    ewas_cpg = ewas_cpg$V1
+    venn = list(predimeth,ewas_cpg)
+    names(venn) = c("predimeth",i)
+    jpeg(paste0("venn_predimeth_ewas",i,".jpg"))
+    venn(venn)
+    dev.off()
+}
+
+```
+
+```{r gsea}
+
+# GSEA plot on aging with predimeth probes 
+ 
+gsea_plot = function(grp_file, rnk_file, out_dir, cmd="/summer/epistorage/opt/GSEA_4.1.0/gsea-cli.sh", nperm=1000, RMOUTDIR=TRUE) {
+  
+  info_gsea = list()
+  
+  if (missing(out_dir)) {
+    out_dir = tempfile(pattern="gsea_out_", tmpdir=".")
+  }
+  dir.create(out_dir)
+  arg = paste0("GSEAPreranked -gmx ", grp_file, " -collapse No_Collapse -mode Max_probe -norm meandiv -nperm ", nperm , " -rnk ", rnk_file, " -scoring_scheme weighted -rpt_label my_analysis -create_svgs false -include_only_symbols true -make_sets true -plot_top_x 20 -rnd_seed timestamp -set_max 5000 -set_min 5 -zip_report false -out ", out_dir)
+  print(paste(cmd, arg))
+  system2(cmd, arg)
+}
+
+info_gsea = gsea_plot("predimeth_GSE147740.grp", "predimeth_ewas_gsea_input.rnk")
+
+
+
+
+```
