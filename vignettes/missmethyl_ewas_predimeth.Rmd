@@ -69,6 +69,9 @@ write.table(enriched_terms_sign_fdr,paste0("GSE147740_predimeth_GOfdr.txt"))
 # Launch and save missMethyl on topEWAS probes
 
 for (i in nb_ewas){
+
+    # Enrichment GO on top EWAS
+
     ewas_cpg = read.table(paste0("ewas_GSE147740_",i,".txt"))
     ewas_cpg = ewas_cpg$V1
     enriched_terms_ewas <- missMethyl::gometh(sig.cpg = ewas_cpg, all.cpg = rownames(ewas), array.type = "EPIC", collection = "GO")
@@ -76,6 +79,8 @@ for (i in nb_ewas){
     enriched_terms_ewas = enriched_terms_ewas[order(enriched_terms_ewas$FDR),]
     print(dim(enriched_terms_ewas))
     write.table(enriched_terms_ewas,paste0("GSE147740_ewas",i,"_GOfdr.txt"))
+
+    # Check pred enrichment GO in ewas enrichment GO 
 
     go_in_pred = rownames(enriched_terms_pred[enriched_terms_pred$DE >= 1,])
     go_ewas_pred = enriched_terms_sign_fdr[rownames(enriched_terms_sign_fdr) %in% go_in_pred,]
@@ -102,15 +107,33 @@ write.table(enriched_terms_ewas,paste0("GSE147740_ewasfdr_GOfdr.txt"))
 
 # Choose personalised Genesets 
 
-if(!exists("geneset_type")){ geneset_type = "hallmarks" } 
+if(!exists("geneset_type")){ geneset_type = "h" } 
 
+#geneset_type = "h"
+#geneset_type = "c2"
+geneset_type = "c6" 
 #geneset_type = "hallmarks"
-#geneset_type = "curated" 
 
-if(geneset_type == "hallmarks") {
+if(geneset_type == "h") {
     cancer_geneset = clusterProfiler::read.gmt("h.all.v2024.1.Hs.entrez.gmt")
-} else if (geneset_type == "curated") {
+} else if (geneset_type == "c2") {
     cancer_geneset = clusterProfiler::read.gmt("c2.all.v2024.1.Hs.entrez.gmt")
+} else if (geneset_type == "c6") {
+    cancer_geneset = clusterProfiler::read.gmt("c6.all.v2024.1.Hs.entrez.gmt")
+} else if (geneset_type == "hallmarks") {
+    cancer_geneset = clusterProfiler::read.gmt("Hallmarks_of_Cancer_TGen.gmt")
+    cancer_geneset = cancer_geneset[cancer_geneset$gene != "",]
+    #Translation in EntrezID
+    library(org.Hs.eg.db)
+    hs <- org.Hs.eg.db
+    my.symbols <- cancer_geneset$gene
+    entrez = select(hs, 
+        keys = my.symbols,
+        columns = c("ENTREZID", "SYMBOL"),
+        keytype = "SYMBOL")
+    entrez = entrez[-920,]
+    cancer_geneset$gene = entrez$ENTREZID
+    cancer_geneset = cancer_geneset[!is.na(cancer_geneset$gene),]
 }
 
 list_of_hallmark_geneset = unique(cancer_geneset$term)
@@ -122,13 +145,14 @@ list_enriched_pred_cancer = list()
 list_enriched_ewas_cancer = list()
 
 count = 1:length(list_of_hallmark_geneset)
+time_start = Sys.time()
 for (gs in list_of_hallmark_geneset) {
     geneset = cancer_geneset$gene[cancer_geneset$term == gs]
     tmp_enriched_pred_cancer = missMethyl::gsameth(sig.cpg = predimeth, all.cpg = rownames(ewas), array.type = "EPIC", collection = geneset)
     list_enriched_pred_cancer[[gs]] = tmp_enriched_pred_cancer
     tmp_enriched_ewas_cancer = missMethyl::gsameth(sig.cpg = slct_ewas_cpg_fdr, all.cpg = rownames(ewas), array.type = "EPIC", collection = geneset)
     list_enriched_ewas_cancer[[gs]] = tmp_enriched_ewas_cancer
-    print(paste0("Operations effectué : ", count[list_of_hallmark_geneset == gs], "/", length(list_of_hallmark_geneset)))
+    print(paste0("Operations effectué : ", count[list_of_hallmark_geneset == gs], "/", length(list_of_hallmark_geneset), " Temps ecoule : ", difftime(Sys.time(), time_start, units = "mins"), " min"))
 }
 
 enriched_pred_cancer = as.data.frame(do.call(rbind, list_enriched_pred_cancer))
