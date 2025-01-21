@@ -1,0 +1,805 @@
+---
+title: "Aging and specific Go term on GTeX transcriptome"
+author: "Fabien Jossaud, Florent Chuffart"
+date: "`r Sys.time()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+```{r, echo=FALSE, eval=TRUE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=10, fig.height=10, eval=TRUE, echo=FALSE, warning=FALSE)
+info = list(start_time = Sys.time())
+source("../common.R") #We launch from gtex_missmethyl dir and not vignettes
+options(scipen = 6)
+```
+
+# Data and Variables
+
+This markdown output is : "***dataset***_***tissue***_***selection***_***missmethyl_probes***_***go_word***_go***go_treshold***.html"  
+With :   
+- ***dataset*** is the dataset selected to run the code, could be "gtex558" or "gtex608"  
+- ***tissue*** is the selected tissue on transcriptomic data (you can use "blood" only on gtex608)  
+- ***selection*** is the selection make on specific term genes associated with probes, could be "predimeth" to select only genes that have at least one predimeth probes  
+- ***missmethyl_probes*** is the probes use to run missmethyl and find associated GO, could be "ewas" or "predimeth"  
+- ***go_word*** is the term associated to go_term (i.e development or inflammation)
+- ***go_treshold*** is the treshold for selected only GO terms that have a number of genes under this value  
+
+You can launch the pipeline using the launcher in the directory : source("launch_gtex_missmethyl.R") to launch with all possible variables  
+
+If you want specific values, init them before launch the markdown ! 
+
+```{r data, echo = FALSE}
+
+library(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
+library(dplyr)
+library(tidyr)
+library(knitr)
+library(TxDb.Hsapiens.UCSC.hg19.knownGene)
+library(org.Hs.eg.db)
+library(GenomicRanges)
+
+#Calling EWAS 
+
+ewas = mreadRDS("ewas_GSE147740_modelcalllm_meth~age.rds") # EWAS association with age in GSE147740
+ewas = as.data.frame(ewas)
+if (missmethyl_probes == "ewasBonf") {
+    ewas$fdr = p.adjust(ewas$pv, method = "bonferroni") #Compute FDR for EWAS pvalues
+} else { ewas$fdr = p.adjust(ewas$pv, method = "BH") }
+ewas = ewas[order(ewas$fdr),] # Order EWAS by FDR
+slct_ewas_cpg_fdr = rownames(ewas)[ewas$fdr <= 0.05] # Select only FDR sign probes
+
+# Epic annotations to obtain all genes in EPIC platform
+
+epic_anno <- getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
+platform_genes = epic_anno$UCSC_RefGene_Name
+
+# All genes by probes
+total_genes <- data.frame(
+  Probe = rownames(epic_anno),
+  Gene = platform_genes
+)
+
+# Split mutiple genes associated to one probe with ";"
+total_genes_split <- total_genes %>%
+  mutate(Gene = strsplit(as.character(Gene), ";")) %>%
+  unnest(Gene)
+
+# All genes in the platform
+unique_platform_genes = unlist(unique(total_genes_split[,2])) 
+
+# Ewas genes 
+
+ewas_anno = epic_anno[rownames(epic_anno) %in% slct_ewas_cpg_fdr, ]
+ewas_genes = ewas_anno$UCSC_RefGene_Name
+
+# All genes by EWAS probes
+ewas_genes = data.frame(
+  Probe = rownames(ewas_anno),
+  Gene = ewas_genes
+)
+
+# Split mutiple genes associated to one EWAS probe with ";"
+ewas_genes_split = ewas_genes %>%
+  mutate(Gene = strsplit(as.character(Gene), ";")) %>%
+  unnest(Gene)
+
+# All genes containing EWAS probes
+unique_ewas_genes = unlist(unique(ewas_genes_split[,2])) 
+
+# Calling Predimeth probes
+
+predimeth_table = read.table("predimeth_probes_GSE147740_10.bed")
+predimeth = predimeth_table$V4
+
+predimeth_anno = epic_anno[rownames(epic_anno) %in% predimeth, ]
+predimeth_genes = predimeth_anno$UCSC_RefGene_Name
+
+# All genes by predimeth probes
+predimeth_genes = data.frame(
+  Probe = rownames(predimeth_anno),
+  Gene = predimeth_genes
+)
+
+# Split mutiple genes associated to one predimeth probe with ";"
+predimeth_genes_split = predimeth_genes %>%
+  mutate(Gene = strsplit(as.character(Gene), ";")) %>%
+  unnest(Gene)
+
+# All genes containing predimeth probes
+unique_predimeth_genes = unlist(unique(predimeth_genes_split[,2])) 
+
+# Calling GTEx transcriptome 
+
+if (dataset == "gtex608") {
+    study_gtex_trscr = mreadRDS("study_gtex_trscr608.rds") 
+} else if (dataset == "complete") {
+    study_gtex_trscr = mreadRDS("study_gtex_trscr_complete.rds")
+    if(sum(colnames(study_gtex_trscr$exp_grp) == "tissue") == 0) colnames(study_gtex_trscr$exp_grp)[colnames(study_gtex_trscr$exp_grp) == "SMTS"] = "tissue"
+}
+
+idx_tissue = rownames(study_gtex_trscr$exp_grp[study_gtex_trscr$exp_grp$tissue == tissue,])
+
+```
+
+We obtain `r length(slct_ewas_cpg_fdr)` `r ifelse(missmethyl_probes == "ewasBonf", "Bonf", "BH")` FDR sign EWAS probes associated with aging on `r nrow(ewas)` probes (`r length(slct_ewas_cpg_fdr)/nrow(ewas)*100` %).
+After computing our Predimeth pipeline on GSE147740, we obtain `r length(predimeth)` probes.  
+
+Concerning genes, we have `r length(unique_platform_genes)` genes.  
+`r length(unique_ewas_genes)` of these containing at least a probe linked to aging in EWAS (`r length(unique_ewas_genes)/length(unique_platform_genes)*100` %) and `r length(unique_predimeth_genes)` containing at least a predimeth probe (`r length(unique_predimeth_genes)/length(unique_platform_genes)*100` %). 
+
+For the transcriptomic dataset, containing `r nrow(study_gtex_trscr$exp_grp)` individuals and `r nrow(study_gtex_trscr$data)` gene expression, we have here the table of all representing tissues :  
+
+`r kable(as.data.frame(table(study_gtex_trscr$exp_grp$tissue)))`
+
+We choose to only keep `r tissue` data, so that give us `r length(idx_tissue)` individuals  
+
+# Genes Generation
+
+
+```{r Missmethyl annotated genes, eval = (genes_generation == "missmethyl"), results='asis'}
+
+cat (" We decided to use missmethyl to generate genes of interest \n ")
+
+library(missMethyl)
+start_time = Sys.time()
+
+#Launch missmethyl depending on the probes ("ewas" for FDR sign EWAS probes or "predimeth" for predimeth probes)
+
+if(missmethyl_probes == "ewasBH" | missmethyl_probes == "ewasBonf" ) {
+
+    #Long time to run missmethyl with sig.genes = TRUE, so better to launch it only if we already don't do it before
+    if(!file.exists(paste0("tables/missmethyl/", missmethyl_probes,"/GSE147740_", missmethyl_probes,"_GO_sign_genes.txt"))) {
+    
+        enriched_terms = missMethyl::gometh(sig.cpg = slct_ewas_cpg_fdr, all.cpg = rownames(ewas), array.type = "EPIC", collection = "GO", sig.genes = TRUE)
+        enriched_terms = enriched_terms[enriched_terms$ONT == "BP" & enriched_terms$FDR < 0.05,] #Select only BP and FDR sign GO Terms
+        enriched_terms = enriched_terms[order(enriched_terms$FDR),] #Order GO by FDR
+        print(dim(enriched_terms))
+        write.table(enriched_terms,paste0("tables/missmethyl/", missmethyl_probes,"/GSE147740_", missmethyl_probes,"_GO_sign_genes.txt")) #Write it to don't have to redo it if rerun
+        print(paste0("Temps pour enrichissement : ", difftime(start_time, Sys.time(), units = "mins"), " min")) #Check time to make it if it's the first time (15 min approx)
+
+    # Else we just take the file already compute
+    } else { 
+        enriched_terms = read.table(paste0("tables/missmethyl/", missmethyl_probes,"/GSE147740_", missmethyl_probes,"_GO_sign_genes.txt"))
+    }
+
+} else if (missmethyl_probes == "predimeth") {
+   
+    if(!file.exists("tables/missmethyl/predimeth/GSE147740_predimeth_GO_sign_genes.txt")) {
+    
+        enriched_terms <- missMethyl::gometh(sig.cpg = predimeth, all.cpg = rownames(ewas), array.type = "EPIC", collection = "GO", sig.genes = TRUE)
+        enriched_terms = enriched_terms[enriched_terms$ONT == "BP" & enriched_terms$P.DE < 0.05,]
+        enriched_terms = enriched_terms[order(enriched_terms$P.DE),]    
+        dim(enriched_terms)
+        write.table(enriched_terms,"tables/missmethyl/predimeth/GSE147740_predimeth_GO_sign_genes.txt")
+        print(paste0("Temps pour enrichissement : ", difftime(start_time, Sys.time(), units = "mins"), " min"))
+
+    } else { 
+        enriched_terms = read.table("tables/missmethyl/predimeth/GSE147740_predimeth_GO_sign_genes.txt")
+    }
+
+}
+
+miss_genes = unique(unlist(strsplit(enriched_terms[,"SigGenesInSet"], ",")))
+
+# After compute associated GO, we can only keep the GO associated to a specific word. To do that, we only select go terms with the word in its term
+
+# Function that can select only GO terms with the wanted word
+filter_by_word = function(list, word) {
+  # Filter vector go terms containing the word
+  name_match = sapply(list, function(vec) word %in% vec)
+  # Return only go terms with the word
+  names(list)[name_match]
+}
+
+# We create a list of vectors containing for each element of list the vector with all words in GO term
+GOterm = enriched_terms$TERM
+GOsplit = strsplit(GOterm, " ")
+names(GOsplit) = rownames(enriched_terms)
+
+table_GOsplit = sort(unlist(GOsplit), decreasing = TRUE)
+write.table(table_GOsplit, paste0("tables/", genes_generation, "/", missmethyl_probes, "/table_all_words_", missmethyl_probes, ".txt"))
+
+# We only select list elements with go_word in the vector
+spec_term_GO = filter_by_word(GOsplit, go_word)
+
+#We obtain here all goterms affected with the word
+total_spec_term_GO = enriched_terms[spec_term_GO,]
+write.table(total_spec_term_GO,paste0("tables/missmethyl/",missmethyl_probes, "/", go_word, "/GSE147740_",missmethyl_probes,"_", go_word,"_pv_sign_genes.txt"))
+
+spec_term_genes = unique(unlist(strsplit(total_spec_term_GO[,"SigGenesInSet"], ",")))
+genes_assoc = spec_term_genes
+write.table(spec_term_genes, paste0("genes/missmethyl/", missmethyl_probes, "/", go_word, "/gene_", go_word,"_",missmethyl_probes,"_no_tresh_unspecific.txt"))
+
+if(go_treshold != "no_tresh") { #We filter these GO with keeping only the GO with an amount of genes below the treshold
+    
+    go_treshold = as.numeric(go_treshold) #go_tresholds is c("no_tresh",300,1000) so 300 or 1000 is a character 
+    treshold_spec_term_GO = total_spec_term_GO[total_spec_term_GO$N <= go_treshold,]
+    write.table(treshold_spec_term_GO,paste0("tables/missmethyl/",missmethyl_probes, "/", go_word, "/GSE147740_",missmethyl_probes,"_GO",go_treshold,"_",go_word,"_pv_sign_genes.txt"))
+
+    layout(matrix(1:4,2, byrow = TRUE), respect=TRUE)
+    col_tresh = ifelse(total_spec_term_GO$N <= go_treshold, "red", "black")
+    plot(total_spec_term_GO$N, total_spec_term_GO$DE, main = paste0("Significative genes ~ Nb genes in ", missmethyl_probes," ", go_word, " GO"), col = col_tresh)
+    legend("topleft", col="red", pch=1, legend = paste0("Selected GO term by gene number treshold (", nrow(treshold_spec_term_GO), ")"))
+    plot(total_spec_term_GO$N, -log10(total_spec_term_GO$P.DE), main = paste0("Pvalue ~ Nb genes in ", missmethyl_probes, " ", go_word, " GO"), col = col_tresh)
+    legend("topleft", col="red", pch=1, legend = paste0("Selected GO term by gene number treshold (", nrow(treshold_spec_term_GO), ")"))
+    plot(treshold_spec_term_GO$N, treshold_spec_term_GO$DE, main = paste0("Significative genes ~ Nb genes in selected ", missmethyl_probes, " ", go_word, " GO by treshold"), col = "red")
+    plot(treshold_spec_term_GO$N, -log10(treshold_spec_term_GO$P.DE), main = paste0("Pvalue ~ Nb genes in selected ", missmethyl_probes, " ", go_word, " GO by treshold"), col = "red")
+
+    genes_spec_term_tresh = unique(unlist(strsplit(treshold_spec_term_GO[,"SigGenesInSet"], ",")))
+    genes_assoc = genes_spec_term_tresh
+    write.table(genes_spec_term_tresh,paste0("genes/missmethyl/", missmethyl_probes, "/", go_word, "/gene_",go_word,"_",missmethyl_probes,"_",go_treshold,"_unspecific.txt"))
+
+
+} else { 
+
+    layout(matrix(1:2,1, byrow = TRUE), respect=TRUE)
+    plot(total_spec_term_GO$N, total_spec_term_GO$DE, main = paste0("Significative genes ~ Nb genes in ", missmethyl_probes, " ", go_word, " GO"))
+    plot(total_spec_term_GO$N, -log10(total_spec_term_GO$P.DE), main = paste0("Pvalue ~ Nb genes in ", missmethyl_probes, " ", go_word, " GO"))
+
+}
+
+genes_unspec = genes_assoc
+
+#After selected specific terms genes, we make an other selection on this genes, with only keeping predimeth genes or genes that contains ewas probes in promoters  
+
+if(selection == "predimeth") { 
+    genes_assoc = genes_assoc[genes_assoc %in% unique_predimeth_genes]
+}else if (selection == "promoter") {
+    if(missmethyl_probes == "ewas") {selected_anno = ewas_anno} else {selected_anno = predimeth_anno}
+    genes_prom = selected_anno$UCSC_RefGene_Name[selected_anno$Regulatory_Feature_Group == "Promoter_Associated" | selected_anno$Regulatory_Feature_Group == "Promoter_Associated_Cell_type_specific"]
+    genes_prom = unique(unlist(strsplit(as.character(genes_prom), ";")))
+    genes_assoc = genes_assoc[genes_assoc %in% genes_prom]
+}
+if(selection != "unspecific") { write.table(genes_assoc,paste0("genes/missmethyl/", missmethyl_probes, "/", go_word, "/gene_", go_word,"_",missmethyl_probes,"_",go_treshold,"_",selection,".txt")) }
+
+title_hm = paste0(selection," genes selected in sign ", missmethyl_probes, " ", go_word," GO terms under ", go_treshold," genes")
+
+# Génération du texte HTML
+output <- paste0(
+  "<h2>At the end of the running of missmethyl</h2>",
+  "<p>We see that in the case we take <strong>", missmethyl_probes, "</strong> probes to run missmethyl, we obtain:</p>",
+  
+  "<ul>",
+  "<li><strong>", nrow(enriched_terms), "</strong> significant BP Go Terms associated with <strong>", missmethyl_probes, "</strong> probes (", length(miss_genes), " genes). ",
+  "You can find the table at ", paste0("<code>tables/missmethyl/", missmethyl_probes, "/GSE147740_", missmethyl_probes, "_GO_sign_genes.txt</code>"), 
+  " and in ANNEXE.</li>",
+  
+  "<li><strong>", length(spec_term_GO), "</strong> significant BP <strong>", go_word, "</strong> Go Terms associated with <strong>", missmethyl_probes, "</strong> probes (", length(spec_term_genes), " genes). ",
+  "You can find the table at <code>tables/missmethyl/", missmethyl_probes, "/", go_word, "/GSE147740_", missmethyl_probes, "_GO_", go_word, "_pv_sign_genes.txt</code> and in ANNEXE.</li>"
+)
+
+# Ajouter conditionnellement la section pour `go_treshold`
+if (go_treshold != "no_tresh") {
+  output <- paste0(
+    output,
+    "<li><strong>", nrow(treshold_spec_term_GO), "</strong> significant BP ", go_word, " Go Terms with an amount of genes under <strong>", 
+    go_treshold, "</strong> associated with <strong>", missmethyl_probes, "</strong> probes (", length(genes_spec_term_tresh), " genes). ",
+    "You can find the table at <code>tables/missmethyl/", missmethyl_probes, "/", go_word, "/GSE147740_", missmethyl_probes, "_GO", go_treshold, "_", go_word, "_pv_sign_genes.txt</code> and in ANNEXE.</li>"
+  )
+}
+
+# Ajouter la conclusion et terminer la liste
+output <- paste0(
+  output,
+  "</ul>",
+  "<p>After all this selection, we obtain <strong>", length(genes_unspec), "</strong> genes to evaluate in transcriptomic data. ",
+  "List of genes is available in the <code>genes/missmethyl/", missmethyl_probes,"/", go_word,"/</code> folder and in ANNEXE.</p>"
+)
+
+if (selection != "unspecific") {
+    output = paste0(
+        output,
+        "</ul>",
+        "<p> And to go further, we can filter these genes with only genes containing <strong>", selection, 
+        "</strong> associated probes, giving us <strong>", length(genes_assoc), "</strong> genes \n",
+        "(list of genes in <code>genes/missmethyl/", missmethyl_probes, "/", go_word, "/gene_", go_word,"_", missmethyl_probes, "_", go_treshold, "_", selection, ".txt</code>) </p>"
+    )
+}
+
+output = paste0(
+    output, 
+    "</ul>",
+    "<p> So after all this selection, we finally make our transcriptome evaluation on <strong>", length(genes_assoc),"</strong> genes </p>"
+)
+
+# Afficher le texte en HTML directement
+cat(output)
+
+```
+
+```{r list of genes, eval = (genes_generation == "list") }
+
+cat("We decided to give directly a list of genes of interest to make our transcriptome evaluation \n")
+
+if (list_of_genes == "hox") {
+    genes_path = "genes/list/hox_genes.txt"
+    if(!file.exists(genes_path)) {
+        hox_genes <- c(
+            paste0("HOXA", 1:13),
+            paste0("HOXB", 1:13),
+            paste0("HOXC", 1:13),
+            paste0("HOXD", 1:13)
+        )
+        write.table(hox_genes, "genes/list/hox_genes.txt")
+    }
+}
+
+genes_assoc = unlist(read.table(genes_path))
+
+title_hm = paste0(list_of_genes," genes ")
+
+
+```
+
+```{r combp, eval = (genes_generation == "combp") }
+
+cat("We decided to take genes associated to combp regions coming from EWAS probes to make our transcriptome evaluation \n 
+You need to have EWAS bed file on gtex_missmethyl folder to launch combp pipeline ! (ewas4combp_study_GSE147740.rds_modelcalllm_meth~age.bed) ")
+
+if(!file.exists("ewas4combp_study_GSE147740.rds_modelcalllm_meth~age.bed")) {
+
+    s = mreadRDS("../datashare/GSE147740/study_preproc_GSE147740.rds")
+    ewas = mreadRDS("ewas_GSE147740_modelcalllm_meth~age.rds") # EWAS association with age in GSE147740
+    pf = s$platform
+
+    head(ewas)
+    head(pf[,1:6])
+
+    pval = ewas[,"pv"]
+
+    bed = pf[rownames(ewas),1:2] # Warning, here pf is global, it must be arg and indexed!!
+    head(bed)
+    bed[,3] = bed[,2]+1
+    bed$probes = names(pval)
+    bed$pval = pval
+    bed$strand = "+"
+    colnames(bed) = c("chrom", "start", "end", "probes", "pval", "strand")
+    head(bed)
+
+    study_filename = "study_GSE147740.rds"
+    model_func_name = "modelcalllm"
+    pval_thresh = 1e-30
+    model_formula = "meth~age"
+
+    prefix = paste0(study_filename, "_", model_func_name, "_", model_formula)
+    prefix2 = paste0(prefix, "_", pval_thresh)
+
+    bed_ewas_filename = paste0("ewas4combp_", prefix,".bed")
+    bed[,1] = as.character(bed[,1])
+    bed = bed[order(bed[,1], bed[,2]),]
+    write.table(bed,file=bed_ewas_filename , sep="\t", quote=FALSE, row.names=FALSE, col.names=TRUE)
+
+}
+
+if(!file.exists("dmr_study_GSE147740.rds_modelcalllm_meth~age_1e-30.regions-t.bed")){
+
+    Sys.setenv(PYTHONPATH = "/summer/epistorage/opt/combined-pvalues/")
+    cmd = "/summer/epistorage/opt/combined-pvalues/cpv/comb-p"
+    arg = paste0("pipeline -c 5 --seed 1e-30  --dist 1000 -p dmr_study_GSE147740.rds_modelcalllm_meth~age_1e-30 --region-filter-p 0.05 --region-filter-n 2 ewas4combp_study_GSE147740.rds_modelcalllm_meth~age.bed")
+    print(paste(cmd, arg))
+    system2(cmd, arg)
+
+}
+
+combp_regions = read.table("dmr_study_GSE147740.rds_modelcalllm_meth~age_1e-30.regions-t.bed")
+colnames(combp_regions) = c("chrom", "start", "end", "min_p", "n_probes", "z_p", "z_sidak_p")
+
+if(!file.exists("genes/combp/combp_genes_GSE147740.txt")) {
+    regions_gr <- GRanges(
+        seqnames = combp_regions$chrom,
+        ranges = IRanges(start = combp_regions$start, end = combp_regions$end)
+    )
+
+    # transcrit hg19 genes
+    txdb = TxDb.Hsapiens.UCSC.hg19.knownGene
+    genes = genes(txdb) 
+
+    overlaps = findOverlaps(regions_gr, genes)
+
+    region_to_genes <- data.frame(
+        region = as.character(regions_gr[queryHits(overlaps)]),
+        gene_id = names(genes)[subjectHits(overlaps)]
+    )
+
+    region_to_genes$gene_name <- mapIds(
+        org.Hs.eg.db, 
+        keys = region_to_genes$gene_id, 
+        column = "SYMBOL", 
+        keytype = "ENTREZID", 
+        multiVals = "first"
+    )
+
+    head(region_to_genes)
+
+    combp_genes = unique(region_to_genes$gene_name)
+    write.table(combp_genes,"genes/combp/combp_genes_GSE147740.txt")
+} else { combp_genes = unlist(read.table("genes/combp/combp_genes_GSE147740.txt"))}
+
+title_hm = paste0("comb-p associated genes")
+
+genes_assoc = combp_genes
+
+```
+
+# Heatmap 
+
+```{r heatmap transcriptome}
+
+layout(matrix(1:1,1), respect=TRUE)
+
+# Transform genes names in transcriptome name 
+trscr_platform = study_gtex_trscr$platform
+trscr_genes = rownames(trscr_platform[trscr_platform$Description %in% genes_assoc,])
+
+# plot distrib age and heatmap 
+idx_heatmap = idx_tissue[order(study_gtex_trscr$exp_grp[idx_tissue,"age"])]
+
+ages = study_gtex_trscr$exp_grp[idx_heatmap,"age"]
+unique_ages = unique(ages)
+valid_ages = unique_ages[sapply(unique_ages, function(age) sum(ages == age) >= 5)] #Checking if all ages have enough individuals
+age_col = ifelse(ages %in% valid_ages, "black", "red") 
+plot(study_gtex_trscr$exp_grp[idx_heatmap,"age"], ylab = "age", col = age_col, main = paste0("age distribution for ", dataset, " expression data individuals"))
+idx_heatmap = idx_heatmap[ages %in% valid_ages] # Delete ages that don't have enough individuals
+ages = study_gtex_trscr$exp_grp[idx_heatmap,"age"] #Reaffect ages after modifications
+
+data = study_gtex_trscr$data[trscr_genes,idx_heatmap]
+
+# Remove no variation genes 
+data = data[apply(data, 1, function(l) {length(unique(l))})>1, ]
+
+rsc = rep("white",nrow(data))
+csc = rep("white",ncol(data))
+
+brut_plot = plot_meth_hm(data, 
+  main=paste0("Brut GTEx ",tissue, " expression variation for ", title_hm," \n"), 
+  rsc=rsc                         , 
+  csc=csc                         , 
+  nb_grp_row=4                     ,
+  nb_grp_col=4                     , 
+  hcmeth_cols=FALSE                , 
+  # hcmeth_cols="eucl_dist"                , 
+  hcmeth_rows="eucl_dist"               , 
+  # hcmeth_rows= FALSE               ,
+  # normalization="zscore_rows"      ,
+  normalization=FALSE              ,
+  ordering_func=median             , 
+  colors=c("cyan", "black", "red") , 
+  # range_exp=c(-4,4)              ,
+  PCA=FALSE                        
+)
+
+norm_plot = plot_meth_hm(data, 
+  main=paste0("Normalized GTEx ",tissue, " expression variation for ", title_hm," \n"), 
+  rsc=rsc                         , 
+  csc=csc                         , 
+  nb_grp_row=4                     ,
+  nb_grp_col=4                     , 
+  hcmeth_cols=FALSE                , 
+  # hcmeth_cols="eucl_dist"                , 
+  hcmeth_rows="eucl_dist"               , 
+  # hcmeth_rows= FALSE               ,
+  normalization="zscore_rows"      ,
+  # normalization=FALSE              ,
+  ordering_func=median             , 
+  colors=c("cyan", "black", "red") , 
+  range_exp=c(-4,4)              ,
+  PCA=FALSE                        
+)
+
+```
+
+```{r clustering, fig.width=10, fig.height=24}
+
+n_clust = 5
+# Create clusters 
+
+clust_groups = cutree(norm_plot$hc_row, k= n_clust)
+print(table(clust_groups))
+
+# No normalized data
+
+# Aggregate expression by age for each cluster
+cl_data_agreg = lapply(1:n_clust, function(cluster) {
+    genes_in_cluster = data[clust_groups == cluster, ]  # Subset genes in this cluster
+    if (is.vector(genes_in_cluster)) {
+        # Convert to a matrix with one row
+        genes_in_cluster <- t(genes_in_cluster)
+    }
+    matrix = sapply(unique(ages), function(age_group) {
+        rowMeans(genes_in_cluster[, ages == age_group, drop = FALSE])  # Mean expression for each age group
+    })
+    if (is.vector(matrix)) { names(matrix) = unique(ages) } else { colnames(matrix) = unique(ages) }  # Assign age groups as column names
+    return(matrix)
+})
+names(cl_data_agreg) = paste0("Cluster_", 1:n_clust)  # Name each cluster
+
+# Normalized data 
+
+data_z = data - apply(data, 1, mean)
+data_z = data_z / apply(data_z, 1, sd)
+
+# Aggregate expression by age for each cluster
+cl_data_z_agreg = lapply(1:n_clust, function(cluster) {
+    genes_in_cluster = data_z[clust_groups == cluster, ]  # Subset genes in this cluster
+    if (is.vector(genes_in_cluster)) {
+        # Convert to a matrix with one row
+        genes_in_cluster <- t(genes_in_cluster)
+    }
+    matrix = sapply(unique(ages), function(age_group) {
+        rowMeans(genes_in_cluster[, ages == age_group, drop = FALSE])  # Mean expression for each age group
+    })
+    if (is.vector(matrix)) { names(matrix) = unique(ages) } else { colnames(matrix) = unique(ages) }  # Assign age groups as column names
+    return(matrix)
+})
+names(cl_data_z_agreg) = paste0("Cluster_", 1:n_clust)  # Name each cluster
+
+
+
+set.seed(1)
+# Matplot 
+layout(matrix(1:(n_clust*2 + 2*n_clust*5),12), respect = TRUE)
+par(mar = c(2, 2, 3, 1), oma = c(0, 0, 4, 0)) 
+
+invisible(sapply(1:n_clust, function(cluster_idx) {
+    if (is.vector(cl_data_agreg[[cluster_idx]])) {
+        plot(1:length(unique(ages)), cl_data_agreg[[cluster_idx]], type = "l", lty = 1,
+            xlab = "Age Groups", ylab = "Expression",
+            main = paste(names(cl_data_agreg)[cluster_idx], " \n No Norm Exp"),
+            xaxt = "n", col = adjustcolor(cluster_idx, alpha.f=.3))
+        axis(1, at = 1:length(unique(ages)), labels = unique(ages))  # Add age labels
+        plot(1:length(unique(ages)), cl_data_z_agreg[[cluster_idx]], type = "l", lty = 1,
+            xlab = "Age Groups", ylab = "Expression",
+            main = "Norm Exp",
+            xaxt = "n", col = adjustcolor(cluster_idx, alpha.f=.3))
+        axis(1, at = 1:length(unique(ages)), labels = unique(ages))  # Add age labels
+    } else {
+        matplot(t(cl_data_agreg[[cluster_idx]]), type = "l", lty = 1,
+            xlab = "Age Groups", ylab = "Expression",
+            main = paste(names(cl_data_agreg)[cluster_idx], " \n No Norm Exp"),
+            xaxt = "n", col = adjustcolor(cluster_idx, alpha.f=.3))
+        axis(1, at = 1:length(unique(ages)), labels = unique(ages))  # Add age labels
+        matplot(t(cl_data_z_agreg[[cluster_idx]]), type = "l", lty = 1,
+            xlab = "Age Groups", ylab = "Expression",
+            main = "Norm Exp",
+            xaxt = "n", col = adjustcolor(cluster_idx, alpha.f=.3))
+        axis(1, at = 1:length(unique(ages)), labels = unique(ages))  # Add age labels
+    }
+
+    genes_in_cluster = names(which(clust_groups == cluster_idx))
+    if (length(genes_in_cluster) >= 5) {
+        tmp_genes = sample(genes_in_cluster, 5)
+    } else {
+        tmp_genes = genes_in_cluster  # Return all genes if less than 5
+    }
+
+    for (i in 1:5) {
+        if (i > length(tmp_genes)) {
+            plot.new() # Empty plot for no norm data
+            plot.new() # Empty plot for norm data
+        } else {
+            # Get expression data for the selected gene
+            gene_idx = tmp_genes[i]
+            gene_exp = data[gene_idx, ]
+            gene_exp_z = data_z[gene_idx, ]
+
+            # Create boxplot for the gene
+            boxplot(gene_exp ~ ages,
+                main = paste(gene_idx, " \n No Norm Exp"),
+                xlab = "Age Group", ylab = "Expression", col = cluster_idx
+            )
+
+            boxplot(gene_exp_z ~ ages,
+                main = "Norm Exp",
+                xlab = "Age Group", ylab = "Expression", col = cluster_idx
+            )
+
+        }
+    }
+
+}))
+
+title(main = "Expression Trends by Clusters and Age Groups", outer = TRUE, cex.main = 1.5)
+
+```
+
+# Descriptive Analysis of gene selected transcriptomic data 
+
+```{r agreg age}
+
+result = sapply(valid_ages, function(age) {
+  rowMeans(data[, ages == age])
+})
+result_df = as.matrix(result)
+colnames(result_df) = valid_ages
+
+data_agreg = result_df
+
+result = sapply(valid_ages, function(age) {
+  rowMeans(data_z[, ages == age])
+})
+result_df = as.matrix(result)
+colnames(result_df) = valid_ages
+data_z_agreg = result_df
+
+if(nrow(data_agreg) >= 3000) { # If Nb genes >= 3000, utiliser Anderson Darling, sinon rester sur Shapiro Wilk
+    if (!require(nortest)) install.packages("nortest")
+    library(nortest)
+    normality_results = apply(data_agreg, 2, function(x) ad.test(x)$p.value)
+} else { normality_results = apply(data_agreg, 2, function(x) shapiro.test(x)$p.value) }
+
+layout(matrix(1:6,2), respect=TRUE)
+for (age in colnames(data_agreg)) {
+  qqnorm(data_agreg[,age], main = paste("QQ-Plot (age", age, ")"," Normality test pval = ", normality_results[age]))
+  qqline(data_agreg[,age], col = "red")
+}
+
+layout(matrix(1:2,1), respect=TRUE)
+
+data_long = stack(data_z_agreg)
+data_long$col = as.factor(data_long$col)
+
+fligner_result = fligner.test(value ~ col, data = data_long)
+boxplot(data_z_agreg,  main = paste0("Expression variability of ", title_hm," genes z-score on GTeX transcriptome agregated by age \n Fligner-Killeen pvalue = ", fligner_result$p.value))
+
+sd = tapply(data_long$value, data_long$col, sd)
+text(x = 1:length(sd),
+     y = apply(data_z_agreg, 2, max) + 0.05,  # Position en y (légèrement au-dessus des boîtes)
+     labels = paste0("sd = ", round(sd, 2)),  # Afficher les variances arrondies à 2 décimales
+     col = "blue", cex = 1)
+
+
+
+mean_genes = apply(data,1,mean)
+sd_genes = apply(data,1,sd)
+
+quartiles = cut(mean_genes, 
+                 breaks = quantile(mean_genes, probs = seq(0, 1, 0.25)), 
+                 include.lowest = TRUE, 
+                 labels = c("Q1", "Q2", "Q3", "Q4"))
+
+tab = table(quartiles)
+
+colors = c("blue", "green", "orange", "red")  # Couleurs pour Q1, Q2, Q3, Q4
+group_colors = colors[as.numeric(quartiles)]
+
+plot(sd_genes,mean_genes, col = group_colors, main ="mean by variability expression of each genes")
+legend("topright", legend = paste0(levels(quartiles), "(", tab, ")"), col = colors, pch = 1, title = "Groupes (Quartiles)")
+
+if(nrow(data_agreg) > 8) {
+    layout(matrix(1:4,2, byrow = TRUE), respect=TRUE)
+    q = c("Q1","Q2","Q3","Q4")
+    for (i in 1:length(q)) {
+      tmp_data_agreg = data_z_agreg[quartiles == q[i],]
+      tmp_data_long = stack(tmp_data_agreg)
+      tmp_data_long$col = as.factor(tmp_data_long$col)
+      tmp_sd = tapply(tmp_data_long$value, tmp_data_long$col, sd)
+      tmp_fligner_result = fligner.test(value ~ col, data = tmp_data_long)
+      boxplot(tmp_data_agreg, col = colors[i], main = paste0("Expression variability of ", title_hm, " z-score on GTeX transcriptome agregated by age for quartile ", q[i], "\n Fligner-Killeen pvalue = ", tmp_fligner_result$p.value))
+      text(x = 1:length(tmp_sd),
+         y = apply(tmp_data_agreg, 2, max) + 0.05,  # Position en y (légèrement au-dessus des boîtes)
+         labels = paste0("sd = ", round(tmp_sd, 2)),  # Afficher les variances arrondies à 2 décimales
+         col = "blue", cex = 1)
+    }
+}
+
+```
+
+```{r annexe missmeth, eval = (genes_generation == "missmethyl"), results = "asis"}
+
+# Construire la section ANNEXE
+output <- paste0(
+  "<h1>ANNEXE</h1>",
+  
+  "<p>You can find here all tables of GO terms:</p>",
+  
+  "<h2>GO Terms</h2>",
+  
+  "<h3>BP sign GO term associated to ", missmethyl_probes, " (", nrow(enriched_terms), "):</h3>",
+  "<div style='max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px;'>",
+  knitr::kable(enriched_terms[, 1:6], format = "html", table.attr = "style='width:100%;'"),
+  "</div>",
+  
+  "<h3>", go_word, " BP sign GO term associated to ", missmethyl_probes, " (", nrow(total_spec_term_GO), "):</h3>",
+  "<div style='max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px;'>",
+  knitr::kable(total_spec_term_GO[, 1:6], format = "html", table.attr = "style='width:100%;'"),
+  "</div>"
+)
+
+# Ajouter conditionnellement la section pour go_treshold
+if (go_treshold != "no_tresh") {
+  output <- paste0(
+    output,
+    "<h3>", go_word, " BP sign GO term with under ", go_treshold, " genes associated to ", missmethyl_probes, " (", nrow(treshold_spec_term_GO), "):</h3>",
+    "<div style='max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px;'>",
+    knitr::kable(treshold_spec_term_GO[, 1:6], format = "html", table.attr = "style='width:100%;'"),
+    "</div>"
+  )
+}
+
+# Ajouter la section Genes
+output <- paste0(
+  output,
+  "<h2>Genes</h2>",
+  
+  "<h3>Genes associated to BP sign GO term associated to <strong>", missmethyl_probes, "</strong> (", length(miss_genes), "):</h3>",
+  "<div style='max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px;'>",
+  paste0("<ul>", paste0("<li>", sort(miss_genes), "</li>", collapse = ""), "</ul>"),
+  "</div>",
+  
+  "<h3>Genes associated to <strong>", go_word, "</strong> BP sign GO term associated to <strong>", missmethyl_probes, "</strong> (", length(spec_term_genes), "):</h3>",
+  "<div style='max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px;'>",
+  paste0("<ul>", paste0("<li>", sort(spec_term_genes), "</li>", collapse = ""), "</ul>"),
+  "</div>"
+)
+
+# Ajouter conditionnellement les gènes filtrés par go_treshold
+if (go_treshold != "no_tresh") {
+  output <- paste0(
+    output,
+    "<h3>Genes associated to <strong>", go_word, "</strong> BP sign GO term with under <strong>", go_treshold, " genes</strong> associated to <strong>", missmethyl_probes, "</strong> (", length(genes_spec_term_tresh), "):</h3>",
+    "<div style='max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px;'>",
+    paste0("<ul>", paste0("<li>", sort(genes_spec_term_tresh), "</li>", collapse = ""), "</ul>"),
+    "</div>"
+  )
+}
+
+# Ajouter conditionnellement les gènes filtrés par selection
+if (selection != "unspecific") {
+  output <- paste0(
+    output,
+    "<h3><strong>", selection, "</strong> associated genes in <strong>", go_word, "</strong> BP sign GO term with under <strong>", go_treshold, " genes</strong> associated to <strong>", missmethyl_probes, "</strong> (", length(genes_assoc), "):</h3>",
+    "<div style='max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px;'>",
+    paste0("<ul>", paste0("<li>", sort(genes_assoc), "</li>", collapse = ""), "</ul>"),
+    "</div>"
+  )
+}
+
+# Afficher la sortie HTML dans le document
+cat(output)
+
+```
+
+```{r annexe combp, eval = (genes_generation == "combp"), results = "asis"}
+
+# Construire le contenu HTML pour la section ANNEXE
+output <- paste0(
+  "<h1>ANNEXE</h1>",
+  
+  "<p>You can find here the combp table:</p>",
+  
+  "<div style='max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px;'>",
+  knitr::kable(combp_regions, format = "html", table.attr = "style='width:100%;'"),
+  "</div>",
+  
+  "<p>Here is the gene list associated with combp regions:</p>",
+  
+  "<div style='max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px;'>",
+  paste0("<ul>", paste0("<li>", combp_genes, "</li>", collapse = ""), "</ul>"),
+  "</div>"
+)
+
+# Afficher le contenu HTML dans le document
+cat(output)
+```
+
+```{r annexe list, eval = (genes_generation == "list"), results = "asis"}
+
+# Construire le contenu HTML pour la section ANNEXE
+output <- paste0(
+  "<h1>ANNEXE</h1>",
+  
+  "<p>You can find here the genes list:</p>",
+  
+  "<div style='max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px;'>",
+  paste0("<ul>", paste0("<li>", genes_assoc, "</li>", collapse = ""), "</ul>"),
+  "</div>"
+)
+
+# Afficher le contenu HTML dans le document
+cat(output)
+
+```
