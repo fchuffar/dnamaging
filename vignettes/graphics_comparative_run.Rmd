@@ -171,7 +171,8 @@ rmse_glm = c()
 nb_pb_bs = c()
 nb_pb_glm = c()
 for (run in 0:nb_run) {
-	tmp_model_bs = readRDS(paste0("info_model_r",run,"_ewas", newas, "_nn", neighb, "_", gse, ".rds"))
+	#tmp_model_bs = readRDS(paste0("info_model_r",run,"_ewas", newas, "_nn", neighb, "_", gse, ".rds"))
+	tmp_model_bs = readRDS(paste0("info_model_r",run,"_", gse, "_modelcalllm_meth~age_ewas", newas, "_nn", neighb, ".rds"))
 	tmp_rmse_bs = tmp_model_bs$gender.bootstrap.RMSE
 	tmp_nb_pb_bs = tmp_model_bs$gender.bootstrap.nb_probes_mod
 	rmse_bs = c(rmse_bs,tmp_rmse_bs)

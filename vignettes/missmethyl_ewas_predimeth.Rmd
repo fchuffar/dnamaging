@@ -107,12 +107,7 @@ write.table(enriched_terms_ewas,paste0("GSE147740_ewasfdr_GOfdr.txt"))
 
 # Choose personalised Genesets 
 
-if(!exists("geneset_type")){ geneset_type = "h" } 
-
-#geneset_type = "h"
-#geneset_type = "c2"
-geneset_type = "c6" 
-#geneset_type = "hallmarks"
+if(!exists("geneset_type")){ g
 
 if(geneset_type == "h") {
     cancer_geneset = clusterProfiler::read.gmt("h.all.v2024.1.Hs.entrez.gmt")
