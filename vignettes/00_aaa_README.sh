@@ -73,7 +73,7 @@ ln -s 00_models_wf.py 00_custom_models_wf.py
 source ~/conda_config.sh
 # conda create -n enrichment_env
 conda activate enrichment_env
-# mamba install -c anaconda -c bioconda -c conda-forge -c r r-base libopenblas bioconductor-geoquery bioconductor-affy bioconductor-biobase r-seqinr r-rcpparmadillo r-devtools r-fastmap r-matrix r-kernsmooth r-catools r-gtools r-nortest r-survival r-beanplot r-gplots r-dbi  snakemake=7.32.4 python=3.9 r-intervals r-iterators r-codetools r-rcppeigen r-shape r-foreach r-glmnet r-writexls r-glmnetutils bioconductor-epidish bioconductor-illuminahumanmethylation450kanno.ilmn12.hg19 bioconductor-illuminahumanmethylationepicanno.ilm10b4.hg19 bioconductor-illuminahumanmethylation27kanno.ilmn12.hg19 bioconductor-annotatr bioconductor-txdb.hsapiens.ucsc.hg19.knowngene bioconductor-org.hs.eg.db r-ggvenn r-bedr bedtools
+# mamba install -c anaconda -c bioconda -c conda-forge -c r r-base libopenblas bioconductor-geoquery bioconductor-affy bioconductor-biobase r-seqinr r-rcpparmadillo r-devtools r-fastmap r-matrix r-kernsmooth r-catools r-gtools r-nortest r-survival r-beanplot r-gplots r-dbi  python r-intervals r-iterators r-codetools r-rcppeigen r-shape r-foreach r-glmnet r-writexls r-glmnetutils bioconductor-epidish bioconductor-illuminahumanmethylation450kanno.ilmn12.hg19 bioconductor-illuminahumanmethylationepicanno.ilm10b4.hg19 bioconductor-illuminahumanmethylation27kanno.ilmn12.hg19 bioconductor-annotatr bioconductor-txdb.hsapiens.ucsc.hg19.knowngene bioconductor-org.hs.eg.db r-ggvenn r-bedr bedtools
 # devtools::install_github("fchuffar/epimedtools")
 rmarkdown::render("05_visu.Rmd")
 for (gse in c("GSE42861", "GSE40279", "GSE87571", "GSE147740", "GSE152026")) {
@@ -83,8 +83,13 @@ for (gse in c("GSE42861", "GSE40279", "GSE87571", "GSE147740", "GSE152026")) {
 
 
 
-
-
+# conda create -n missmethyl_env
+conda activate missmethyl_env
+# mamba install -c anaconda -c bioconda -c conda-forge -c r r-base libopenblas bioconductor-geoquery bioconductor-affy bioconductor-biobase r-seqinr r-rcpparmadillo r-devtools r-fastmap r-matrix r-kernsmooth r-catools r-gtools r-nortest r-survival r-beanplot r-gplots r-dbi  snakemake=7.32.4 python=3.9 r-intervals r-iterators r-codetools r-rcppeigen r-shape r-foreach r-glmnet r-writexls r-glmnetutils r-ggvenn r-bedr bedtools bioconductor-rtracklayer bioconductor-epidish
+# bioconductor-missmethyl
+# devtools::install_github("fchuffar/epimedtools")
+# devtools::install_github("fchuffar/dnamaging")
+# BiocManager::install("missMethyl")
 
 
 

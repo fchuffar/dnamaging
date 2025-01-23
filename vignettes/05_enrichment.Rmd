@@ -309,6 +309,9 @@ if (!exists("annotations_rmsk")) {
   # annots = c( 'mm10_basicgenes', 'mm10_cpgs')
   # write.table(rmsk[rmsk[,4]=="GSAT_MM",]  , file="gsat.mm10.bed"  , sep="\t", quote=FALSE,row.names=FALSE, col.names=FALSE)
   # write.table(rmsk[rmsk[,4]=="SYNREP_MM",], file="synrep.mm10.bed", sep="\t", quote=FALSE,row.names=FALSE, col.names=FALSE)
+  # write.table(pfbed[grep("TTC[CG]GAA", pf[pfbed[,4],]$Forward_Sequence, fixed=TRUE),] , file="ttc[cg]gaa.hg19.bed", sep="\t", quote=FALSE,row.names=FALSE, col.names=FALSE)
+  # pf[grep("TTC\\[CG\\]GAA[CTGA][TCGA]TTC", pf[pfbed[,4],]$Forward_Sequence),] 
+  # pf[grep("GAA[CTGA][TCGA]TTC\\[CG\\]GAA", pf[pfbed[,4],]$Forward_Sequence),] 
   write.table(pfbed[grep("TTC[CG]GAA", pf[pfbed[,4],]$Forward_Sequence, fixed=TRUE),] , file="ttc[cg]gaa.hg19.bed", sep="\t", quote=FALSE,row.names=FALSE, col.names=FALSE)
   write.table(rmsk[grep("AATGG|ATGGA|ATTCC|CATTC|GAATG|TCCAT|TGGAA", rmsk[,4]),]      , file="ggaat.hg19.bed"     , sep="\t", quote=FALSE,row.names=FALSE, col.names=FALSE)
   write.table(rmsk[grep("LTR", rmsk[,4]),]                                            , file="ltr.hg19.bed"       , sep="\t", quote=FALSE,row.names=FALSE, col.names=FALSE)
