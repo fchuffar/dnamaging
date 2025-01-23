@@ -2,20 +2,19 @@ cd ~/projects/dnamaging/vignettes
 rsync -auvP ~/projects/dnamaging/ cargo:~/projects/dnamaging/ --dry-run
 rsync -auvP ~/projects/dnamaging/ cargo:~/projects/dnamaging/ --exclude="gsea_out*" --exclude="*.rds" --exclude="*.grp" --exclude="*.bed" --exclude="*.html" --exclude="*.rnk" --dry-run 
 
-source ~/conda_config.sh
-conda activate dnamaging_env
-# under R 
-# devtools::install_github("fchuffar/dnamaging")
-
-
+## CUSTOM
 # cp 00_aaa_README.sh 00_aaa_custom_README.sh
-# source config
+# # config
+# projects=episoma
+# study=epic_episoma_chuga
 # echo ${project}
 # echo ${study}
-# rsync -auvP ~/projects/${project}/results/${study}/ cargo:~/projects/${project}/results/${study}/
+# rsync -auvP ~/projects/${project}/results/${study}/ cargo:~/projects/${project}/results/${study}/ --dry-run
+
+# # data
+# cd ~/projects/${project}/results/${study}/
 # ln -s ~/projects/datashare .
-# cd datashare/${study}/raw
-# ln -s .../*.idat .
+# ls -lha datashare/${study}/raw
 
 ln -s 00_build_idat_studies.py 00_custom_build_idat_studies.py 
 # conda create -n idat2study_env
