@@ -153,8 +153,9 @@ RnBeads::rnb.options(
   # replicate.id.column = "treatment",
   # import.table.separator = ";",
   # import.bed.style     = "bismarkCov",
-  assembly             = "hg38",
-  import.idat.platform = "probesEPICv2",
+  # assembly             = ifelse(pf_idx=="GPL33022", "hg38", "hg19"),
+  assembly             = "hg19",
+  # import.idat.platform = ifelse(pf_idx=="GPL33022", "probesEPICv2"),
   # region.types=c("promoters", "genes", "tiling", "cpgislands", "sites"),
   region.types=c("sites"),
   # region.aggregation="coverage.weighted",
@@ -332,66 +333,6 @@ sessionInfo()
 ```
 
 
-
-
-
-
-```{r eval=FALSE}
-# cd datashare/GSE197678/raw
-
-dim(s$exp_grp)
-s$exp_grp$key = substr(s$exp_grp$title, 77, 79)
-tab = sort(table(s$exp_grp$key))
-tab
-thresh = 150
-sample_idx = rownames(s$exp_grp)[s$exp_grp$key %in% names(tab)[tab >= thresh]]
-# sample_idx = rownames(s$exp_grp)[s$exp_grp$key %in% names(tab)[tab < 10]]
-length(sample_idx)
-
-length(sample_idx) * 850000
-.Machine$integer.max
-
-for (gsm in sample_idx) {
-  print(gsm)
-  cmd = "mv"
-  args = paste0("datashare/GSE197678/raw/back/", gsm, "*.idat datashare/GSE197678/raw/.")
-  print(paste(cmd, args))
-  system2(cmd, args)
-}
-
-
-
-for (i in 2480:2000) {
-  print(paste0("*************** ", i, " ************"))
-  exp_grp = exp_grp[1:i,]
-  dim(exp_grp)
-  write.table(exp_grp, sample.sheet, sep=",", row.names=FALSE, quote=FALSE)
-
-
-  dir.create(dir.reports, showWarnings=FALSE)
-  num.cores = 32
-  parallel.setup(num.cores)
-
-  unlink(dir.reports, recursive=TRUE)
-  rnbtry = try(RnBeads::rnb.run.analysis(
-    # GEO.acc = gse,
-    sample.sheet=sample.sheet,
-    data.dir=idat_dir,
-    # data.source = list(data.dir = idat_dir, sample.sheet = sample.sheet),
-    # GS.report = NULL,
-
-    dir.reports=dir.reports, 
-    # build.index = TRUE,
-    save.rdata = FALSE,
-    initialize.reports=TRUE
-  ))
-  if (!inherits(rnbtry, "try-error")) {
-    stop() 
-  } else {
-    print(paste0("*************** NOT ", i, " ************"))
-  }
-}
-```
 
 
 

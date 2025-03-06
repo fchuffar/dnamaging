@@ -56,7 +56,7 @@ gses = [
 
   "GSE197678",  # n=2000 # Childhood Cancer Survivors
   # PROBLEM in IDAT processing "GSE154566",  # need more memory/space #  WARNING mixed 450k & Epic (n=1177) only keep Epic (n=944) # DNA methylation signatures of adolescent victimization: Analysis of a longitudinal monozygotic twin sample.
-  "GSE140686",  # need more memory/space # WARNING mixed 450k & Epic (n=1505) only keep Epic (n=1020) # Sarcoma Classification by DNA-methylation profiling
+  # "GSE140686",  # need more memory/space # WARNING mixed 450k & Epic (n=1505) only keep Epic (n=1020) # Sarcoma Classification by DNA-methylation profiling
   "GSE90496"  , # need more memory/space # TO CHECK 450k, n=2801 # DNA methylation-based classification of human central nervous system tumors [reference set]
 
   "GSE109379" ,  # TO CHECK 450k, n=1104 # DNA methylation-based classification of human central nervous system tumors [validation set]
@@ -84,8 +84,8 @@ rule target:
     input: 
       info_idat,
     shell:"""
-export PATH="/summer/epistorage/opt/bin:$PATH"
-export PATH="/summer/epistorage/miniconda3/envs/idat2study_env/bin:$PATH"
+source ~/conda_config.sh
+conda activate idat2study_env
 pwd
 # RCODE="source('data_info.R')"
 # echo $RCODE | Rscript - 2>&1 > data_info.Rout
@@ -103,8 +103,8 @@ rule R01_idat2study:
       info      = "{prefix}/info_idat2study_{gse}.rds"   ,
     threads: 32
     shell:"""
-export PATH="/summer/epistorage/opt/bin:$PATH"
-export PATH="/summer/epistorage/miniconda3/envs/idat2study_env/bin:$PATH"
+source ~/conda_config.sh
+conda activate idat2study_env
 export OMP_NUM_THREADS=1
 cd {wildcards.prefix}
 

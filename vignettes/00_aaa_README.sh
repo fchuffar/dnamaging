@@ -17,20 +17,27 @@ rsync -auvP ~/projects/dnamaging/ cargo:~/projects/dnamaging/ --exclude="gsea_ou
 # ls -lha datashare/${study}/raw
 
 ln -s 00_build_idat_studies.py 00_custom_build_idat_studies.py 
+source ~/conda_config.sh
 # conda create -n idat2study_env
 conda activate idat2study_env
 # mamba install -c anaconda -c bioconda -c conda-forge -c r r-base libopenblas bioconductor-geoquery bioconductor-affy bioconductor-biobase r-seqinr r-rcpparmadillo r-devtools r-fastmap r-matrix r-kernsmooth r-catools r-gtools r-nortest r-survival r-beanplot r-gplots bioconductor-rnbeads r-doparallel bioconductor-rnbeads.hg19 ghostscript bioconductor-watermelon bioconductor-illuminahumanmethylation450kanno.ilmn12.hg19 bioconductor-illuminahumanmethylationepicanno.ilm10b4.hg19 bioconductor-illuminahumanmethylation27kanno.ilmn12.hg19 snakemake=7.32.4
 # devtools::install_github("fchuffar/epimedtools")
-# devtools::install_github("epigen/RnBeads")
-snakemake --cores 1 -s 00_custom_build_idat_studies.py -pn 
-snakemake -k -s 00_custom_build_idat_studies.py --jobs 50 --cluster "oarsub --project epimed -l /nodes=1,walltime=10:00:00"  --latency-wait 60 -pn
+# gse='GSE147740'; rmarkdown::render('01_idat2study.Rmd', output_file=paste0('01_idat2study_',gse,'.html'));
+# gse='GSE221745'; rmarkdown::render('01_idat2study.Rmd', output_file=paste0('01_idat2study_',gse,'.html'));
+## for EpicV2
+## mamba install -c anaconda -c bioconda -c conda-forge -c r r-base libopenblas bioconductor-geoquery bioconductor-affy bioconductor-biobase r-seqinr r-rcpparmadillo r-devtools r-fastmap r-matrix r-kernsmooth r-catools r-gtools r-nortest r-survival r-beanplot r-gplots bioconductor-rnbeads r-doparallel bioconductor-rnbeads.hg19 ghostscript bioconductor-watermelon bioconductor-illuminahumanmethylation450kanno.ilmn12.hg19 bioconductor-illuminahumanmethylationepicanno.ilm10b4.hg19 bioconductor-illuminahumanmethylation27kanno.ilmn12.hg19 snakemake=7.32.4 r-filelock r-dplyr bioconductor-biocfilecache bioconductor-biomart bioconductor-rnbeads
+## devtools::install_github("epigen/RnBeads")
+snakemake -k --cores 1 -s 00_custom_build_idat_studies.py -pn 
+snakemake -k -s 00_custom_build_idat_studies.py --jobs 50 --cluster "oarsub --project epimed -l /nodes=1,walltime=4:00:00"  --latency-wait 60 -pn
+snakemake -k -s 00_custom_build_idat_studies.py --jobs 50 --cluster "oarsub --project epimed -l /nodes=1,walltime=10:00:00 -t fat"  --latency-wait 60 -pn
+
 
 
 ln -s 00_studies_wf.py 00_custom_studies_wf.py
 source ~/conda_config.sh
 # conda create -n buildstudy_env
 conda activate buildstudy_env
-# mamba install -c anaconda -c bioconda -c conda-forge -c r r-base libopenblas bioconductor-geoquery bioconductor-affy bioconductor-biobase r-seqinr r-rcpparmadillo r-devtools r-fastmap r-matrix r-kernsmooth r-catools r-gtools r-nortest r-survival r-beanplot r-gplots r-sass jquery r-nlme r-bslib r-sourcetools r-fontawesome r-xtable r-httpuv r-dbi r-shiny bioconductor-illuminahumanmethylation450kanno.ilmn12.hg19 bioconductor-illuminahumanmethylationepicanno.ilm10b4.hg19 bioconductor-illuminahumanmethylation27kanno.ilmn12.hg19 bioconductor-epidish r-openxlsx snakemake=7.32.4 bioconductor-rnbeads.hg38
+# mamba install -c anaconda -c bioconda -c conda-forge -c r r-base libopenblas bioconductor-geoquery bioconductor-affy bioconductor-biobase r-seqinr r-rcpparmadillo r-devtools r-fastmap r-matrix r-kernsmooth r-catools r-gtools r-nortest r-survival r-beanplot r-gplots r-sass jquery r-nlme r-bslib r-sourcetools r-fontawesome r-xtable r-httpuv r-dbi r-shiny bioconductor-illuminahumanmethylation450kanno.ilmn12.hg19 bioconductor-illuminahumanmethylationepicanno.ilm10b4.hg19 bioconductor-illuminahumanmethylation27kanno.ilmn12.hg19 bioconductor-epidish r-openxlsx snakemake=7.32.4 # bioconductor-rnbeads.hg38
 # devtools::install_github("fchuffar/epimedtools")
 # gse='GSE41037'; rmarkdown::render('01_build_study_generic.Rmd', output_file=paste0('01_build_study_',gse,'.html'));
 # gse='GSE119617'; rmarkdown::render('01_build_study_generic.Rmd', output_file=paste0('01_build_study_',gse,'.html'));

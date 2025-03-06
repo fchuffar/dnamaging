@@ -12,7 +12,7 @@ output:
 
 ```{r, echo=FALSE, eval=TRUE}
 knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=10, fig.height=10, eval=TRUE, echo=FALSE, warning=FALSE)
-source("../common.R") #We launch from gtex_missmethyl dir and not vignettes
+source("common.R")
 options(scipen = 6)
 
 library(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
@@ -39,7 +39,8 @@ We perform on a list of given genes :
 
 # Calling GTEx transcriptome 
 
-study_gtex_trscr = mreadRDS("study_gtex_trscr_complete.rds")
+# study_gtex_trscr = mreadRDS("study_gtex_trscr_complete.rds")
+study_gtex_trscr = mreadRDS("~/projects/gtex/results/study_gtex_trscr608.rds")
 if(sum(colnames(study_gtex_trscr$exp_grp) == "tissue") == 0) colnames(study_gtex_trscr$exp_grp)[colnames(study_gtex_trscr$exp_grp) == "SMTS"] = "tissue"
 
 idx_tissue = rownames(study_gtex_trscr$exp_grp[study_gtex_trscr$exp_grp$tissue == tissue,])
@@ -72,7 +73,6 @@ gene_clusters <- lapply(clusters, function(i) {
 })
 
 names(gene_clusters) <- paste0("Cluster_", 1:n_clust)
-
 ```
 
 # Heatmap 
@@ -151,23 +151,49 @@ norm_plot = plot_meth_hm(data,
 ```
 
 ```{r linear model}
-test_genes = intersect(gene_clusters[[3]], rownames(data))
-length(test_genes)
-data_model = data[test_genes,]
+for (i in 1:3) {
+    test_genes = intersect(gene_clusters[[i]], rownames(data))
+    length(test_genes)
+    data_model = data[test_genes,]
 
-data_long = data_model %>%
-  as.data.frame() %>%
-  tibble::rownames_to_column(var = "Gene") %>%  # Ajouter les gènes en colonne
-  pivot_longer(cols = -Gene, names_to = "Sample", values_to = "Expression")  # Passer en format long
+    layout(matrix(1:4, 1, byrow=TRUE), respect = TRUE)
+    plot(density(data_model), main=paste0("cluster ", i))
+    data_model = (data_model - apply(data_model, 1, mean)) /  apply(data_model, 1, sd)
+    plot(density(data_model), main=paste0("cluster ", i))
 
-data_long$Age = ages[data_long$Sample]   
+    data_long = data_model %>%
+    as.data.frame() %>%
+    tibble::rownames_to_column(var = "Gene") %>%  # Ajouter les gènes en colonne
+    pivot_longer(cols = -Gene, names_to = "Sample", values_to = "Expression")  # Passer en format long
 
-plot(data_long$Age, data_long$Expression, col = as.numeric(as.factor(data_long$Gene)))
+    head(data_long)
 
-m = lm(Expression ~ Age, data = data_long)
-abline(m)
+    data_long$Age = ages[data_long$Sample]   
 
-m2 = lm(Expression ~ Age * Gene, data = data_long)
+
+    boxplot(Expression ~ Age, data = data_long, main=paste0("cluster ", i))
+    plot(data_long$Age, data_long$Expression, col = adjustcolor(1, alpha.f=0.3), main=paste0("cluster ", i))
+    m = lm(Expression ~ Age, data = data_long)
+    anova(m)
+    head(m$coefficients)
+    abline(m)
+    abline(h=0, col="grey", lty=2)
+
+    layout(1, respect = TRUE)
+    library(ggplot2)
+
+    data_long$age_fact = as.factor(data_long$Age)
+    p = ggplot(data_long, aes(x = age_fact, y = Expression, fill = age_fact)) +
+    geom_violin(trim = FALSE, alpha = 0.7) +  # Violin plot avec transparence
+    geom_boxplot(width = 0.1, fill = "white", outlier.shape = NA) +  # Ajouter une boîte pour plus de détails
+    labs(title = "Violin Plot des valeurs par groupe",
+        x = "Age",
+        y = "Expression") +
+    theme_minimal() +
+    scale_fill_brewer(palette = "Set2")  # Palette de couleurs esthétique
+    print(p)
+
+}
 ```
 
 ```{r clustering, fig.width=n_clust*2, fig.height=26}
