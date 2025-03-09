@@ -17,7 +17,7 @@ start_time = Sys.time()
 ```
 
 ```{r params}
-# gse = "GSE42861" ; rmarkdown::render("01_build_study_generic.Rmd", output_file=paste0("01_build_study_", gse, ".html"))
+# gse = "GSE42861" ; rmarkdown::render("02_genericstudy.Rmd", output_file=paste0("01_genericstudy_", gse, ".html"))
 # seed=1 ; gse = "GSE42861"; nb_core=12; rmarkdown::render('00_fullpipeline1.Rmd', output_file=paste0("00_fullpipeline1_", gse, ".html"))
 ```
 
@@ -79,7 +79,7 @@ head(s$exp_grp)
 ```
 
 ```{r decorate_exp_grp}
-expgrpwrapper_file = paste0("01_wrappers/01_expgrpwrapper_", gse, ".R")
+expgrpwrapper_file = paste0("02_wrappers/expgrpwrapper_", gse, ".R")
 print(expgrpwrapper_file)
 if (exists("DEBUG")) { stop("stop here for debugging")}
 source(expgrpwrapper_file)
@@ -119,7 +119,7 @@ if (file.exists(gseidat_study_filename)) {
 
 # get data matrix from wrapper
 if (nrow(tmp_data)==0) {
-  datawrapper_file = paste0("01_wrappers/01_datawrapper_", gse, ".R")
+  datawrapper_file = paste0("02_wrappers/datawrapper_", gse, ".R")
   print(datawrapper_file)
   source(datawrapper_file)    
   s$stuffs$orig = "datawrapper"
@@ -138,27 +138,37 @@ print("# get platform (rows metdata) from IlluminaHumanMethylationXXXanno")
 if (s$platform_name=="GPL8490") {
   print("27k")
   library(IlluminaHumanMethylation27kanno.ilmn12.hg19)
-  pf27k = data.frame(getAnnotation(IlluminaHumanMethylation27kanno.ilmn12.hg19))
-  s$platform = pf27k
+  tmp_pf = data.frame(getAnnotation(IlluminaHumanMethylation27kanno.ilmn12.hg19))
 } else if (s$platform_name=="GPL13534") { 
   print("450k")
   library(IlluminaHumanMethylation450kanno.ilmn12.hg19)
-  pf450k = data.frame(getAnnotation(IlluminaHumanMethylation450kanno.ilmn12.hg19))
-  s$platform = pf450k  
+  tmp_pf = data.frame(getAnnotation(IlluminaHumanMethylation450kanno.ilmn12.hg19))
 } else if (s$platform_name%in%c("GPL21145", "GPL23976")) {
   print("epic")
   library(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)  
-  pfepic = data.frame(getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b4.hg19))
-  s$platform = pfepic  
+  tmp_pf = data.frame(getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b4.hg19))
 } else if (s$platform_name%in%c("GPL33022")) {
   print("epicV2")
   library(IlluminaHumanMethylationEPICv2anno.20a1.hg38)  
-  pfepicv2 = data.frame(getAnnotation(IlluminaHumanMethylationEPICv2anno.20a1.hg38))
-  s$platform = pfepicv2  
+  tmp_pf = data.frame(getAnnotation(IlluminaHumanMethylationEPICv2anno.20a1.hg38))
 } else if (s$platform_name%in%"RRBS") {
   print("RRBS")
 } else {
   stop(paste0("platform problem ", gse, " ", s$platform_name))
+}
+if (!s$platform_name%in%"RRBS") {
+  # hg38 annotation from https://github.com/achilleasNP/IlluminaHumanMethylationEPICanno.ilm10b5.hg38
+  library(IlluminaHumanMethylationEPICmanifest)
+  library(IlluminaHumanMethylationEPICanno.ilm10b5.hg38)
+  library(minfi)
+  annoEPIC_hg38 = getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b5.hg38)
+  # sum(!rownames(tmp_pf) %in% rownames(annoEPIC_hg38))
+  tmp_idx = rownames(tmp_pf)[rownames(tmp_pf) %in% rownames(annoEPIC_hg38)]
+  tmp_pf$CHR_hg38   = NA
+  tmp_pf$Start_hg38 = NA
+  tmp_pf[tmp_idx,]$CHR_hg38   =            annoEPIC_hg38[tmp_idx, "CHR_hg38"]
+  tmp_pf[tmp_idx,]$Start_hg38 = as.numeric(annoEPIC_hg38[tmp_idx, "Start_hg38"])
+  s$platform = tmp_pf  
 }
 s$platform = s$platform[rownames(s$platform) %in% rownames(s$data),]
 

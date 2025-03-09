@@ -92,7 +92,7 @@ echo $RCODE | Rscript - 2>&1 > data_info.Rout
 rule r00_create_empty_expgrpwrapper:
     input: 
     output: 
-      r_expgrpwrapper="{prefix}/01_wrappers/01_expgrpwrapper_{gse}.R",
+      r_expgrpwrapper="{prefix}/02_wrappers/expgrpwrapper_{gse}.R",
     threads: 1
     shell:"""
 cd {wildcards.prefix}
@@ -102,7 +102,7 @@ touch {output.r_expgrpwrapper}
 rule r00_create_empty_datawrapper:
     input: 
     output: 
-      r_datawrapper="{prefix}/01_wrappers/01_datawrapper_{gse}.R",
+      r_datawrapper="{prefix}/02_wrappers/datawrapper_{gse}.R",
     threads: 1
     shell:"""
 cd {wildcards.prefix}
@@ -119,16 +119,16 @@ touch {output.r_datawrapper}
 # touch {output.idatstudy_rds}
 # """
 
-rule r01_build_study:
+rule r02_genericstudy:
     input: 
-      rmd = "{prefix}/01_build_study_generic.Rmd",
-      r_datawrapper   = "{prefix}/01_wrappers/01_datawrapper_{gse}.R",
-      r_expgrpwrapper = "{prefix}/01_wrappers/01_expgrpwrapper_{gse}.R",
+      rmd = "{prefix}/02_genericstudy.Rmd",
+      r_datawrapper   = "{prefix}/02_wrappers/datawrapper_{gse}.R",
+      r_expgrpwrapper = "{prefix}/02_wrappers/expgrpwrapper_{gse}.R",
       # idatstudy_rds = "{prefix}/datashare/{gse}/study_idat_{gse}.rds",
     output: 
       study_rds =   "{prefix}/datashare/{gse}/study_{gse}.rds",
       df_rds =      "{prefix}/datashare/{gse}/df_{gse}.rds"    ,           
-      html =        "{prefix}/01_build_study_{gse}.html"      ,           
+      html =        "{prefix}/02_genericstudy_{gse}.html"      ,           
       info       =  "{prefix}/info_build_{gse}.rds"   ,
     threads: 32
     shell:"""
@@ -142,13 +142,13 @@ mkdir -p /tmp/wd_{wildcards.gse}
 cd /tmp/wd_{wildcards.gse}
 ln -s {wildcards.prefix}/datashare 
 cp {input.rmd} .
-mkdir 01_wrappers
-cp {input.r_datawrapper} {input.r_expgrpwrapper} 01_wrappers/.
+mkdir 02_wrappers
+cp {input.r_datawrapper} {input.r_expgrpwrapper} 02_wrappers/.
 
-RCODE="gse='{wildcards.gse}'; rmarkdown::render('01_build_study_generic.Rmd', output_file=paste0('01_build_study_',gse,'.html'));"
-echo $RCODE | Rscript - 2>&1 > 01_build_study_{wildcards.gse}.Rout
+RCODE="gse='{wildcards.gse}'; rmarkdown::render('02_genericstudy.Rmd', output_file=paste0('02_genericstudy_',gse,'.html'));"
+echo $RCODE | Rscript - 2>&1 > 02_genericstudy_{wildcards.gse}.Rout
 
-cp 01_build_study_{wildcards.gse}.Rout info_build_{wildcards.gse}.rds 01_build_study_{wildcards.gse}.html {wildcards.prefix}/.
+cp 02_genericstudy_{wildcards.gse}.Rout info_build_{wildcards.gse}.rds 02_genericstudy_{wildcards.gse}.html {wildcards.prefix}/.
 cd {wildcards.prefix}
 rm -Rf /tmp/wd_{wildcards.gse}
 """
