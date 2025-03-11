@@ -1,0 +1,576 @@
+---
+title: "ENCODE profiles"
+author: "Florent Chuffart"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+
+
+```{r echo=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide")
+info = list(start_time = Sys.time())
+source("common.R")
+if (!exists("mreadRDS")) {mreadRDS = memoise::memoise(readRDS, cache=cachem::cache_mem(max_size = 10*1024 * 1024^2)) }
+```
+
+```{r params}
+# source("params_default.R")
+y_key="age"
+```
+
+# Data
+
+```
+gse = "GSE147740"; rmarkdown::render("05_encode.Rmd", output_file=paste0("05_encode_", gse, ".html"))
+```
+
+```{r inputs, eval=!exists("ewas")}
+if (!exists("gse"))             gse = "GSE147740"  ;
+if (!exists("model_formula"))   model_formula = paste0("meth~", y_key)  ;
+if (!exists("model_func_name")) model_func_name = "modelcalllm"         ;
+if (file.exists(paste0(model_func_name, ".R"))) {
+  source(paste0(model_func_name, ".R"))
+}
+study_filename = paste0("./datashare/", gse, "/study_preproc_", gse, ".rds")
+
+if (!exists("newas"))           newas = "1000000"                            ;
+if (!exists("neighb"))          neighb = "1000"                           ;
+
+bed_ewas_filename = paste0("ewas4combp_", gse, "_", model_func_name, "_", model_formula, ".bed")
+rds_ewas_filename = paste0("ewas_", gse, "_", model_func_name, "_", model_formula, ".rds")
+study_filename = paste0("~/projects/datashare/", gse, "/study_preproc_", gse, "_", model_func_name, "_", model_formula, "_ewas", newas, "_nn", neighb, ".rds")
+
+ewas = mreadRDS(rds_ewas_filename)
+ewas = data.frame(ewas)
+
+
+library("IlluminaHumanMethylationEPICv2anno.20a1.hg38")
+pfepichg38 = data.frame(getAnnotation(IlluminaHumanMethylationEPICv2anno.20a1.hg38))
+dim(pfepichg38)
+pfepichg38 = pfepichg38[pfepichg38$EPICv1_Loci %in% rownames(ewas),]
+dim(pfepichg38)
+pfepichg38 = pfepichg38[!duplicated(pfepichg38$EPICv1_Loci),]
+rownames(pfepichg38) = pfepichg38$EPICv1_Loci
+pfepichg38$Relation_to_Island = factor(pfepichg38$Relation_to_Island, levels = c("Island", "Shore", "Shelf", "OpenSea"))
+dim(pfepichg38)
+
+ewas = ewas[rownames(pfepichg38),]
+
+
+s = mreadRDS(study_filename)
+ewas$mean_beta = apply(s$data[rownames(ewas),], 1, mean)
+ewas$sd_beta = apply(s$data[rownames(ewas),], 1, sd)
+```
+
+
+# EWAS
+
+```{r ewas}
+ewas$pvbonf = p.adjust(ewas[,"pv"], method="bonferroni")
+layout(matrix(1:2,1), respect=TRUE)
+plot(ewas$beta, ewas$lpv, pch=".")
+plot(ewas$beta, -log10(ewas$pvbonf), pch=".")
+abline(h=2, col=2)
+sum(ewas$pvbonf<0.01)
+
+probes = list()
+probes[["hypometh"]] = rownames(ewas)[ewas$pvbonf<0.01 & ewas$beta<0]
+probes[["hypermeth"]] = rownames(ewas)[ewas$pvbonf<0.01 & ewas$beta>0]
+
+predimeth_probes = read.table("predimeth_probes_GSE147740_10.bed")
+# layout(matrix(1:6, 3), respect=TRUE)
+layout(matrix(1:2, 1), respect=TRUE)
+for (n in names(probes)) {
+  idx = probes[[n]]
+  # plot(ewas[idx, ]$beta, -log10(ewas[idx, ]$pvbonf), pch=".", main=n, col=adjustcolor(1, alpha.f=.1))
+  # smoothScatter(ewas[idx, ]$beta, -log10(ewas[idx, ]$pvbonf), main=n)
+  # plot(ewas[idx, ]$beta, ewas[idx, ]$mean_beta, pch=".")
+  smoothScatter(ewas[idx, ]$beta, ewas[idx, ]$mean_beta, main=n)
+  tmp_idx = predimeth_probes[,4]
+  points(ewas[tmp_idx, ]$beta, ewas[tmp_idx, ]$mean_beta, col=2, main=n)
+}
+```
+
+```{r volcano}
+layout(matrix(1:2, 1), respect=TRUE)
+for (n in names(probes)) {
+  idx = probes[[n]]
+  idx_isl = intersect(idx, rownames(pfepichg38)[pfepichg38$Relation_to_Island%in% c("Island")]) 
+  idx_ops = intersect(idx, rownames(pfepichg38)[pfepichg38$Relation_to_Island%in% c("OpenSea")]) 
+  idx_shr = intersect(idx, rownames(pfepichg38)[pfepichg38$Relation_to_Island%in% c("Shore")]) 
+  idx_shl = intersect(idx, rownames(pfepichg38)[pfepichg38$Relation_to_Island%in% c("Shelf")]) 
+  smoothScatter(ewas[idx, ]$beta, ewas[idx, ]$mean_beta, main=n)
+  cols = rep(NA, nrow(ewas))
+  names(cols) = rownames(ewas)
+  # cols[idx_shr] = 1
+  cols[idx_isl] = 2
+  cols[idx_ops] = 3
+  # cols[idx_shl] = 4
+  # points(ewas[idx_isl, ]$beta, ewas[idx_isl, ]$mean_beta, col=2, pch=".")
+  # points(ewas[idx_ops, ]$beta, ewas[idx_ops, ]$mean_beta, col=3, pch=".")
+  points(ewas$beta, ewas$mean_beta, col=adjustcolor(cols, alpha.f=.8), pch=1)
+}
+# legend("topright", c("Shore", "Island", "OpenSea", "Shelf"), col=1:4, pch=16)
+legend("topright", c("Island", "OpenSea"), col=2:3, pch=16)
+```
+
+```{r trueIsland}
+idx_isl = intersect(rownames(pfepichg38), rownames(pfepichg38)[pfepichg38$Relation_to_Island%in% c("Island")]) 
+
+head(pfepichg38[idx_isl,c("Islands_Name", "Relation_to_Island")])
+
+foo = do.call(rbind, strsplit(pfepichg38[idx_isl,]$Islands_Name, ":|-|;"))
+rownames(foo) = idx_isl
+sum((pfepichg38[idx_isl,2] < as.numeric(foo[,2]) | pfepichg38[idx_isl,2] > as.numeric(foo[,3])))
+
+bar = rep(NA,nrow(foo))
+for (i in 0:5) {
+  idx = which(!(pfepichg38[idx_isl,2] < as.numeric(foo[,i*3+2]) | pfepichg38[idx_isl,2] > as.numeric(foo[,i*3+3])))
+  bar[idx] = i
+}
+
+pfepichg38$trueIsland = NA
+baz = do.call(rbind, strsplit(pfepichg38[idx_isl,]$Islands_Name, ";"))
+pfepichg38[idx_isl,]$trueIsland = sapply(1:length(bar), function(j){baz[j,bar[j]+1]})
+
+foo = do.call(rbind, strsplit(pfepichg38[idx_isl,]$trueIsland, ":|-|;"))
+sum((pfepichg38[idx_isl,2] < as.numeric(foo[,2]) | pfepichg38[idx_isl,2] > as.numeric(foo[,3])))
+```
+
+```{r flatanno}
+options(scipen = 3)
+library(missMethyl)
+flatanno = missMethyl:::.getFlatAnnotation("EPIC")     
+missingcpg = rownames(ewas)[!rownames(ewas) %in% flatanno$cpg]
+flatanno = rbind(flatanno, data.frame(symbol=NA, group="NoGene", cpg=missingcpg, alias=NA, entrezid=NA))
+flatanno$group = factor(flatanno$group, levels = c("TSS1500", "TSS200", "5'UTR", "1stExon", "Body", "ExonBnd", "3'UTR", "NoGene"))
+```
+
+```{r barplots}
+layout(matrix(1:2, 1, byrow=TRUE), respect=TRUE)
+
+n = "pfepichg38"
+idx = rownames(pfepichg38)
+fa = flatanno[flatanno$cpg %in% idx,]
+barplot(table(pfepichg38[idx,]$Relation_to_Island, useNA="ifany"), las=2, main=paste0(n, " (", length(idx), ")"))
+barplot(table(fa$group, useNA="ifany"), main=paste0(n, " (", length(idx), ")"), las=2)
+
+for (n in names(probes)) {
+  idx = probes[[n]]
+  barplot((table(pfepichg38[idx,]$Relation_to_Island, useNA="ifany")), las=2, main=paste0(n, " (", length(idx), ")"))
+}
+
+
+for (n in names(probes)) {
+  idx = probes[[n]]
+  fa = flatanno[flatanno$cpg %in% idx,]
+  head(fa)
+  barplot(table(fa$group, useNA="ifany"), main=paste0(n, " (", length(idx), ")"), las=2)
+}
+
+for (rti in c("Island", "Shore", "Shelf", "OpenSea")) {
+  for (n in names(probes)) {
+    idx = probes[[n]]
+    fa = flatanno[flatanno$cpg %in% idx,]
+    k = paste0(n, "_", rti)
+    print(k)
+    idx = intersect(idx, rownames(pfepichg38)[pfepichg38$Relation_to_Island%in% rti]) 
+    fa = flatanno[flatanno$cpg %in% idx,]
+    head(fa)
+    barplot(table(fa$group, useNA="ifany"), main=paste0(k, " (", length(idx), ")"), las=2)
+  }
+}
+```
+
+
+
+# ENCODE / deeptools
+
+
+### Marks Associated with Transcriptional Activation:
+1. **H3K27ac**  
+   - Associated with active enhancers and promoters.  
+   - Indicates a transcriptionally permissive environment.
+
+2. **H3K36me3**  
+   - Found in coding regions of actively transcribed genes.  
+   - Linked to transcriptional elongation and genomic integrity.
+
+3. **H3K4me1**  
+   - Associated with enhancers (often primed or active).  
+   - Reflects regulatory potential but does not guarantee activity.
+
+4. **H3K4me3**  
+   - Marks active or poised promoters.  
+   - Strongly linked to transcriptional initiation.
+
+5. **H3K9ac**  
+   - Found at active promoters and enhancers.  
+   - Associated with euchromatic, transcriptionally permissive environments.
+
+---
+
+### Marks Associated with Transcriptional Repression:
+6. **H3K27me3**  
+   - Linked to transcriptional repression, often mediated by the Polycomb Repressive Complex 2 (PRC2).  
+   - Characteristic of facultative heterochromatin (regions that are repressed but potentially reactivatable).
+
+7. **H3K9me3**  
+   - A mark of constitutive heterochromatin, found in inactive genomic regions such as centromeres and telomeres.  
+   - Recruits proteins like HP1 (Heterochromatin Protein 1) to maintain a condensed chromatin state.
+
+---
+
+### Summary:
+
+
+| **Histone Mark** | **Activation/Repression**   | **Associated Regions**               |
+|-------------------|-----------------------------|-------------------------------------|
+| **H3K27ac**       | Activation                 | Active enhancers, promoters          |
+| **H3K36me3**      | Activation                 | Coding regions                       |
+| **H3K4me1**       | Activation (potential)     | Primed/active enhancers              |
+| **H3K4me3**       | Activation                 | Active or poised promoters           |
+| **H3K9ac**        | Activation                 | Active promoters, enhancers          |
+| **H3K27me3**      | Repression                 | Facultative heterochromatin  (PRC2)  |
+| **H3K9me3**       | Repression                 | Constitutive heterochromatin (HP1 )  |
+
+
+
+
+
+```{r encode_db}
+# db = read.table("~/projects/meth3d/results/entex/metadata.insituhic.tsv", sep="\t", header=TRUE)
+db = read.table("encode_lung.tsv", sep="\t", header=TRUE)
+rownames(db) = db[,1]
+dim(db)
+head(db)
+table(db[,3])
+
+table(db$File.format, db$File.type)
+db = db[db$File.type == "bigWig",]
+
+table(db$Experiment.target)
+db$Experiment.target = factor(db$Experiment.target, levels=c(
+  "H3K4me3-human"  , # Activation            | Active or poised promoters           |
+  "H3K4me1-human"  , # Activation (potential)| Primed/active enhancers              |
+  "H3K27me3-human" , # Repression            | Facultative heterochromatin  (PRC2)  |
+  "H3K27ac-human"  , # Activation            | Active enhancers, promoters          |
+  "H3K9ac-human"   , # Activation            | Active promoters, enhancers          |
+  "H3K36me3-human" , # Activation            | Coding regions                       |
+  "H3K9me3-human"  , # Repression            | Constitutive heterochromatin (HP1 )  |
+  NULL
+))
+db = db[order(db$Experiment.target),]
+db = db[db$Experiment.target %in% c(
+  "H3K27me3-human" , # Repression            | Facultative heterochromatin  (PRC2)  |
+  "H3K4me3-human"  , # Activation            | Active or poised promoters           |
+  "H3K4me1-human"  , # Activation (potential)| Primed/active enhancers              |
+  # "H3K27ac-human"  , # Activation            | Active enhancers, promoters          |
+  "H3K9ac-human"   , # Activation            | Active promoters, enhancers          |
+  # "H3K36me3-human" , # Activation            | Coding regions                       |
+  # "H3K9me3-human"  , # Repression            | Constitutive heterochromatin (HP1 )  |
+  NULL
+),]
+
+blacklist = c(
+  # "ENCFF331IOZ", #     H3K27ac-human                lung
+  # "ENCFF028TDS", #     H3K27ac-human                lung
+  # "ENCFF386ZSF", #    H3K27me3-human                lung
+  # "ENCFF238XGJ", #    H3K27me3-human                lung
+  "ENCFF440HPT", #    H3K27me3-human                lung
+  # "ENCFF507BZS", #    H3K36me3-human                lung
+  # "ENCFF170SDA", #    H3K36me3-human                lung
+  # "ENCFF821WNV", #    H3K36me3-human                lung
+  # "ENCFF655YLP", #    H3K36me3-human                lung
+  # "ENCFF036EBD", #     H3K4me1-human                lung
+  # "ENCFF204IAN", #     H3K4me1-human                lung
+  # "ENCFF262ZVW", #     H3K4me1-human                lung
+  "ENCFF896NVM", #     H3K4me1-human                lung
+  "ENCFF926QND", #     H3K4me1-human                lung
+  "ENCFF062ZIV", #     H3K4me3-human                lung
+  # "ENCFF485XPN", #     H3K4me3-human                lung
+  # "ENCFF999LEM", #     H3K4me3-human                lung
+  "ENCFF434JKJ", #     H3K4me3-human                lung
+  # "ENCFF645EXF", #      H3K9ac-human                lung
+  # "ENCFF046SLU", #      H3K9ac-human                lung
+  # "ENCFF308TWI", #     H3K9me3-human                lung
+  # "ENCFF305ZXD", #     H3K9me3-human                lung
+  # "ENCFF275KCQ", #     H3K9me3-human                lung
+  "ENCFF970KWF", #     H3K9me3-human                lung
+  NULL
+)
+sapply(blacklist, function(id) {print(paste0("rm -Rf ", id, "*"))})
+db = db[!rownames(db) %in% blacklist,]
+db$file = do.call(rbind, strsplit(db$File.download.URL, "/"))[,7]
+
+# download
+df = db
+if (!exists("DOWNLOAD")) {
+  print("DOWNLOAD is not defined. To download, set DOWNLOLAD=TRUE")
+ } else {
+  ALLISGOOD = FALSE
+  while (!ALLISGOOD) {
+    ALLISGOOD = TRUE
+      foo = apply(df, 1, function(row) {
+        url = row[["File.download.URL"]]
+        file = rev(strsplit(url, "/")[[1]])[1]
+        if (file.exists(file)) {
+          print(paste0("File ", file, " exists."))
+        } else {
+          cmd = "wget"
+          args = url
+          print(paste(cmd, args))
+          # system2(cmd, args)    
+        }  
+      })
+
+
+    foo = apply(df, 1, function(row) {
+      url = row[["File.download.URL"]]
+      file = rev(strsplit(url, "/")[[1]])[1]
+      md5 = tools::md5sum(file)
+      if (md5 != row[["md5sum"]]) {
+        print(paste0("md5 is different for ", file))
+        unlink(file)
+        ALLISGOOD <<- FALSE
+      } else {
+        print(paste0("md5 is ok for ", file))
+      }  
+    })
+  }
+ }
+
+
+get_bed_cgi = function(tmp_idx) {
+  cgi = pfepichg38[tmp_idx,]$trueIsland
+  cgi = cgi[cgi!=""]
+  bed3 = data.frame(do.call(rbind, strsplit(unique(cgi), ":|-")))
+  names(bed3) = c("#chr", "start", "stop")
+  bed3[,2] = as.numeric(bed3[,2])
+  bed3[,3] = as.numeric(bed3[,3])
+  bed = bed3
+  bed$name = paste0(bed[,1], ":", bed[,2], "-", bed[,3])
+  bed$len = bed$stop - bed$start
+  bed$strand = "+"
+  layout(matrix(1:3,1), respect=TRUE)
+  barplot(sort(table(cgi)), las=2)
+  plot(density(bed$len))
+  plot(bed$len, table(cgi)[bed$name])
+  return(bed)
+}
+
+write_bed_tss = function(bed, tag) {
+  # build and write bed file
+  bed = bed[,1:3]
+  bed[,2] = round((bed[,2] + bed[,3])/2)
+  head(bed)
+  bed[,3] = bed[,2]+1
+  bed$probes = "."
+  bed$pval = 0
+  bed$strand = "+"
+  colnames(bed) = c("#chrom", "start", "end", "probes", "pval", "strand")
+  bed[,4] = rownames(bed)
+  head(bed)
+
+  # write peaks for deeptools
+  bed[,1] = as.character(bed[,1])
+  bed = bed[order(bed[,1], bed[,2]),]
+  options(scipen = 99)
+  bedfile = paste0(tag, ".bed")
+  write.table(bed, file=bedfile, sep="\t", quote=FALSE, row.names=FALSE, col.names=TRUE)
+  return(bedfile)
+}
+
+get_mf = function(bwfiles, bed_files, samplesLabel, prefix="all") {
+  cmd = "computeMatrix"
+  args = paste0(
+    "reference-point -p 32 -bs 100 -b 5000 -a 5000 -R ", paste0(bed_files, collapse=" " ), " -o matrix2.txt.gz -S ", 
+    paste0("./", bwfiles, collapse=" ")
+  ) 
+  print(paste(cmd, args))
+  system2(cmd, args)
+
+  cmd = "plotHeatmap"
+  args = paste0("-m matrix2.txt.gz --samplesLabel ", samplesLabel, " -o hm_", prefix, ".png")
+  print(paste(cmd, args))
+  system2(cmd, args)
+  mf = read.table(gzfile("matrix2.txt.gz"), sep="\t", comment="@")
+  return(mf)
+}
+if (!exists("mget_mf")) {mget_mf = memoise::memoise(get_mf)}
+```
+## Chromatine profile
+
+```{r hm}
+idx_up = probes[["hypermeth"]]
+
+idx_isl = intersect(idx_up, rownames(pfepichg38)[pfepichg38$Relation_to_Island%in% c("Island")]) 
+set.seed(1)
+idx_rnd = sample(rownames(pfepichg38)[pfepichg38$Relation_to_Island%in% c("Island")], 5000) 
+
+bed_isl = get_bed_cgi(idx_isl)
+bed_rnd = get_bed_cgi(idx_rnd)
+bed_files = c(write_bed_tss(bed_isl, "isl"), write_bed_tss(bed_rnd, "rnd"))
+
+bwfiles = db$file
+samplesLabel = gsub("-human", "", paste(paste0(db$Experiment.target, "_", db$Biosample.term.name), collapse=" "))
+mf = mget_mf(bwfiles, bed_files, samplesLabel)
+
+
+idx_bod = intersect(
+            intersect(idx_up, rownames(pfepichg38)[pfepichg38$Relation_to_Island%in% c("Island")]), 
+            unique(flatanno[flatanno$group %in% "Body","cpg"])
+          ) 
+bed_bod = get_bed_cgi(idx_bod)
+idx_nog = intersect(
+            intersect(idx_up, rownames(pfepichg38)[pfepichg38$Relation_to_Island%in% c("Island")]), 
+            unique(flatanno[flatanno$group %in% "NoGene","cpg"])
+          ) 
+bed_nog = get_bed_cgi(idx_nog)
+
+bed_files = c(
+  write_bed_tss(bed_isl, "isl"), 
+  write_bed_tss(bed_bod, "bod"), 
+  write_bed_tss(bed_nog, "nog"), 
+  write_bed_tss(bed_rnd, "rnd")
+)
+mf = mget_mf(bwfiles, bed_files, samplesLabel, prefix="mix")
+```
+
+![hm_all](hm_all.png)
+![hm_nog](hm_mix.png)
+
+
+
+
+```{r missmethyl}
+options(scipen = 3)
+library(missMethyl)
+if (!exists("mmissmethyl_gometh")) {mmissmethyl_gometh=memoise::memoise(missMethyl::gometh)}
+if (!exists("ets")) {ets = list()}
+
+for (n in names(probes)) {
+  idx = probes[[n]]
+  ets[[n]] = mmissmethyl_gometh(sig.cpg=idx, all.cpg = rownames(ewas), array.type = "EPIC", collection = "GO", sig.genes = TRUE)
+  for (rti in c("Island", "Shore", "Shelf", "OpenSea")) {
+    k = paste0(n, "_", rti)
+    print(k)
+    tmp_idx = intersect(idx, rownames(pfepichg38)[pfepichg38$Relation_to_Island%in% rti]) 
+    ets[[k]] = mmissmethyl_gometh(sig.cpg=tmp_idx, all.cpg=rownames(ewas), array.type="EPIC", collection="GO", sig.genes=TRUE)   
+  }
+}
+
+k = "hypometh"
+go_dw = ets[[k]]
+go_dw = go_dw[go_dw$ONTOLOGY=="BP",]
+go_dw = go_dw[go_dw$FDR<0.05,]
+go_dw = go_dw[order(go_dw$P.DE),]
+# go_dw = go_dw[go_dw$DE<1000,]
+# go_dw = go_dw[go_dw$N>1000,]
+go_dw$tag = substr(go_dw$TERM, 1, 40)
+dim(go_dw)
+head(go_dw[,-c(1,2,5,7)])
+
+
+k = "hypermeth_Island"
+go_up_isl = ets[[k]]
+go_up_isl = go_up_isl[go_up_isl$ONTOLOGY=="BP",]
+go_up_isl = go_up_isl[go_up_isl$FDR<0.05,]
+go_up_isl = go_up_isl[order(go_up_isl$P.DE),]
+go_up_isl = go_up_isl[go_up_isl$DE<1000,]
+go_up_isl = go_up_isl[go_up_isl$N>1000,]
+go_up_isl$tag = substr(go_up_isl$TERM, 1, 40)
+dim(go_up_isl)
+head(go_up_isl[,-c(1,2,5,7)])
+
+head(go_up_isl[,-c(1,2,5,7)])
+gs = unique(unlist(strsplit(go_up_isl$SigGenesInSet, ",")))
+dim(go_up_isl)
+bar = matrix(0, nrow=nrow(go_up_isl), ncol=length(gs))
+colnames(bar) = gs
+for (i in 1:nrow(go_up_isl)) {
+  g = strsplit(go_up_isl[i,7], ",")[[1]]
+  bar[i, g] = 1
+}
+```
+# missMethyl
+
+```{r cfa}
+mat = bar
+cfa = MASS::corresp(mat, nf=2)
+layout(matrix(1:6,2, byrow=TRUE), respect=TRUE)
+plot(cfa)
+
+clusters = rep(1, nrow(cfa$rscore))
+th1 = -.4
+th2 = .5
+clusters[cfa$rscore[,1] < th1] = 2
+clusters[cfa$rscore[,1] > th2] = 4
+plot(cfa$rscore, col=clusters)
+abline(v=c(th1, th2))
+go_up_isl[cfa$rscore[,1] < th1 ,-c(1,2,5,7)]
+go_up_isl[cfa$rscore[,1] > th2 ,-c(1,2,5,7)]
+
+clustersg = rep(4, nrow(cfa$cscore))
+names(clustersg) = rownames(cfa$cscore)
+th1g =.5
+th2g = -.5
+clustersg[cfa$cscore[,1] < th1g] = 2
+clustersg[cfa$cscore[,2] < th2g] = 1
+plot(cfa$cscore, col=adjustcolor(clustersg, .3))
+abline(v=th1g, h=th2g)
+# # go_up_isl[cfa$rscore[,1] < th1 ,-c(1,2,5,7)]
+# go_up_isl[cfa$rscore[,1] > th2 ,-c(1,2,5,7)]
+
+plot(go_up_isl$N, go_up_isl$DE, col=clusters)
+
+```
+
+```{r clusters, results="varbatim"}
+for (i in unique(clustersg)) {
+  genes = names(clustersg)[clustersg==i]
+  print("")
+  print(paste0("***** cluster ", i, " (", length(genes), " genes/", sum(clusters==i), " GO terms)"))
+  print(head(go_up_isl[clusters==i,-c(1,2,5,7)]$tag, 20))
+  write.table(genes, paste0("cluster_", i, ".txt"))
+}
+```
+
+
+```{r pca}
+mat = bar
+pca = prcomp(mat, scale=TRUE)
+v = pca$sdev * pca$sdev
+p = v / sum(v) * 100
+layout(matrix(1:6,2), respect=TRUE)
+# layout(matrix(1:2,1), respect=TRUE)
+barplot(p, ylab="% of variance explained", xlab="components")
+
+for (i in 1:4) {
+  j = i+1
+  plot(pca$x[,i], pca$x[,j], 
+    xlab=paste0("PC", i, "(", signif(p[i], 3), "%)"), 
+    ylab=paste0("PC", j, "(", signif(p[j], 3), "%)"), 
+    col=clusters,
+    pch=16)  
+}
+
+plot(go_up_isl$N, go_up_isl$DE, col=clusters)
+```
+
+
+
+
+
+# Session Information
+
+```{r, results="verbatim"}
+sessionInfo()
+```
+
