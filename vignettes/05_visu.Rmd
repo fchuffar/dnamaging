@@ -17,14 +17,14 @@ knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, 
 info = list(start_time = Sys.time())
 source("common.R")
 neighb = 1000
-runmax=14
+runmax=50
 gses = c(
-  "GSE40279" , # 450k, n=656  # Genome-wide Methylation Profiles Reveal Quantitative Views of Human Aging Rates
-  "GSE42861" , # 450k, n=689  # Differential DNA methylation in Rheumatoid arthritis
-  "GSE87571" , # 450k, n=750  # Continuous Aging of the Human DNA Methylome Throughout the Human Lifespan
+  # "GSE40279" , # 450k, n=656  # Genome-wide Methylation Profiles Reveal Quantitative Views of Human Aging Rates
+  # "GSE42861" , # 450k, n=689  # Differential DNA methylation in Rheumatoid arthritis
+  # "GSE87571" , # 450k, n=750  # Continuous Aging of the Human DNA Methylome Throughout the Human Lifespan
   "GSE147740", # Epic, n=1129 # DNA methylation analysis of human peripheral blood mononuclear cell collected in the AIRWAVE study
   "CustGSE147740rr", # Epic, n=1129 # DNA methylation analysis of human peripheral blood mononuclear cell collected in the AIRWAVE study
-  "GSE152026", # Epic, n=934 # Blood DNA methylation profiles from first episode psychosis patients and controls I
+  # "GSE152026", # Epic, n=934 # Blood DNA methylation profiles from first episode psychosis patients and controls I
   NULL
 )
 newass = c("1000", "2000", "3000", "5000", "10000", "20000", "30000", "50000", "100000", "200000", "300000", "500000")

@@ -1,0 +1,90 @@
+---
+title: "Common probes "
+author: "Fabien Jossaud, Florent Chuffart"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+
+
+```{r echo=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=10, fig.height=10, eval=TRUE, echo=FALSE)
+start_time = Sys.time()
+```
+
+```{r params}
+
+if(!exists("gse")){gse="GSE147740"}
+if(!exists("seed")){seed = 1}
+if(!exists("nb_run")){nb_run = 50}
+if (!exists("nb_ewas")) nb_ewas = 1000000
+if (!exists("dist_nn")) dist_nn = 1000
+
+source("common.R")
+source("params_default.R")
+options(scipen=999)
+
+```
+
+```{r r2/nb probes evolution}
+
+study = readRDS(paste0("datashare/",gse,"/study_preproc_",gse,".rds"))
+null_rmse = sd(study$exp_grp$age)
+
+x = c(0:nb_run)
+r2_bs = c()
+rmse_bs = c()
+nb_pb_bs = c()
+for (run in 0:nb_run){
+	tmp_info_model_bs = readRDS(paste0("info_model_r",run,"_",gse,"_modelcalllm_meth~age_ewas", nb_ewas, "_nn", dist_nn, ".rds"))
+	tmp_nb_pb_bs = tmp_info_model_bs$gender.bootstrap.nb_probes_mod
+	tmp_rmse_bs = tmp_info_model_bs$gender.bootstrap.RMSE
+	tmp_r2_bs = tmp_info_model_bs$gender.bootstrap.R2
+	rmse_bs = c(rmse_bs,tmp_rmse_bs)
+	r2_bs = c(r2_bs,tmp_r2_bs)	
+	nb_pb_bs = c(nb_pb_bs, tmp_nb_pb_bs)
+}
+
+###### RMSE/R2 
+
+	
+################# First Plot (RMSE/nb_probes)
+
+
+	## add extra space to right margin of plot within frame
+	par(mar=c(5, 4, 4, 5) + 0.1)
+	## Plot first set of data and draw its axis
+	plot(x, rmse_bs, axes=FALSE, xlab="", ylab="", type="b",ylim=c(0,null_rmse+1), lty = 1, col="black", main=paste0(gse))
+	axis(2, ylim=c(0,null_rmse+1),col="black",las=1)  ## las=1 makes horizontal labels
+	mtext("RMSE",side=2,line=2.5)
+    abline(h=null_rmse, col = "black")
+	abline(v=10, col="black",lty = 2)
+
+	## Allow a second plot on the same graph
+	par(new=TRUE)
+
+	## Plot the second plot and put axis scale on right
+	cum_nb = cumsum(nb_pb_bs)
+	plot(x, cum_nb,  xlab="", ylab="", ylim=c(0,max(cum_nb)+200), 
+	    axes=FALSE, type="b", col="red", lty=1)
+	## a little farther out (line=4) to make room for labels
+	mtext("cum_nb_probes",side=4,col="red",line=4) 
+	axis(4, ylim=c(0,max(cum_nb)+200,10), col="red",col.axis="red",las=1)
+
+	## Draw the time axis
+	axis(1,pretty(range(x),10))
+	mtext("nb_run",side=1,col="black",line=2.5)  
+
+	## Add Legend
+
+	# legend("topleft",legend=c("RMSE for BS method","RMSE for GLM method", "nb probes for BS method", "nb probes for GLM method"), text.col=c("black","black","red","red"),col=c("black","black","red","red"), lty = c(1,2,1,2))
+
+	legend("bottomleft",legend=c("iterations RMSE", "cumulative number of probes","null model RMSE","end of predimeth probes"), text.col=c("black","red","black","black"),col=c("black","red","black","black"), lty = c(1,1,1,2),pch= c(1,1,NA,NA), cex=0.8)
+
+
+```

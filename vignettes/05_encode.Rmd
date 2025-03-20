@@ -264,6 +264,7 @@ db$Experiment.target = factor(db$Experiment.target, levels=c(
   "H3K9ac-human"   , # Activation            | Active promoters, enhancers          |
   "H3K36me3-human" , # Activation            | Coding regions                       |
   "H3K9me3-human"  , # Repression            | Constitutive heterochromatin (HP1 )  |
+  "CTCF-human", 
   NULL
 ))
 db = db[order(db$Experiment.target),]
@@ -308,7 +309,8 @@ blacklist = c(
 sapply(blacklist, function(id) {print(paste0("rm -Rf ", id, "*"))})
 db = db[!rownames(db) %in% blacklist,]
 db$file = do.call(rbind, strsplit(db$File.download.URL, "/"))[,7]
-
+apply(db, 1, function(row) {print(paste0("ln -s ", row[["file"]], " ", row[["Biosample.term.name"]], "_", row[["Experiment.target"]], ".bw"))})
+# stop("EFN")
 # download
 df = db
 if (!exists("DOWNLOAD")) {

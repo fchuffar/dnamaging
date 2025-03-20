@@ -10,7 +10,7 @@ gses = [
   # "GSE40279" , # 450k, n=656  # Genome-wide Methylation Profiles Reveal Quantitative Views of Human Aging Rates
   # "GSE42861" , # 450k, n=689  # Differential DNA methylation in Rheumatoid arthritis
   # "GSE87571" , # 450k, n=750  # Continuous Aging of the Human DNA Methylome Throughout the Human Lifespan
-  # "GSE147740", # Epic, n=1129 # DNA methylation analysis of human peripheral blood mononuclear cell collected in the AIRWAVE study
+  "GSE147740", # Epic, n=1129 # DNA methylation analysis of human peripheral blood mononuclear cell collected in the AIRWAVE study
   "CustGSE147740rr",
   # "GSE152026", # Epic, n=934 # Blood DNA methylation profiles from first episode psychosis patients and controls I
   # # 27k
@@ -21,7 +21,7 @@ gses = [
 prefix = os.getcwd()
 neighb = 1000
 
-runmax=25
+runmax=50
 info_combp = [f"{prefix}/info_combp_{gse}_modelcalllm_meth~age_{pval_tresh}.rds"  for gse in gses for pval_tresh in ["1e-30", "1e-20", "1e-10", "1e-5"]]
 
 # runmax=2

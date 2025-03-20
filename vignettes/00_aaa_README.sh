@@ -77,13 +77,14 @@ snakemake -k -s 00_custom_models_wf.py --jobs 50 --cluster "oarsub --project epi
 
 
 
-ln -s 00_models_wf.py 00_custom_models_wf.py
 source ~/conda_config.sh
 # conda create -n enrichment_env
 conda activate enrichment_env
 # mamba install -c anaconda -c bioconda -c conda-forge -c r r-base libopenblas bioconductor-geoquery bioconductor-affy bioconductor-biobase r-seqinr r-rcpparmadillo r-devtools r-fastmap r-matrix r-kernsmooth r-catools r-gtools r-nortest r-survival r-beanplot r-gplots r-dbi  python r-intervals r-iterators r-codetools r-rcppeigen r-shape r-foreach r-glmnet r-writexls r-glmnetutils bioconductor-epidish bioconductor-illuminahumanmethylation450kanno.ilmn12.hg19 bioconductor-illuminahumanmethylationepicanno.ilm10b4.hg19 bioconductor-illuminahumanmethylation27kanno.ilmn12.hg19 bioconductor-annotatr bioconductor-txdb.hsapiens.ucsc.hg19.knowngene bioconductor-org.hs.eg.db r-ggvenn r-bedr bedtools
 # devtools::install_github("fchuffar/epimedtools")
+# devtools::install_github("fchuffar/dnamaging")
 rmarkdown::render("05_visu.Rmd")
+gse = "GSE147740" ; rmarkdown::render("05_enrichment.Rmd", output_file=paste0("05_enrichment_", gse, ".html"))
 for (gse in c("GSE42861", "GSE40279", "GSE87571", "GSE147740", "GSE152026")) {
   rmarkdown::render("05_enrichment.Rmd", output_file=paste0("05_enrichment_", gse, ".html"))
 }
