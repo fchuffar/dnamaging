@@ -247,6 +247,7 @@ for (rti in c("Island", "Shore", "Shelf", "OpenSea")) {
 ```{r encode_db}
 # db = read.table("~/projects/meth3d/results/entex/metadata.insituhic.tsv", sep="\t", header=TRUE)
 db = read.table("encode_lung.tsv", sep="\t", header=TRUE)
+# db = read.table("encode_ovary.tsv", sep="\t", header=TRUE)
 rownames(db) = db[,1]
 dim(db)
 head(db)
@@ -314,8 +315,8 @@ apply(db, 1, function(row) {print(paste0("ln -s ", row[["file"]], " ", row[["Bio
 # download
 df = db
 if (!exists("DOWNLOAD")) {
-  print("DOWNLOAD is not defined. To download, set DOWNLOLAD=TRUE")
- } else {
+  print("DOWNLOAD is not defined. To download, set DOWNLOAD=TRUE")
+} else {
   ALLISGOOD = FALSE
   while (!ALLISGOOD) {
     ALLISGOOD = TRUE
@@ -328,7 +329,7 @@ if (!exists("DOWNLOAD")) {
           cmd = "wget"
           args = url
           print(paste(cmd, args))
-          # system2(cmd, args)    
+          system2(cmd, args)    
         }  
       })
 
@@ -346,7 +347,7 @@ if (!exists("DOWNLOAD")) {
       }  
     })
   }
- }
+}
 
 
 get_bed_cgi = function(tmp_idx) {

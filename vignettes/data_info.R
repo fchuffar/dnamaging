@@ -8,10 +8,17 @@ data_info = lapply(gses, function(gse) {
   # gse = "GSE42861"
   # gse = "GSE40279"
   # gse = "GSE43976"
+  file_idat2study = paste0("info_idat2study_",gse,".rds")
   file_build = paste0("info_build_",gse,".rds")
   file_desc  = paste0("info_desc_",gse,".rds")
-  file_ewas  = paste0("info_ewas3000_",gse,".rds")
-  file_model = paste0("info_model_r0_ewas3000_",gse,".rds")
+  file_ewas  = paste0("info_ewas_ewcpr_",gse,"_modelcalllm_meth~age.rds")
+  #  info_ewas_ewcpr_GSE147740_modelcalllm_meth~age.rds                            info_ewas_neighb_GSE147740_modelcalllm_meth~age_ewas1000000_nn1000.rds
+  file_model = paste0("info_model_r0_",gse,"_modelcalllm_meth~age_ewas1000000_nn1000.rds")
+  if (file.exists(file_idat2study)) {
+      info_idat2study = readRDS(file_idat2study)
+  } else { 
+    info_idat2study = list()
+  }
   if (file.exists(file_build)) {
       info_build = readRDS(file_build)
   } else { 
@@ -63,7 +70,8 @@ data_info = lapply(gses, function(gse) {
     disease    = info_build$disease  ,
     bmi        = info_build$bmi      ,
     ethnicity  = info_build$ethnicity,
-    exec_time  = info_build$exec_time,
+    exec_time_build  = info_build$exec_time,
+    exec_time_idat2study  = info_idat2study$exec_time,
 
     # tissue    = info_desc$tissue    ,
     # n         = info_desc$n         ,
@@ -72,23 +80,25 @@ data_info = lapply(gses, function(gse) {
     # disease   = info_desc$disease   ,
     # gender    = info_desc$gender    ,
     # tobacco   = info_desc$tobacco   ,
-    exec_time = info_desc$exec_time ,
+    exec_time_preproc = info_desc$exec_time ,
 
-    exec_time  = info_ewas$exec_time,
-
+    exec_time_ewas  = info_ewas$exec_time,
+    exec_time_model  = info_model$exec_time,
+  
     # RMSE       = eval(parse(text = paste0("info_model$",cofactors[[1]][1],".bootstrap.RMSE"))),
     # nb_probes  = eval(parse(text = paste0("info_model$",cofactors[[1]][1],".bootstrap.nb_probes_mod"))),
   
     
     # ...
 
-    exec_time = info_model$exec_time     
+    exec_time_model = info_model$exec_time     
   )
   ret = c(ret,pval)
   ret
 })
 data_info = data.frame(do.call(rbind, data_info))
 data_info = data_info[order(substr(unlist(data_info$tissue), 1, 5), unlist(data_info$p)),]
+rownames(data_info) = data_info$GSE
 data_info
 WriteXLS::WriteXLS(data_info, "data_info.xlsx", verbose=TRUE, row.names=FALSE, AdjWidth=TRUE, BoldHeaderRow=TRUE, FreezeRow=1, FreezeCol=1)
 #      envir=          ExcelFileName=  perl=           Encoding=       col.names=      AutoFilter=     na=                   

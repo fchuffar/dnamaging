@@ -92,13 +92,15 @@ for (gse in c("GSE42861", "GSE40279", "GSE87571", "GSE147740", "GSE152026")) {
 
 
 
+source ~/conda_config.sh
 # conda create -n missmethyl_env
 conda activate missmethyl_env
-# mamba install -c anaconda -c bioconda -c conda-forge -c r r-base libopenblas bioconductor-geoquery bioconductor-affy bioconductor-biobase r-seqinr r-rcpparmadillo r-devtools r-fastmap r-matrix r-kernsmooth r-catools r-gtools r-nortest r-survival r-beanplot r-gplots r-dbi  snakemake=7.32.4 python=3.9 r-intervals r-iterators r-codetools r-rcppeigen r-shape r-foreach r-glmnet r-writexls r-glmnetutils r-ggvenn r-bedr bedtools bioconductor-rtracklayer bioconductor-epidish
+# mamba install -c anaconda -c bioconda -c conda-forge -c r r-base libopenblas bioconductor-geoquery bioconductor-affy bioconductor-biobase r-seqinr r-rcpparmadillo r-devtools r-fastmap r-matrix r-kernsmooth r-catools r-gtools r-nortest r-survival r-beanplot r-gplots r-dbi  snakemake=7.32.4 python=3.9 r-intervals r-iterators r-codetools r-rcppeigen r-shape r-foreach r-glmnet r-writexls r-glmnetutils r-ggvenn r-bedr bedtools bioconductor-rtracklayer bioconductor-epidish # bioconductor-missmethyl
 # bioconductor-missmethyl
 # devtools::install_github("fchuffar/epimedtools")
 # devtools::install_github("fchuffar/dnamaging")
 # BiocManager::install("missMethyl")
+rmarkdown::render("05_encode.Rmd")
 
 
 

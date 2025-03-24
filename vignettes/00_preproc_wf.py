@@ -54,6 +54,7 @@ gses = [
   "GSE97362" , # 450k, n=235  # CHARGE and Kabuki syndromes: Gene-specific DNA methylation signatures
    "GSE87648" , # 450k, n=350  # DNA Methylation May Mediate Genetic Risk In Inflammatory Bowel Disease
   "GSE89353" , # 450k, n=600  # Proband : Epimutations as a novel cause of congenital disorders
+  "CustGSE89353rr", 
   # "GSE56105" , # 450k, n=614  # Brisbane Systems Genetics Study - DNA methylation data, MZ and DZ twin pairs, their siblings and their parents.
   "GSE72680",  # 450k, n=422 # DNA Methylation of African Americans from the Grady Trauma Project
   "GSE72775" , # 450k, n=335  # DNA methylation profiles of human blood samples from Hispanics and Caucasians
