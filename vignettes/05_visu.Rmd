@@ -129,7 +129,7 @@ library(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
 pfepic = data.frame(getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b4.hg19))
 
 newas = "1000000"
-lastrun = 10
+lastrun = 50
 for (gse in gses) {
   print(gse)
   bed_filename = paste0("predimeth_probes_", gse, "_", lastrun, ".bed")
@@ -154,6 +154,16 @@ for (gse in gses) {
   # write ewas res for combp
   bed[,1] = as.character(bed[,1])
   bed = bed[order(bed[,1], bed[,2]),]
+  bed_filename = paste0("predimeth_probes_", gse, "_", lastrun, ".bed")
+  write.table(bed, file=bed_filename , sep="\t", quote=FALSE, row.names=FALSE, col.names=TRUE)
+  ewas = mreadRDS(paste0("ewas_", gse, "_modelcalllm_meth~age.rds"))
+
+  idx = rownames(bed)[ewas[rownames(bed),"beta"]>0]
+  bed_filename = paste0("predimeth_probes_up_", gse, "_", lastrun, ".bed")
+  write.table(bed[idx,], file=bed_filename , sep="\t", quote=FALSE, row.names=FALSE, col.names=TRUE)
+
+  idx = rownames(bed)[ewas[rownames(bed),"beta"]<0]
+  bed_filename = paste0("predimeth_probes_dw_", gse, "_", lastrun, ".bed")
   write.table(bed, file=bed_filename , sep="\t", quote=FALSE, row.names=FALSE, col.names=TRUE)
 }
 ```
