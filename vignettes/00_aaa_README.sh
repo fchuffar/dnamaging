@@ -12,7 +12,7 @@ rsync -auvP ~/projects/dnamaging/ cargo:~/projects/dnamaging/ --exclude="gsea_ou
 # rsync -auvP ~/projects/${project}/results/${study}/ cargo:~/projects/${project}/results/${study}/ --dry-run
 
 # # data
-# cd ~/projects/${project}/results/${study}/
+# cd ~/projects/${project}/results/${study}/vignette
 # ln -s ~/projects/datashare .
 # ls -lha datashare/${study}/raw
 
