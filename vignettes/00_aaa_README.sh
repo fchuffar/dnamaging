@@ -5,7 +5,7 @@ rsync -auvP ~/projects/dnamaging/ cargo:~/projects/dnamaging/ --exclude="gsea_ou
 ## CUSTOM
 # cp 00_aaa_README.sh 00_aaa_custom_README.sh
 # # config
-# projects=episoma
+# project=episoma
 # study=epic_episoma_chuga
 # echo ${project}
 # echo ${study}
