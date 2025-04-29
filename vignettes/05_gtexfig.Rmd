@@ -1,0 +1,502 @@
+---
+title: "expr in GTEx"
+author: "Fabien Jossaud, Florent Chuffart, Julien Thevenon"
+date: "`r Sys.time()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+```{r, echo=FALSE, eval=TRUE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=10, fig.height=10, eval=TRUE, echo=FALSE, warning=FALSE)
+source("common.R")
+```
+
+# expr in GTEx
+
+```{r missmethyl}
+if(!exists("tissue")) {tissue = "Lung"}
+```
+
+
+# GTeX transcriptomic dataset
+
+```{r gtex dataset init, echo = FALSE}
+# Calling GTEx transcriptome 
+study_gtex_trscr = mreadRDS("~/projects/gtex/results/study_gtex_trscr608.rds")
+idx_samples = rownames(study_gtex_trscr$exp_grp)[study_gtex_trscr$exp_grp$tissue == tissue]
+idx_samples = idx_samples[order(study_gtex_trscr$exp_grp[idx_samples,]$age)]
+# ages = study_gtex_trscr$exp_grp[idx_samples, "age"]
+
+layout(matrix(1:2, 1), respect=TRUE)
+barplot(sort(table(study_gtex_trscr$exp_grp$tissue)), las=2)
+barplot(sort(table(study_gtex_trscr$exp_grp[idx_samples,]$age)), las=2, main=paste0(tissue, " (", length(idx_samples), ")"))
+```
+
+
+# List of genes 
+
+```{r list of genes}
+# beta_meth = "hyper"
+# clusters = c(1,2,4)
+# n_clust = length(clusters)
+
+# gene_clusters <- lapply(clusters, function(i) {
+#   file_path <- paste0("cluster_",beta_meth, "_", i, ".txt")  
+#   unlist(read.table(file_path))
+# })
+
+# names(gene_clusters) <- paste0("Cluster_", 1:n_clust)
+# idx_genes = unique(unlist(gene_clusters))
+```
+
+# Heatmap 
+
+```{r heatmap transcriptome}
+# n = "methylation_gain"
+# mm = mmissmethyl_gometh(sig.cpg=probes[[n]], all.cpg = rownames(ewas), array.type="EPIC", collection="GO", sig.genes=TRUE, genomic.features="TSS200")
+# # genomic.features = c("ALL", "TSS200", "TSS1500", "Body", "1stExon", "3'UTR", "5'UTR","ExonBnd"),
+# idx_genes = unique(unlist(strsplit(mm$SigGenesInSet, ",")))
+idx_genes = sort(genes$cluster_1)
+# idx_genes = genes[[5]]
+idx_genes = intersect(rownames(study_gtex_trscr$platform), idx_genes)
+length(idx_genes)
+# set.seed(1)
+# rnd_genes = sample(rownames(study_gtex_trscr$platform), length(idx_genes))
+
+
+# idx_samples = idx_samples
+# unique_ages = unique(ages)
+# valid_ages = unique_ages[sapply(unique_ages, function(age) sum(ages == age) >= 5)] #Checking if all ages have enough individuals
+# age_col = ifelse(ages %in% valid_ages, "black", "red") 
+
+
+# barplot(plot(study_gtex_trscr$exp_grp[idx_samples,"age"], ylab = "age", col = age_col, main = "age distribution for GTeX expression data individuals")
+
+# idx_samples = idx_samples[ages %in% valid_ages] # Delete ages that don't have enough individuals
+# ages = study_gtex_trscr$exp_grp[idx_samples,"age"] #Reaffect ages after modifications
+# names(ages) = idx_samples
+
+# stop("EFN")
+data = study_gtex_trscr$data[idx_genes,idx_samples]
+data = data[apply(data, 1, function(l) {length(unique(l))})>1, ] # Remove no variation genes 
+
+brut_plot = plot_meth_hm(data, 
+  main=paste0("Raw GTEx ",tissue, " expression variation for PCA clusters genes\n"), 
+#   rsc=rsc                         , 
+#   csc=csc                         , 
+  nb_grp_row=4                     ,
+  nb_grp_col=4                     , 
+  hcmeth_cols=FALSE                , 
+  # hcmeth_cols="eucl_dist"                , 
+  hcmeth_rows="eucl_dist"               , 
+  # hcmeth_rows="cor"               , 
+  # hcmeth_rows= FALSE               ,
+  # normalization="zscore_rows"      ,
+  normalization=FALSE              ,
+  ordering_func=median             , 
+  colors=c("cyan", "black", "red") , 
+  # range_exp=c(-4,4)              ,
+  PCA=FALSE                        
+)
+
+norm_plot = plot_meth_hm(data, 
+  main=paste0("Normalized GTEx ",tissue, " expression variation for PCA clusters genes\n"), 
+#   rsc=rsc                         , 
+#   csc=csc                         , 
+  nb_grp_row=4                     ,
+  nb_grp_col=4                     , 
+  hcmeth_cols=FALSE                , 
+  # hcmeth_cols="eucl_dist"                , 
+  hcmeth_rows="cor"               , 
+  # hcmeth_rows= FALSE               ,
+  normalization="zscore_rows"      ,
+  # normalization=FALSE              ,
+  ordering_func=median             , 
+  colors=c("cyan", "black", "red") , 
+  range_exp=c(-4,4)              ,
+  PCA=FALSE                        
+)
+
+```
+
+```{r beanplot}
+data_orig = data
+data = data_orig
+
+is = c()
+for (i in 1:nrow(data)) {
+  for (a in unique(study_gtex_trscr$exp_grp$age)) {
+    if (length(unique(data[i,colnames(data)[study_gtex_trscr$exp_grp[colnames(data),]$age==a]])) == 1) {
+      is = c(is,i)
+    }
+  }
+}
+is = unique(is)
+data = data[-is,]
+
+layout(matrix(1:4, 1, byrow=TRUE), respect = TRUE)
+plot(density(data), main=paste0("cluster ", 1))
+gmean = apply(data, 1, mean)
+q = quantile(gmean, probs=seq(0, 1, length.out=10))
+idxs = cut(gmean, q, include.lowest=TRUE)
+names(idxs) = names(gmean)
+
+d = lapply(rownames(data), function(g) {
+  data.frame(gene=g, sample=colnames(data), expr=data[g,])
+})
+d = do.call(rbind, d)
+head(d)
+dim(d)
+d$age = study_gtex_trscr$exp_grp[d$sample,]$age
+
+
+
+gtex = function()  {
+  layout(1, respect=TRUE)
+  bp = beanplot::beanplot(bw=.3, expr ~ age, d, what=c(0,1,0,0), 
+    col=adjustcolor("grey", alpha.f=0.3), main=paste0("expression distribution (", length(unique(d$gene)), " genes)"), ylab="expression (z-score)")
+  for (idx in rev(levels(idxs))) {
+      # layout(1, respect=TRUE)
+      col = which(idx==rev(levels(idxs))) + 1
+      beanplot::beanplot(bw=.3, grownage=1, add=TRUE, expr ~ age, d[d$gene%in%names(idxs)[idxs==idx],], what=c(1,1,1,0), 
+
+        col=c(adjustcolor(col, alpha.f=0.3), which(idx==rev(levels(idxs))) + 1, which(idx==rev(levels(idxs))) + 1, which(idx==rev(levels(idxs))) + 1), main=paste0("expression distribution (", length(unique(d$gene)), " genes)"), ylab="expression (z-score)")
+  }
+}
+gtex()
+# data = (data - apply(data, 1, mean)) /  apply(data, 1, sd)
+plot(density(data), main=paste0("cluster ", 1))
+
+
+# is = c()
+# for (i in 1:nrow(data)) {
+#   for (a in unique(study_gtex_trscr$exp_grp$age)) {
+#     if (length(unique(data[i,colnames(data)[study_gtex_trscr$exp_grp[colnames(data),]$age==a]])) == 1) {
+#       is = c(is,i)
+#     }
+#   }
+# }
+# is = unique(is)
+# data = data[-is,]
+
+d = lapply(rownames(data), function(g) {
+  data.frame(gene=g, sample=colnames(data), expr=data[g,])
+})
+d = do.call(rbind, d)
+head(d)
+dim(d)
+d$age = study_gtex_trscr$exp_grp[d$sample,]$age
+
+gtex = function()  {
+  layout(1, respect=TRUE)
+  beanplot::beanplot(expr ~ age, d, what=c(1,1,1,0), col="grey", main=paste0("expression distribution (", length(unique(d$gene)), " genes)"), ylab="expression (z-score)")
+}
+gtex()
+pdf("gtexfig.pdf", width=8, height=6)
+# png("gtexfig.png", width=800, height=600)
+gtex()
+dev.off()
+
+
+# data = data_orig
+# d = lapply(rownames(data), function(g) {
+#   data.frame(gene=g, sample=colnames(data), expr=data[g,])
+# })
+# d = do.call(rbind, d)
+# head(d)
+# dim(d)
+# d$age = study_gtex_trscr$exp_grp[d$sample,]$age
+
+layout(matrix(1:16, 4, byrow=TRUE), respect=TRUE)
+for (g in sort(unique(d$gene))) {
+  boxplot(expr ~ age, d[d$gene==g,], what=c(1,1,1,0), col="grey", main=paste0(g, " expression distribution)"), ylab="expression (z-score)")
+}
+
+
+
+# boxplot(expr ~ age, data = d, main=paste0("cluster ", 1))
+# plot(d$age, d$expr, col = adjustcolor(1, alpha.f=0.3), main=paste0("cluster ", 1))
+# m = lm(expr ~ age, data = d)
+# anova(m)
+# head(m$coefficients)
+# abline(m)
+# abline(h=0, col="grey", lty=2)
+
+# layout(1, respect = TRUE)
+# library(ggplot2)
+
+# d$age_fact = as.factor(d$age)
+# p = ggplot(d, aes(x = age_fact, y = expr, fill = age_fact)) +
+# geom_violin(trim = FALSE, alpha = 0.7) +  # Violin plot avec transparence
+# geom_boxplot(width = 0.1, fill = "white", outlier.shape = NA) +  # Ajouter une boîte pour plus de détails
+# labs(title = "Violin Plot des valeurs par groupe",
+#     x = "age",
+#     y = "expr") +
+# theme_minimal() +
+# scale_fill_brewer(palette = "Set2")  # Palette de couleurs esthétique
+# print(p)
+```
+
+
+```{r model, eval=FALSE}
+set.seed(1)
+nindiv= 20
+ngen=10
+# subdata = data[1:ngen, sample(colnames(data), nindiv)]
+subdata = data
+d = lapply(rownames(subdata), function(g) {
+  data.frame(gene=g, sample=colnames(subdata), expr=subdata[g,])
+})
+d = do.call(rbind, d)
+head(d)
+dim(d)
+d$age = study_gtex_trscr$exp_grp[d$sample,]$age
+d$gene = as.factor(d$gene)
+class(d) = c("nfnGroupedData", "nfGroupedData", "groupedData", "data.frame")
+
+barplot(table(d$age)/ngen)
+m = lm(expr ~ age*gene, data=d)
+summary(m)
+
+m2 = lm(expr~age*gene, d)
+summary(m2)
+layout(1, respect=TRUE)
+plot(expr~age, d, pch=16, col=as.numeric(as.factor(d$gene)))
+abline(a=m2$coef[1]             , b=m2$coef[2]              , col=1)
+n = length(levels(d$gene))
+for (i in 2:n) {
+  abline(a=m2$coef[1] + m2$coef[i+1], b=m2$coef[2] + m2$coef[n+i] , col=i)
+}
+legend("bottomright", cex=.7, levels(d$gene), col=1:length(levels(d$gene)), pch=16)
+
+
+
+m3 = nlme::lme(expr ~ age, random=expr ~ age | gene, data=d, control=nlme::lmeControl(opt='optim', optimMethod="L-BFGS-B"), method="ML")
+summary(m3)
+m3 = nlme::lme(expr ~ age, random=expr ~ age+gene| gene, data=d, control=nlme::lmeControl(opt='optim', optimMethod="L-BFGS-B"), method="ML")
+summary(m3)
+
+
+# d$gene    d$sample  d$expr    d$age     
+attributes(d)$formula = formula("expr ~ age | gene")
+# m0 = lm(expr ~ age * gene, data=d)
+m4 = lme4::lmer(expr ~ age + (age | gene), data=d)
+
+m3 = nlme::lme(expr ~ age, random=expr ~ age | gene, data=d, control=nlme::lmeControl(opt='optim', optimMethod="L-BFGS-B"), method="ML")
+
+
+# m3 = nlme::lme(expr ~ age, random="expr ~ age | gene"gene"DATA=D, CONTROL=NLME::LMEcONTROL(OPT='OPTIM', OPTIMmETHOD="l-bfgs-b"), METHOD="ml", )
+
+m3 = nlme::lme(expr ~ age, data=d, control=nlme::lmeControl(opt='optim'), method="ML")
+summary(m3)
+m4 = lme4::lmer(expr ~ age + (age | genesample), data=d)
+
+m11 = lme4::lmer(expr ~ age|gene), data=d)
+summary(m11)
+layout(1, respect=TRUE)
+plot(expr~age, d, col=as.numeric(d$rat), lty=as.numeric(d$gene), pch=as.numeric(d$gene), main="expr ~ age*gene + (age | rat)")
+for (i in 1:length(levels(d$rat))) {
+  tmp_gene = d[d$rat==levels(d$rat)[i],]$gene[1]
+  if (tmp_gene=="d1") {
+    abline(a=coef(m11)$rat[i,1]                  , b=coef(m11)$rat[i,2]                  , col=i)    
+  } else if (tmp_gene=="d2") {
+    abline(a=coef(m11)$rat[i,1]+coef(m11)$rat[i,3], b=coef(m11)$rat[i,2]+coef(m11)$rat[i,4], col=i)
+  } 
+}
+
+m12 = nlme::lme(expr ~ age*gene, random=~1+gene, data=d, control=nlme::lmeControl(opt='optim'), method="ML")
+summary(m12)
+```
+
+# Faux positifs
+
+```{r eval=FALSE}
+basal_expr=200
+basal_expr_gain = 20
+delta_fixed_effect_gene_int = 0 
+delta_fixed_effect_gene_slp = 0 # /!\ no fixed effect 
+sd_random_effect_rat_int = 0    # only random effect on   
+sd_random_effect_rat_slp = 5    # expr gain per rat 
+nb_rep = 10
+nb_age = 10
+seed=1
+
+params = c(2,3,5, 10, 20)
+plot(0,0, col=0, xlim=range(params), ylim=c(0,10), ylab="-log10(pval)", xlab="sd_random_effect_rat_slp")
+abline(h=-log10(0.05))
+legend("topright", c("lm", "nlme"), col=c(2,4), pch=1)
+for (seed in 1:5) {
+  for (param in params) {
+    d = rats_on_a_gene_sim(
+      sd_random_effect_rat_int    = sd_random_effect_rat_int   ,
+      sd_random_effect_rat_slp    = param   ,
+      delta_fixed_effect_gene_int = delta_fixed_effect_gene_int,
+      delta_fixed_effect_gene_slp = delta_fixed_effect_gene_slp,
+      basal_expr_gain           = basal_expr_gain          ,
+      basal_expr                = basal_expr               ,
+      nb_rep                      = nb_rep                     ,
+      nb_age                     = nb_age                    ,
+      seed                        = seed                       
+    )
+    m10 = lm(expr~age*gene+rat, d)
+    m12 = nlme::lme(expr ~ age*gene, random=~1+age, data=d, control=nlme::lmeControl(opt='optim'), method="ML")
+    s = summary(m12)
+    a = anova(m10)
+    lpv_lm = -log10(a[4,5])
+    lpv_mm = -log10(s$tTable[4,5])
+    points(param, lpv_lm, col=2)
+    points(param, lpv_mm, col=4)  
+  }
+}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r clustering, fig.width=6, fig.height=26, eval=FALSE}
+
+# No normalized data
+
+# Aggregate expression by age for each cluster
+cl_data_agreg = lapply(names(gene_clusters), function(cluster) {
+    genes_in_cluster = data[rownames(data) %in% gene_clusters[[cluster]], ]  # Subset genes in this cluster
+    matrix = sapply(unique(ages), function(age_group) {
+        rowMeans(genes_in_cluster[, ages == age_group, drop = FALSE])  # Mean expression for each age group
+    })
+    colnames(matrix) = unique(ages)  # Assign age groups as column names
+    return(matrix)
+})
+names(cl_data_agreg) = paste0("Cluster_", 1:n_clust)  # Name each cluster
+
+
+# Normalized data 
+
+data_z = data - apply(data, 1, mean)
+data_z = data_z / apply(data_z, 1, sd)
+
+rnd_data_z = rnd_data - apply(rnd_data, 1, mean)
+rnd_data_z = rnd_data_z / apply(rnd_data_z, 1, sd)
+
+# Aggregate expression by age for each cluster
+cl_data_z_agreg = lapply(names(gene_clusters), function(cluster) {
+    genes_in_cluster = data_z[rownames(data_z) %in% gene_clusters[[cluster]], ]  # Subset genes in this cluster
+    matrix = sapply(unique(ages), function(age_group) {
+        rowMeans(genes_in_cluster[, ages == age_group, drop = FALSE])  # Mean expression for each age group
+    })
+    colnames(matrix) = unique(ages)  # Assign age groups as column names
+    return(matrix)
+})
+names(cl_data_z_agreg) = paste0("Cluster_", 1:n_clust)  # Name each cluster
+
+rnd_data_z_agreg = sapply(unique(ages), function(age_group) {
+        rowMeans(rnd_data_z[, ages == age_group, drop = FALSE])  # Mean expression for each age group
+    })
+colnames(rnd_data_z_agreg) = unique(ages)  # Assign age groups as column names
+
+set.seed(1)
+# Matplot 
+layout(matrix(1:(n_clust*3 + 2*n_clust*5),13), respect = TRUE)
+par(mar = c(2, 2, 3, 1), oma = c(0, 0, 4, 0)) 
+
+invisible(sapply(1:n_clust, function(cluster_idx) {
+    
+    matplot(t(cl_data_agreg[[cluster_idx]]), type = "l", lty = 1,
+        xlab = "age Groups", ylab = "expr",
+        main = paste(names(cl_data_agreg)[cluster_idx], "(", nrow(cl_data_agreg[[cluster_idx]]), ") \n No Norm Exp"),
+        xaxt = "n", col = adjustcolor(cluster_idx, alpha.f=.3))
+    axis(1, at = 1:length(unique(ages)), labels = unique(ages))  # Add age labels
+    
+    mean_expression <- colMeans(cl_data_z_agreg[[cluster_idx]], na.rm = TRUE)
+    trend_model <- lm(mean_expression ~ seq_along(mean_expression))
+
+    matplot(t(cl_data_z_agreg[[cluster_idx]]), type = "l", lty = 1,
+        xlab = "age Groups", ylab = "expr",
+        main = paste0("Norm Exp \n Trend = " , formatC(trend_model$coefficients[2], format = "e", digits = 1)),
+        xaxt = "n", col = adjustcolor(cluster_idx, alpha.f=.3))
+    axis(1, at = 1:length(unique(ages)), labels = unique(ages))  # Add age labels
+
+    lines(predict(trend_model), col = "white", lwd = 2)
+
+    mean_expression <- colMeans(rnd_data_z_agreg, na.rm = TRUE)
+    trend_model <- lm(mean_expression ~ seq_along(mean_expression))
+
+    matplot(t(rnd_data_z_agreg), type = "l", lty = 1,
+        xlab = "age Groups", ylab = "expr",
+        main = paste0("Random Norm Exp \n Trend = " , formatC(trend_model$coefficients[2], format = "e", digits = 1)),
+        xaxt = "n", col = adjustcolor("black", alpha.f=.3))
+    axis(1, at = 1:length(unique(ages)), labels = unique(ages))  # Add age labels
+
+    lines(predict(trend_model), col = "white", lwd = 2)
+
+    genes_in_cluster = gene_clusters[[cluster_idx]][gene_clusters[[cluster_idx]] %in% rownames(data)]
+    if (length(genes_in_cluster) >= 5) {
+        tmp_genes = sample(genes_in_cluster, 5)
+    } else {
+        tmp_genes = genes_in_cluster  # Return all genes if less than 5
+    }
+
+    for (i in 1:5) {
+        if (i > length(tmp_genes)) {
+            plot.new() # Empty plot for no norm data
+            plot.new() # Empty plot for norm data
+        } else {
+            # Get expression data for the selected gene
+            gene_idx = tmp_genes[i]
+            gene_exp = data[gene_idx, ]
+            gene_exp_z = data_z[gene_idx, ]
+
+            # Create boxplot for the gene
+            boxplot(gene_exp ~ ages,
+                main = paste(gene_idx, " \n No Norm Exp"),
+                xlab = "age Group", ylab = "expr", col = cluster_idx
+            )
+
+            boxplot(gene_exp_z ~ ages,
+                main = "Norm Exp",
+                xlab = "age Group", ylab = "expr", col = cluster_idx
+            )
+
+        }
+    }
+
+}))
+
+title(main = "expr Trends by Clusters and age Groups", outer = TRUE, cex.main = 1.5)
+
+```
+
+
+
+
+
+
+# Session Information
+
+```{r, results="verbatim"}
+sessionInfo()
+```
+

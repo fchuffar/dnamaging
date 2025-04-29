@@ -1,0 +1,384 @@
+---
+title: "ENCODE profiles"
+author: "Florent Chuffart"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+
+
+```{r echo=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide")
+info = list(start_time = Sys.time())
+source("common.R")
+if (!exists("mreadRDS")) {mreadRDS = memoise::memoise(readRDS, cache=cachem::cache_mem(max_size = 10*1024 * 1024^2)) }
+```
+
+```{r params}
+# source("params_default.R")
+y_key="age"
+```
+
+# Data
+
+```
+gse = "GSE147740"; rmarkdown::render("05_encode.Rmd", output_file=paste0("05_encode_", gse, ".html"))
+```
+
+```{r inputs}
+if (!exists("gse"))             gse = "GSE147740"  ;
+if (!exists("model_formula"))   model_formula = paste0("meth~", y_key)  ;
+if (!exists("model_func_name")) model_func_name = "modelcalllm"         ;
+if (file.exists(paste0(model_func_name, ".R"))) {
+  source(paste0(model_func_name, ".R"))
+}
+study_filename = paste0("./datashare/", gse, "/study_preproc_", gse, ".rds")
+
+if (!exists("newas"))           newas = "1000000"                            ;
+if (!exists("neighb"))          neighb = "1000"                           ;
+
+bed_ewas_filename = paste0("ewas4combp_", gse, "_", model_func_name, "_", model_formula, ".bed")
+rds_ewas_filename = paste0("ewas_", gse, "_", model_func_name, "_", model_formula, ".rds")
+study_filename = paste0("~/projects/datashare/", gse, "/study_preproc_", gse, "_", model_func_name, "_", model_formula, "_ewas", newas, "_nn", neighb, ".rds")
+```
+
+
+```{r loading ewas, eval=!exists("ewas")}
+# stop("EFN")
+ewas = mreadRDS(rds_ewas_filename)
+ewas = data.frame(ewas)
+ewas$pvbonf = p.adjust(ewas[,"pv"], method="bonferroni")
+s = mreadRDS(study_filename)
+ewas$mean_beta = apply(s$data[rownames(ewas),], 1, mean)
+ewas$sd_beta = apply(s$data[rownames(ewas),], 1, sd)
+# rm("s")
+```
+
+
+```{r hg38}
+library(IlluminaHumanMethylationEPICmanifest)
+library(IlluminaHumanMethylationEPICanno.ilm10b5.hg38)
+library(minfi)
+pfepichg38 = getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b5.hg38)
+
+table(pfepichg38$Relation_to_Island, useNA="always")
+pfepichg38[pfepichg38$Relation_to_Island == "N_Shelf", ]$Relation_to_Island = "Shelf" 
+pfepichg38[pfepichg38$Relation_to_Island == "N_Shore", ]$Relation_to_Island = "Shore" 
+pfepichg38[pfepichg38$Relation_to_Island == "S_Shelf", ]$Relation_to_Island = "Shelf" 
+pfepichg38[pfepichg38$Relation_to_Island == "S_Shore", ]$Relation_to_Island = "Shore" 
+table(pfepichg38$Relation_to_Island, useNA="always")
+pfepichg38$Relation_to_Island = factor(pfepichg38$Relation_to_Island, levels = c("Island", "Shore", "Shelf", "OpenSea"))
+
+# library("IlluminaHumanMethylationEPICv2anno.20a1.hg38")
+# pfepichg38 = data.frame(getAnnotation(IlluminaHumanMethylationEPICv2anno.20a1.hg38))
+# dim(pfepichg38)
+# pfepichg38 = pfepichg38[pfepichg38$EPICv1_Loci %in% rownames(ewas),]
+# dim(pfepichg38)
+# pfepichg38 = pfepichg38[!duplicated(pfepichg38$EPICv1_Loci),]
+# rownames(pfepichg38) = pfepichg38$EPICv1_Loci
+# pfepichg38$Relation_to_Island = factor(pfepichg38$Relation_to_Island, levels = c("Island", "Shore", "Shelf", "OpenSea"))
+# dim(pfepichg38)
+
+all(rownames(pfepichg38) %in% rownames(ewas))
+if (!all(rownames(ewas) %in% rownames(pfepichg38))) {
+  stop("problem annotation hg38.")
+} else {
+  pfepichg38 = pfepichg38[rownames(ewas),]
+  ewas$Relation_to_Island = pfepichg38[rownames(ewas),]$Relation_to_Island
+}
+```
+
+
+# EWAS
+
+```{r ewas, fig.width=7, fig.height=7}
+# layout(matrix(1:2,1), respect=TRUE)
+# plot(ewas$beta, ewas$lpv, pch=".")
+# plot(ewas$beta, -log10(ewas$pvbonf), pch=".")
+# abline(h=2, col=2)
+# sum(ewas$pvbonf<0.01)
+
+
+fc = function (x = seq(0, 1, length.out = nrow(z)), y = seq(0, 1, 
+    length.out = ncol(z)), z, xlim = range(x, finite = TRUE), 
+    ylim = range(y, finite = TRUE), zlim = range(z, finite = TRUE), 
+    levels = pretty(zlim, nlevels), nlevels = 20, color.palette = function(n) hcl.colors(n, 
+        "YlOrRd", rev = TRUE), col = color.palette(length(levels) - 
+        1), plot.title, plot.axes, key.title, key.axes, key.border = NULL, 
+    asp = NA, xaxs = "i", yaxs = "i", las = 1, axes = TRUE, frame.plot = axes, LEGEND=FALSE,
+    ...) 
+{
+    if (missing(z)) {
+        if (!missing(x)) {
+            if (is.list(x)) {
+                z <- x$z
+                y <- x$y
+                x <- x$x
+            }
+            else {
+                z <- x
+                x <- seq.int(0, 1, length.out = nrow(z))
+            }
+        }
+        else stop("no 'z' matrix specified")
+    }
+    else if (is.list(x)) {
+        y <- x$y
+        x <- x$x
+    }
+    if (any(diff(x) <= 0) || any(diff(y) <= 0)) 
+        stop("increasing 'x' and 'y' values expected")
+    if (LEGEND) { 
+      mar.orig <- (par.orig <- par(c("mar", "las", "mfrow")))$mar
+      # on.exit(par(par.orig))
+      w <- (3 + mar.orig[2L]) * par("csi") * 2.54
+      # layout(matrix(c(2, 1), ncol = 2L), widths = c(1, lcm(w)))
+      # par(las = las)
+      # mar <- mar.orig
+      # mar[4L] <- mar[2L]
+      # mar[2L] <- 1
+      # par(mar = mar)
+      par(mar=c(5.1, 5.1, 4.1, 5.1))
+
+      plot.new()
+      plot.window(xlim = c(0, 1), ylim = range(levels), xaxs = "i", 
+          yaxs = "i")
+      rect(0, levels[-length(levels)], 1, levels[-1L], col = col, 
+          border = key.border)
+      if (missing(key.axes)) {
+          if (axes) 
+              axis(4)
+      }
+      else key.axes
+      box()
+      if (!missing(key.title)) 
+          key.title
+      mar <- mar.orig
+      # mar[4L] <- 1
+      par(mar = mar)
+    }
+    plot.new()
+    plot.window(xlim, ylim, "", xaxs = xaxs, yaxs = yaxs, asp = asp)
+    .filled.contour(x, y, z, levels, col)
+    if (missing(plot.axes)) {
+        if (axes) {
+            title(main = "", xlab = "", ylab = "")
+            Axis(x, side = 1)
+            Axis(y, side = 2)
+        }
+    }
+    else plot.axes
+    if (frame.plot) 
+        box()
+    if (missing(plot.title)) 
+        title(...)
+    else plot.title
+    return(list(levels=levels, zlim=zlim))
+}
+
+
+ewasfig = function()  {
+  layout(matrix(c(2,2,2,1,
+                  2,2,2,1,
+                  2,2,2,1,
+                  3,4,5,6), 4, byrow=TRUE), respect=TRUE)
+  par(mar=c(5.1, 4.1, 4.1, 2.1))
+  idx = rownames(ewas)[ewas$pvbonf<0.01]
+  xlab = "age effect (meth. prop. per year)"
+  ylab = "mean methylation proportion"
+  x = ewas[idx, ]$beta
+  y = ewas[idx, ]$mean_beta
+  z = MASS::kde2d(x, y, n = 100, lims=c(-0.002, 0.002, 0, 1))
+  main = paste0("Bonferroni 1% (", length(idx), " probes)")
+  fc(z, main=main, xlab=xlab, ylab=ylab, LEGEND=TRUE)
+  # nlevels = 20
+  # zlim = range(z$z, finite = TRUE)
+  # levels = pretty(zlim, nlevels)
+  # x <- z$x
+  # y <- z$y
+  # grid <- expand.grid(x=x, y=y)
+  # grid$z <- as.vector(z$z)
+  # contourplot(z ~ x * y, grid, cuts = 20,labels=FALSE, main=main)
+  # levelplot(z ~ x * y, grid, cuts = 10, colorkey=FALSE, main=main)
+  colpals=c("Greens", "Grays", "Purples", "Blues")
+  names(colpals) = levels(ewas$Relation_to_Island)
+  for (k in levels(ewas$Relation_to_Island)) {
+    par(mar=c(2, 2.5, 3.1, 2.5))
+    idx = rownames(ewas)[ewas$pvbonf<0.01]
+    idx = intersect(idx, rownames(ewas)[ewas$Relation_to_Island%in% k])
+    x = ewas[idx, ]$beta
+    y = ewas[idx, ]$mean_beta
+    z = MASS::kde2d(x, y, n = 100, lims=c(-0.002, 0.002, 0, 1))
+    main=paste0(k, " (", length(idx), " probes)")
+    fc(z, main=main, plot.axes=FALSE, color.palette=function(n) hcl.colors(n,  palette=colpals[k], rev=TRUE))# , levels=fc$levels, zlim=fc$zlim)
+    axis(1, at=c(-0.002, 0, 0.002), labels=c(-0.002, 0, 0.002))
+    axis(2, at=c(0, .5, 1), labels=c(0, .5, 1))
+
+  }
+  par(mar=c(5.1, 4.1, 4.1, 2.1))
+}
+ewasfig()
+# pdf("ewasfig.pdf", width=8, height=6)
+png("ewasfig.png", width=1600, height=1200, res=150)
+ewasfig()
+dev.off()
+
+# x = ewas[idx, ]$beta
+# y = ewas[idx, ]$mean_beta
+# z = MASS::kde2d(x, y, n = 100, lims=c(-0.002, 0.002, 0, 1))
+
+#      levelplot(z ~ x * y, grid), cuts = 50, ), xlab="",
+#                ylab="", main="Weird Function", sub="with log scales",
+#                colorkey = FALSE, region = TRUE)
+
+
+
+```
+
+```{r}
+probes = list()
+probes[["bonferroni01"]]       = rownames(ewas)[ewas$pvbonf<0.01]
+probes[["methylation_gain"]]   = rownames(ewas)[ewas$pvbonf<0.01 & ewas$beta >= 0]
+probes[["methylation_loss"]]   = rownames(ewas)[ewas$pvbonf<0.01 & ewas$beta <  0]
+probes[["methylation_losshypo"]] = rownames(ewas)[ewas$pvbonf<0.01 & ewas$beta <  0 & ewas$mean_beta <= .3]
+probes[["methylation_losshyper"]] = rownames(ewas)[ewas$pvbonf<0.01 & ewas$beta <  0 & ewas$mean_beta > .3]
+d0 = density(ewas[probes[["bonferroni01"]],]$mean_beta)
+d1 = density(ewas[probes[["methylation_gain"  ]],]$mean_beta, bw=d0$bw, weights=rep(1/length(probes[["bonferroni01"]]), length(probes[["methylation_gain"  ]])))
+d2 = density(ewas[probes[["methylation_loss"  ]],]$mean_beta, bw=d0$bw, weights=rep(1/length(probes[["bonferroni01"]]), length(probes[["methylation_loss"  ]])))
+d3 = density(ewas[probes[["methylation_losshypo"]],]$mean_beta, bw=d0$bw, weights=rep(1/length(probes[["bonferroni01"]]), length(probes[["methylation_losshypo"]])))
+d4 = density(ewas[probes[["methylation_losshyper"]],]$mean_beta, bw=d0$bw, weights=rep(1/length(probes[["bonferroni01"]]), length(probes[["methylation_losshyper"]])))
+plot(d0, col="grey", lty=2)
+lines(d1, col=1)
+lines(d2, col=2)
+lines(d3, col=3)
+lines(d4, col=4)
+abline(v=0.3, col="grey", lty=3)
+abline(v=0.6, col="grey", lty=3)
+```
+
+
+
+
+
+```{r eval=FALSE}
+predimeth_probes = read.table(paste0("predimeth_probes_", gse, "_50.bed"))
+# layout(matrix(1:6, 3), respect=TRUE)
+layout(matrix(1:2, 1), respect=TRUE)
+for (n in names(probes)) {
+  idx = probes[[n]]
+  # plot(ewas[idx, ]$beta, -log10(ewas[idx, ]$pvbonf), pch=".", main=n, col=adjustcolor(1, alpha.f=.1))
+  # smoothScatter(ewas[idx, ]$beta, -log10(ewas[idx, ]$pvbonf), main=n)
+  # plot(ewas[idx, ]$beta, ewas[idx, ]$mean_beta, pch=".")
+  smoothScatter(ewas[idx, ]$beta, ewas[idx, ]$mean_beta, main=n)
+  tmp_idx = predimeth_probes[,4]
+  # points(ewas[tmp_idx, ]$beta, ewas[tmp_idx, ]$mean_beta, col=2, main=n)
+}
+```
+
+```{r volcano, eval=FALSE}
+layout(matrix(1:2, 1), respect=TRUE)
+for (n in names(probes)) {
+  idx = probes[[n]]
+  idx_isl = intersect(idx, rownames(ewas)[ewas$Relation_to_Island%in% c("Island")]) 
+  idx_ops = intersect(idx, rownames(ewas)[ewas$Relation_to_Island%in% c("OpenSea")]) 
+  idx_shr = intersect(idx, rownames(ewas)[ewas$Relation_to_Island%in% c("Shore")]) 
+  idx_shl = intersect(idx, rownames(ewas)[ewas$Relation_to_Island%in% c("Shelf")]) 
+  smoothScatter(ewas[idx, ]$beta, ewas[idx, ]$mean_beta, main=n)
+  cols = rep(NA, nrow(ewas))
+  names(cols) = rownames(ewas)
+  # cols[idx_shr] = 1
+  cols[idx_isl] = 2
+  cols[idx_ops] = 3
+  # cols[idx_shl] = 4
+  # points(ewas[idx_isl, ]$beta, ewas[idx_isl, ]$mean_beta, col=2, pch=".")
+  # points(ewas[idx_ops, ]$beta, ewas[idx_ops, ]$mean_beta, col=3, pch=".")
+  points(ewas$beta, ewas$mean_beta, col=adjustcolor(cols, alpha.f=.8), pch=1)
+}
+# legend("topright", c("Shore", "Island", "OpenSea", "Shelf"), col=1:4, pch=16)
+legend("topright", c("Island", "OpenSea"), col=2:3, pch=16)
+```
+
+```{r trueIsland, eval=FALSE}
+# table(ewas$Islands_Name)
+ewas$trueIsland = ewas$Islands_Name
+# idx_isl = intersect(rownames(ewas), rownames(ewas)[ewas$Relation_to_Island%in% c("Island")]) 
+
+# head(ewas[idx_isl,c("Islands_Name", "Relation_to_Island")])
+
+# foo = do.call(rbind, strsplit(ewas[idx_isl,]$Islands_Name, ":|-|;"))
+# rownames(foo) = idx_isl
+# sum((ewas[idx_isl,2] < as.numeric(foo[,2]) | ewas[idx_isl,2] > as.numeric(foo[,3])))
+
+# bar = rep(NA,nrow(foo))
+# for (i in 0:5) {
+#   idx = which(!(ewas[idx_isl,2] < as.numeric(foo[,i*3+2]) | ewas[idx_isl,2] > as.numeric(foo[,i*3+3])))
+#   bar[idx] = i
+# }
+
+# ewas$trueIsland = NA
+# baz = do.call(rbind, strsplit(ewas[idx_isl,]$Islands_Name, ";"))
+# ewas[idx_isl,]$trueIsland = sapply(1:length(bar), function(j){baz[j,bar[j]+1]})
+
+# foo = do.call(rbind, strsplit(ewas[idx_isl,]$trueIsland, ":|-|;"))
+# sum((ewas[idx_isl,2] < as.numeric(foo[,2]) | ewas[idx_isl,2] > as.numeric(foo[,3])))
+```
+
+```{r flatanno, eval=FALSE}
+options(scipen = 3)
+library(missMethyl)
+flatanno = missMethyl:::.getFlatAnnotation("EPIC")     
+missingcpg = rownames(ewas)[!rownames(ewas) %in% flatanno$cpg]
+flatanno = rbind(flatanno, data.frame(symbol=NA, group="NoGene", cpg=missingcpg, alias=NA, entrezid=NA))
+flatanno$group = factor(flatanno$group, levels = c("TSS1500", "TSS200", "5'UTR", "1stExon", "Body", "ExonBnd", "3'UTR", "NoGene"))
+```
+
+```{r barplots, eval=FALSE}
+layout(matrix(1:2, 1, byrow=TRUE), respect=TRUE)
+
+n = "ewas"
+idx = rownames(ewas)
+fa = flatanno[flatanno$cpg %in% idx,]
+barplot(table(ewas[idx,]$Relation_to_Island, useNA="ifany"), las=2, main=paste0(n, " (", length(idx), ")"))
+barplot(table(fa$group, useNA="ifany"), main=paste0(n, " (", length(idx), ")"), las=2)
+
+for (n in names(probes)) {
+  idx = probes[[n]]
+  barplot((table(ewas[idx,]$Relation_to_Island, useNA="ifany")), las=2, main=paste0(n, " (", length(idx), ")"))
+}
+
+
+for (n in names(probes)) {
+  idx = probes[[n]]
+  fa = flatanno[flatanno$cpg %in% idx,]
+  head(fa)
+  barplot(table(fa$group, useNA="ifany"), main=paste0(n, " (", length(idx), ")"), las=2)
+}
+
+for (rti in c("Island", "Shore", "Shelf", "OpenSea")) {
+  for (n in names(probes)) {
+    idx = probes[[n]]
+    fa = flatanno[flatanno$cpg %in% idx,]
+    k = paste0(n, "_", rti)
+    print(k)
+    idx = intersect(idx, rownames(ewas)[ewas$Relation_to_Island%in% rti]) 
+    fa = flatanno[flatanno$cpg %in% idx,]
+    head(fa)
+    barplot(table(fa$group, useNA="ifany"), main=paste0(k, " (", length(idx), ")"), las=2)
+  }
+}
+```
+
+
+
+
+# Session Information
+
+```{r, results="verbatim"}
+sessionInfo()
+```
+

@@ -20,7 +20,11 @@ if (!exists("cl_bs")) {
   cl_bs = parallel::makeCluster(nb_core, type="FORK")
 }
 residuals = parallel::parApply(cl_bs, orig_study$data, 1, function(meth, gender, age) {
-  m = lm(meth ~ gender + age)
+  if (length(unique(na.omit(gender)))>1) {
+    m = lm(meth ~ gender + age)
+  } else { 
+    m = lm(meth ~ age)
+  }
   m$residuals
 }, gender, age)
 parallel::stopCluster(cl_bs)

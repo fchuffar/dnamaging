@@ -170,7 +170,8 @@ plot_meth_hm = function(data,
   range_exp=NULL                   ,
   features_type="probes"           ,
   samples_type="patients"          ,
-  PCA=FALSE
+  PCA=FALSE, 
+  PLOT_HM=TRUE
 ) {
   # Remove rows with no variation (needed to clustering rows according to cor)
   # data = data[apply(data, 1, function(l) {length(unique(l))})>1, ]

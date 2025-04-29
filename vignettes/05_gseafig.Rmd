@@ -1,0 +1,140 @@
+---
+title: "PrediMEth episignature on TCGA cohorts"
+author: "Fabien Jossaud, Florent Chuffart, Julien Thevenon"
+date: "`r Sys.time()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+```{r, echo=FALSE, eval=TRUE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=10, fig.height=10, eval=TRUE, echo=FALSE, warning=FALSE)
+source("common.R")
+```
+
+
+
+```{r gsea function}
+gsea_plot = function(grp_filename, rnk_filename, out_dir, cmd="/summer/epistorage/opt/GSEA_4.1.0/gsea-cli.sh", nperm=1000, RMOUTDIR=TRUE, gse) {
+  
+  info_gsea = list()
+  
+  if (missing(out_dir)) {
+    out_dir = tempfile(pattern="gsea_out_", tmpdir=".")
+  }
+  dir.create(out_dir)
+  arg = paste0("GSEAPreranked -gmx ", grp_filename, " -collapse No_Collapse -mode Max_probe -norm meandiv -nperm ", nperm , " -rnk ", rnk_filename, " -scoring_scheme weighted -rpt_label my_analysis -create_svgs false -include_only_symbols true -make_sets true -plot_top_x 20 -rnd_seed timestamp -set_max 5000 -set_min 15 -zip_report false -out ", out_dir)
+  print(paste(cmd, arg))
+  system2(cmd, arg)
+  suffix = strsplit(list.files(out_dir)[1], ".", fixed=TRUE)[[1]][3]
+  
+  endplot_filename = paste0(out_dir, "/my_analysis.GseaPreranked.", suffix, "/enplot_", grp_filename, "_1.png")
+  endplot_filename
+  summary_neg = read.table(paste0(out_dir, "/my_analysis.GseaPreranked.", suffix, "/gsea_report_for_na_neg_", suffix, ".tsv"), sep="\t", header=TRUE) ;   
+  summary_pos = read.table(paste0(out_dir, "/my_analysis.GseaPreranked.", suffix, "/gsea_report_for_na_pos_", suffix, ".tsv"), sep="\t", header=TRUE) ;   
+  if (nrow(summary_pos)>0) {
+    s = summary_pos    
+  } else if (nrow(summary_neg)>0) {
+    s = summary_neg    
+  }
+  n =  s$SIZE
+  pv = s$NOM.p.val
+  if (pv == 0 | pv == "---") { pv = 1/nperm}
+  pv = signif(pv, 2)  
+  
+  info_gsea$pv = pv
+  info_gsea$n = n
+  
+  addImg <- function(
+    obj, # an image file imported as an array (e.g. png::readPNG, jpeg::readJPEG)
+    x = NULL, # mid x coordinate for image
+    y = NULL, # mid y coordinate for image
+    width = NULL, # width of image (in x coordinate units)
+    interpolate = TRUE # (passed to graphics::rasterImage) A logical vector (or scalar) indicating whether to apply linear interpolation to the image when drawing. 
+  ){
+    if(is.null(x) | is.null(y) | is.null(width)){stop("Must provide args 'x', 'y', and 'width'")}
+    USR <- par()$usr # A vector of the form c(x1, x2, y1, y2) giving the extremes of the user coordinates of the plotting region
+    PIN <- par()$pin # The current plot dimensions, (width, height), in inches
+    DIM <- dim(obj) # number of x-y pixels for the image
+    ARp <- DIM[1]/DIM[2] # pixel aspect ratio (y/x)
+    WIDi <- width/(USR[2]-USR[1])*PIN[1] # convert width units to inches
+    HEIi <- WIDi * ARp # height in inches
+    HEIu <- HEIi/PIN[2]*(USR[4]-USR[3]) # height in units
+    rasterImage(image = obj, 
+      xleft = x-(width/2), xright = x+(width/2),
+      ybottom = y-(HEIu/2), ytop = y+(HEIu/2), 
+      interpolate = interpolate)
+  }
+  img = png::readPNG(endplot_filename)
+  if (RMOUTDIR) {unlink(out_dir, recursive=TRUE)}    
+  par(mar=c(0.5, 0, 1.1, 0))
+  plot(NA, NA, xlim=0:1, ylim=0:1, axes=FALSE, main=paste0(gse, " n: ", n, " pv: ", pv, ""), xlab="", ylab="")
+  addImg(img, x=.5,y=.5,width=1)
+  par(mar=c(5.1, 4.1, 4.1, 2.1))  
+  return(info_gsea)
+}
+```
+
+
+```{r gsea apply}
+
+gsea = function()  {
+  layout(matrix(1:6, 2, byrow=TRUE), respect=TRUE)
+  for (key in c("TCGA-BRCA", "TCGA-KIRP", "TCGA-KIRC", "TCGA-LUAD", "TCGA-LUSC", "BRB")) {
+  # layout(matrix(1:2, 1, byrow=TRUE), respect=TRUE)
+  # for (key in c("TCGA-BRCA", "TCGA-KIRP")) {
+    # key = "TCGA-BRCA"
+    s = mreadRDS(paste0("~/projects/datashare/", key, "/study_preproc_", key, ".rds"))
+    e = s$exp_grp
+    idx = intersect(e[e$tissue_status == "normal",]$id_patient, e[e$tissue_status == "tumoral",]$id_patient)
+    e = e[e$id_patient%in%idx,]
+    tab1 = table(e[e$tissue_status == "normal",]$id_patient)
+    tab2 = table(e[e$tissue_status == "tumoral",]$id_patient)
+    idx = intersect(names(tab1)[tab1==1], names(tab2)[tab2==1])    
+    e = e[e$id_patient%in%idx,]
+    tab = table(e$id_patient, e$tissue_status)
+    tab
+    if (!all(tab==1)|nrow(tab)==0) {stop(paste0("Problem pairing samples for ", key))}
+
+    d = s$data[,rownames(e)]
+    da = apply(d[,rownames(e)[e$tissue_status=="tumoral"]], 1, mean) - apply(d[,rownames(e)[e$tissue_status=="normal"]], 1, mean)
+    da = sort(da)
+
+    gsea_input = cbind(names(da), da)
+    head(gsea_input)
+    dim(gsea_input)
+    rnk_filename = paste0("gsea_input_", key, ".rnk")
+    print(paste("gsea_input were exported in", rnk_filename, "file."))
+    write.table(gsea_input, rnk_filename, sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
+    # probes$bonferroni01           probes$methylation_gain       probes$methylation_loss       probes$methylation_losshypo   probes$methylation_losshyper  
+    grp_filenamename = paste0("predimeth_methylation_gain.grp")
+    tmp_probes = read.table("predimeth_probes_up_GSE147740_50.bed")[,4]
+    write.table(tmp_probes, quote=FALSE, row.names=FALSE, col.names=FALSE, grp_filenamename)
+    gsea_plot(grp_filenamename, rnk_filename, gse=key)  
+  }
+}
+
+
+
+gsea()
+pdf("gseafig.pdf", width=8, height=6)
+# png("gseafig.png", width=800, height=600)
+gsea()
+dev.off()
+  
+ 
+```
+
+
+
+
+
+# Session Information
+
+```{r, results="verbatim"}
+sessionInfo()
+```
+

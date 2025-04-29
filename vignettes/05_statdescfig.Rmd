@@ -1,0 +1,79 @@
+---
+title: "ENCODE profiles"
+author: "Florent Chuffart"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+
+
+```{r echo=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide")
+source("common.R")
+```
+
+```{r params}
+# source("params_default.R")
+y_key="age"
+```
+
+# Data
+
+```
+gse = "GSE147740"; rmarkdown::render("05_encode.Rmd", output_file=paste0("05_encode_", gse, ".html"))
+```
+
+```{r inputs}
+if (!exists("gse"))             gse = "GSE147740"  ;
+if (!exists("model_formula"))   model_formula = paste0("meth~", y_key)  ;
+if (!exists("model_func_name")) model_func_name = "modelcalllm"         ;
+if (file.exists(paste0(model_func_name, ".R"))) {
+  source(paste0(model_func_name, ".R"))
+}
+study_filename = paste0("./datashare/", gse, "/study_preproc_", gse, ".rds")
+
+if (!exists("newas"))           newas = "1000000"                            ;
+if (!exists("neighb"))          neighb = "1000"                           ;
+
+bed_ewas_filename = paste0("ewas4combp_", gse, "_", model_func_name, "_", model_formula, ".bed")
+rds_ewas_filename = paste0("ewas_", gse, "_", model_func_name, "_", model_formula, ".rds")
+study_filename = paste0("~/projects/datashare/", gse, "/study_preproc_", gse, "_", model_func_name, "_", model_formula, "_ewas", newas, "_nn", neighb, ".rds")
+```
+
+
+```{r loading exp_grp, eval=!exists("exp_grp")}
+s = mreadRDS(study_filename)
+exp_grp = s$exp_grp
+rm("s")
+```
+
+
+# Stat Desc
+
+```{r ewas, fig.width=9, fig.height=6}
+statdesc = function()  {
+  layout(1, respect=TRUE)
+  beanplot::beanplot(exp_grp$age ~ paste0(exp_grp$gender, " (", table(exp_grp$gender)[exp_grp$gender], " individuals)"), what=c(1,1,1,0), col="grey", main=paste0("sex distribution (", nrow(exp_grp), " individuals)"), ylab="age (years)")
+}
+statdesc()
+pdf("statdescfig.pdf", width=8, height=6)
+# png("statdescfig.png", width=800, height=600)
+statdesc()
+dev.off()
+```
+
+
+
+
+
+# Session Information
+
+```{r, results="verbatim"}
+sessionInfo()
+```
+

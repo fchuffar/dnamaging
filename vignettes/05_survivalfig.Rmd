@@ -1,0 +1,162 @@
+---
+title: "Build predictive visu"
+author: "Fabien Jossaud, Florent Chuffart"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+
+
+```{r echo=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=9, eval=TRUE, echo=FALSE, results="hide")
+info = list(start_time = Sys.time())
+source("common.R")
+```
+
+```{r results="verbatim"}
+
+gses = c(
+  "TCGA-KIRC", 
+  "TCGA-KIRP", 
+  "TCGA-KICH", 
+  # "TCGA-LUAD", 
+  # "TCGA-LUSC", 
+  # "BRB",
+  # "TCGA-LGG" ,
+  # "TCGA-GBM" ,
+  # "TCGA-ACC" ,
+  # "TCGA-HNSC",
+  # "TCGA-BRCA",
+  # "TCGA-BLCA",
+  # "TCGA-CESC",
+  # "TCGA-CHOL",
+  # "TCGA-COAD",
+  # "TCGA-DLBC",
+  # "TCGA-ESCA",
+  # "TCGA-LAML",
+  # "TCGA-LIHC",
+  # "TCGA-MESO",
+  # "TCGA-PAAD",
+  # "TCGA-PCPG",
+  # "TCGA-PRAD",
+  # "TCGA-READ",
+  # "TCGA-SARC",
+  # "TCGA-SKCM",
+  # "TCGA-STAD",
+  # "TCGA-TGCT",
+  # "TCGA-THCA",
+  # "TCGA-THYM",
+  # "TCGA-UCS" ,
+  # "TCGA-UVM" ,
+  # "TCGA-OV"  ,
+  NULL
+)
+```
+
+```{r}
+survival = function()  {
+  for (gse in gses) {
+    for (setofprobes in c("PrediMeth", "random")){
+      predimeth_probes = read.table("predimeth_probes_up_GSE147740_50.bed")
+      if (setofprobes=="random") {
+        set.seed(1)
+        predimeth_probes = s$platform[sample(rownames(s$platform), length(predimeth_probes)), 1:6]
+      }
+      print(gse)
+      s = mreadRDS(paste0("~/projects/datashare/", gse, "/study_preproc_", gse, ".rds"))
+    
+
+      # layout(matrix(1:2,1), respect=TRUE)
+      # plot(density(s$exp_grp$age))
+
+      idx_kc = rownames(s$exp_grp)[s$exp_grp$tissue_status=="tumoral"]
+
+      da = s$data[,idx_kc]
+      p = intersect(predimeth_probes[,4], rownames(da))
+      dim(da[p,])
+
+        # PCA on tissues
+      data = t(da[p,])
+      idx_sample = rownames(data)
+
+      pca = prcomp(data, scale=FALSE)
+      v = pca$sdev * pca$sdev
+      p = v / sum(v) * 100
+
+      library(mclust)
+      em = Mclust(pca$x[,1:2], G=2)
+      col=em$class
+
+      layout(matrix(c(3,3,1,5,5,5,
+                      2,2,4,5,5,5,
+                      2,2,4,5,5,5,
+                      NULL), 3, byrow=TRUE), respect=TRUE)
+      par(mar=c(0, 0, 4.1, 2.1))  
+      barplot(p[1:20], main="% of expl. var.")
+      i=1
+      j=2
+      par(mar=c(5.1, 4.1, 0, 0))  
+      plot(pca$x[,i], pca$x[,j], xlab=paste0("PC", i, "(", signif(p[i], 3), "%)"), ylab=paste0("PC", j, "(", signif(p[j], 3), "%)"), col=col)
+
+      den = density(pca$x[,1])
+      par(mar=c(0, 4.1, 4.1, 0))  
+      plot(den, lty=2, col="grey", main="EM clustering on PC1:2", xlab="", ylab="", xlim=range(pca$x[,1]), xaxt="n", yaxt="n")
+      den1 = density(pca$x[col==1,1], bw=den$bw, weights=rep(1/nrow(pca$x), sum(col==1)))
+      den2 = density(pca$x[col==2,1], bw=den$bw, weights=rep(1/nrow(pca$x), sum(col==2)))
+      lines(den1, col=1)
+      lines(den2, col=2)
+
+      den = density(pca$x[,2])
+      par(mar=c(5.1, 0, 0, 2.1))  
+      plot(den$y, den$x, lty=2, col="grey", type="l", xlab="", ylab="", ylim=range(pca$x[,2]), xaxt="n", yaxt="n")
+      den1 = density(pca$x[col==1,2], bw=den$bw, weights=rep(1/nrow(pca$x), sum(col==1)))
+      den2 = density(pca$x[col==2,2], bw=den$bw, weights=rep(1/nrow(pca$x), sum(col==2)))
+      lines(den1$y, den1$x, col=1)
+      lines(den2$y, den2$x, col=2)
+
+      if (!all(idx_sample == names(col))) {stop("mcluster loss labels")}
+      par(mar=c(5.1, 4.1, 4.1, 2.1))  
+      epimedtools::scurve(ss=s$exp_grp[idx_sample,]$os, v=col, col=palette()[1:length(unique(col))], main=paste0(gse, " ", setofprobes), xlab=("duration (month)"), ylab="survival rate")
+    }
+  }
+}
+
+
+
+survival()
+pdf("survivalfig.pdf", width=8, height=4)
+# png("survivalfig.png", width=800, height=600)
+survival()
+dev.off()
+  
+
+```
+
+# pairs
+
+```{r, eval=FALSE}
+layout(1, respect=TRUE)
+rn = rownames(pcas[[1]]$rotation)
+for (gse in gses) {
+  rn = intersect(rn, rownames(pcas[[gse]]$rotation))
+}
+foo = pcas[[gses[1]]]$rotation[rn,1]
+for (gse in gses[-1]) {
+  foo = cbind(foo, pcas[[gse]]$rotation[rn,1])
+}
+colnames(foo) = gses
+pairs(foo)
+```
+
+
+# Session Information
+
+```{r, results="verbatim"}
+sessionInfo()
+```
+

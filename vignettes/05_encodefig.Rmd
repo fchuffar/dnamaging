@@ -1,0 +1,313 @@
+---
+title: "ENCODE profiles"
+author: "Florent Chuffart"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+
+
+```{r echo=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide")
+info = list(start_time = Sys.time())
+source("common.R")
+# if (!exists("mreadRDS")) {mreadRDS = memoise::memoise(readRDS, cache=cachem::cache_mem(max_size = 10*1024 * 1024^2)) }
+```
+
+# ENCODE / deeptools
+
+
+### Marks Associated with Transcriptional Activation:
+1. **H3K27ac**  
+   - Associated with active enhancers and promoters.  
+   - Indicates a transcriptionally permissive environment.
+
+2. **H3K36me3**  
+   - Found in coding regions of actively transcribed genes.  
+   - Linked to transcriptional elongation and genomic integrity.
+
+3. **H3K4me1**  
+   - Associated with enhancers (often primed or active).  
+   - Reflects regulatory potential but does not guarantee activity.
+
+4. **H3K4me3**  
+   - Marks active or poised promoters.  
+   - Strongly linked to transcriptional initiation.
+
+5. **H3K9ac**  
+   - Found at active promoters and enhancers.  
+   - Associated with euchromatic, transcriptionally permissive environments.
+
+---
+
+### Marks Associated with Transcriptional Repression:
+6. **H3K27me3**  
+   - Linked to transcriptional repression, often mediated by the Polycomb Repressive Complex 2 (PRC2).  
+   - Characteristic of facultative heterochromatin (regions that are repressed but potentially reactivatable).
+
+7. **H3K9me3**  
+   - A mark of constitutive heterochromatin, found in inactive genomic regions such as centromeres and telomeres.  
+   - Recruits proteins like HP1 (Heterochromatin Protein 1) to maintain a condensed chromatin state.
+
+---
+
+### Summary:
+
+
+| **Histone Mark** | **Activation/Repression**   | **Associated Regions**               |
+|-------------------|-----------------------------|-------------------------------------|
+| **H3K27ac**       | Activation                 | Active enhancers, promoters          |
+| **H3K36me3**      | Activation                 | Coding regions                       |
+| **H3K4me1**       | Activation (potential)     | Primed/active enhancers              |
+| **H3K4me3**       | Activation                 | Active or poised promoters           |
+| **H3K9ac**        | Activation                 | Active promoters, enhancers          |
+| **H3K27me3**      | Repression                 | Facultative heterochromatin  (PRC2)  |
+| **H3K9me3**       | Repression                 | Constitutive heterochromatin (HP1 )  |
+
+
+
+
+
+```{r encode_db}
+# db = read.table("~/projects/meth3d/results/entex/metadata.insituhic.tsv", sep="\t", header=TRUE)
+db = read.table("encode_lung.tsv", sep="\t", header=TRUE)
+# db = read.table("encode_ovary.tsv", sep="\t", header=TRUE)
+rownames(db) = db[,1]
+dim(db)
+head(db)
+table(db[,3])
+
+table(db$File.format, db$File.type)
+db = db[db$File.type == "bigWig",]
+
+table(db$Experiment.target)
+db$Experiment.target = factor(db$Experiment.target, levels=c(
+  "H3K4me3-human"  , # Activation            | Active or poised promoters           |
+  "H3K4me1-human"  , # Activation (potential)| Primed/active enhancers              |
+  "H3K27me3-human" , # Repression            | Facultative heterochromatin  (PRC2)  |
+  "H3K27ac-human"  , # Activation            | Active enhancers, promoters          |
+  "H3K9ac-human"   , # Activation            | Active promoters, enhancers          |
+  "H3K36me3-human" , # Activation            | Coding regions                       |
+  "H3K9me3-human"  , # Repression            | Constitutive heterochromatin (HP1 )  |
+  "CTCF-human", 
+  NULL
+))
+db = db[order(db$Experiment.target),]
+db = db[db$Experiment.target %in% c(
+  "H3K27me3-human" , # Repression            | Facultative heterochromatin  (PRC2)  |
+  "H3K4me3-human"  , # Activation            | Active or poised promoters           |
+  "H3K4me1-human"  , # Activation (potential)| Primed/active enhancers              |
+  # "H3K27ac-human"  , # Activation            | Active enhancers, promoters          |
+  # "H3K9ac-human"   , # Activation            | Active promoters, enhancers          |
+  # "H3K36me3-human" , # Activation            | Coding regions                       |
+  # "H3K9me3-human"  , # Repression            | Constitutive heterochromatin (HP1 )  |
+  NULL
+),]
+
+blacklist = c(
+  # "ENCFF331IOZ", #     H3K27ac-human                lung
+  # "ENCFF028TDS", #     H3K27ac-human                lung
+  # "ENCFF386ZSF", #    H3K27me3-human                lung
+  # "ENCFF238XGJ", #    H3K27me3-human                lung
+  "ENCFF440HPT", #    H3K27me3-human                lung
+  # "ENCFF507BZS", #    H3K36me3-human                lung
+  # "ENCFF170SDA", #    H3K36me3-human                lung
+  # "ENCFF821WNV", #    H3K36me3-human                lung
+  # "ENCFF655YLP", #    H3K36me3-human                lung
+  # "ENCFF036EBD", #     H3K4me1-human                lung
+  # "ENCFF204IAN", #     H3K4me1-human                lung
+  # "ENCFF262ZVW", #     H3K4me1-human                lung
+  "ENCFF896NVM", #     H3K4me1-human                lung
+  "ENCFF926QND", #     H3K4me1-human                lung
+  "ENCFF062ZIV", #     H3K4me3-human                lung
+  # "ENCFF485XPN", #     H3K4me3-human                lung
+  # "ENCFF999LEM", #     H3K4me3-human                lung
+  "ENCFF434JKJ", #     H3K4me3-human                lung
+  # "ENCFF645EXF", #      H3K9ac-human                lung
+  # "ENCFF046SLU", #      H3K9ac-human                lung
+  # "ENCFF308TWI", #     H3K9me3-human                lung
+  # "ENCFF305ZXD", #     H3K9me3-human                lung
+  # "ENCFF275KCQ", #     H3K9me3-human                lung
+  "ENCFF970KWF", #     H3K9me3-human                lung
+  NULL
+)
+sapply(blacklist, function(id) {print(paste0("rm -Rf ", id, "*"))})
+db = db[!rownames(db) %in% blacklist,]
+db$file = do.call(rbind, strsplit(db$File.download.URL, "/"))[,7]
+apply(db, 1, function(row) {print(paste0("ln -s ", row[["file"]], " ", row[["Biosample.term.name"]], "_", row[["Experiment.target"]], ".bw"))})
+# stop("EFN")
+# download
+df = db
+directory_prefix = "datashare/encode/"
+if (!exists("DOWNLOAD")) {
+  print("DOWNLOAD is not defined. To download, set DOWNLOAD=TRUE")
+} else {
+  ALLISGOOD = FALSE
+  while (!ALLISGOOD) {
+    ALLISGOOD = TRUE
+      foo = apply(df, 1, function(row) {
+        url = row[["File.download.URL"]]
+        file = rev(strsplit(url, "/")[[1]])[1]
+        file = paste0(directory_prefix, file)
+        if (file.exists(file)) {
+          print(paste0("File ", file, " exists."))
+        } else {
+          cmd = "wget"
+          args = paste0("--directory-prefix ", directory_prefix, " ", url)
+          print(paste(cmd, args))
+          system2(cmd, args)    
+        }  
+      })
+
+
+    foo = apply(df, 1, function(row) {
+      url = row[["File.download.URL"]]
+      file = rev(strsplit(url, "/")[[1]])[1]
+      file = paste0(directory_prefix, file)
+      md5 = tools::md5sum(file)
+      if (md5 != row[["md5sum"]]) {
+        print(paste0("md5 is different for ", file))
+        unlink(file)
+        ALLISGOOD <<- FALSE
+      } else {
+        print(paste0("md5 is ok for ", file))
+      }  
+    })
+  }
+}
+
+
+get_bed_cgi = function(tmp_idx) {
+  cgi = pfepichg38[tmp_idx,]$Islands_Name #trueIsland
+  cgi = cgi[cgi!=""]
+  bed3 = data.frame(do.call(rbind, strsplit(unique(cgi), ":|-")))
+  names(bed3) = c("#chr", "start", "stop")
+  bed3[,2] = as.numeric(bed3[,2])
+  bed3[,3] = as.numeric(bed3[,3])
+  bed = bed3
+  bed$name = paste0(bed[,1], ":", bed[,2], "-", bed[,3])
+  bed$len = bed$stop - bed$start
+  bed$strand = "+"
+  layout(matrix(1:3,1), respect=TRUE)
+  barplot(sort(table(cgi)), las=2)
+  plot(density(bed$len))
+  plot(bed$len, table(cgi)[bed$name])
+  return(bed)
+}
+
+write_bed_tss = function(bed, tag) {
+  # build and write bed file
+  bed = bed[,1:3]
+  bed[,2] = round((bed[,2] + bed[,3])/2)
+  head(bed)
+  bed[,3] = bed[,2]+1
+  bed$probes = "."
+  bed$pval = 0
+  bed$strand = "+"
+  colnames(bed) = c("#chrom", "start", "end", "probes", "pval", "strand")
+  bed[,4] = rownames(bed)
+  head(bed)
+
+  # write peaks for deeptools
+  bed[,1] = as.character(bed[,1])
+  bed = bed[order(bed[,1], bed[,2]),]
+  options(scipen = 99)
+  bedfile = paste0(tag, ".bed")
+  write.table(bed, file=bedfile, sep="\t", quote=FALSE, row.names=FALSE, col.names=TRUE)
+  return(bedfile)
+}
+
+get_mf = function(bwfiles, bed_files, samplesLabel, prefix="all") {
+  cmd = "computeMatrix"
+  args = paste0(
+    "reference-point -p 32 -bs 100 -b 5000 -a 5000 -R ", paste0(bed_files, collapse=" " ), " -o matrix2.txt.gz -S ", 
+    paste0(directory_prefix, bwfiles, collapse=" ")
+  ) 
+  print(paste(cmd, args))
+  system2(cmd, args)
+
+  cmd = "plotHeatmap"
+  args = paste0("-m matrix2.txt.gz --samplesLabel ", samplesLabel, " -o hm_", prefix, ".png")
+  print(paste(cmd, args))
+  system2(cmd, args)
+  mf = read.table(gzfile("matrix2.txt.gz"), sep="\t", comment="@")
+  return(mf)
+}
+if (!exists("mget_mf")) {mget_mf = memoise::memoise(get_mf)}
+```
+## Chromatine profile
+
+```{r hm}
+# stop("EFN")
+
+# idx_up = probes[["bonferroni01"      ]] 
+idx_gain = probes[["methylation_gain"  ]] 
+idx_loss = probes[["methylation_loss"  ]] 
+idx_losshypo = probes[["methylation_losshypo"]] 
+idx_losshyper = probes[["methylation_losshyper"]] 
+
+# idx_up = probes[["methylation_gain"]]
+
+# idx_isl = intersect(idx_up, rownames(pfepichg38)[pfepichg38$Relation_to_Island%in% c("Island")]) 
+pfepichg38$Start_hg38 = as.numeric(pfepichg38$Start_hg38)
+pfepichg38 = pfepichg38[!is.na(pfepichg38$CHR_hg38),]
+set.seed(1)
+idx_rnd_island  = sample(rownames(pfepichg38)[pfepichg38$Relation_to_Island%in% c("Island")], 5000) 
+idx_rnd_opensea = sample(rownames(pfepichg38)[pfepichg38$Relation_to_Island%in% c("OpenSea")], 5000) 
+
+pfepichg38$Start_hg38 = as.numeric(pfepichg38$Start_hg38)
+pfepichg38 = pfepichg38[!is.na(pfepichg38$CHR_hg38),]
+bed_gain        = mget_fat_feats(pfepichg38[idx_gain       ,], "CHR_hg38", "Start_hg38", extend_region_dist=1000)
+bed_loss        = mget_fat_feats(pfepichg38[idx_loss       ,], "CHR_hg38", "Start_hg38", extend_region_dist=1000)
+bed_losshypo      = mget_fat_feats(pfepichg38[idx_losshypo     ,], "CHR_hg38", "Start_hg38", extend_region_dist=1000)
+bed_losshyper      = mget_fat_feats(pfepichg38[idx_losshyper     ,], "CHR_hg38", "Start_hg38", extend_region_dist=1000)
+bed_rnd_island  = mget_fat_feats(pfepichg38[idx_rnd_island ,], "CHR_hg38", "Start_hg38", extend_region_dist=1000)
+bed_rnd_opensea = mget_fat_feats(pfepichg38[idx_rnd_opensea,], "CHR_hg38", "Start_hg38", extend_region_dist=1000)
+
+bed_files = c(
+  write_bed_tss(bed_gain       , "gain"       ), 
+  # # write_bed_tss(bed_loss       , "loss"       ), 
+  # write_bed_tss(bed_losshypo     , "losshypo"       ), 
+  # write_bed_tss(bed_losshyper     , "losshyper"       ), 
+  write_bed_tss(bed_rnd_island , "rnd_island" ), 
+  # write_bed_tss(bed_rnd_opensea, "rnd_opensea"), 
+  NULL
+)
+
+bwfiles = db$file
+samplesLabel = gsub("-human", "", paste(paste0(db$Experiment.target, "_", db$Biosample.term.name), collapse=" "))
+mf = mget_mf(bwfiles, bed_files, samplesLabel, prefix="gain")
+
+
+bed_files = c(
+  # write_bed_tss(bed_gain       , "gain"       ), 
+  # # write_bed_tss(bed_loss       , "loss"       ), 
+  write_bed_tss(bed_losshypo     , "losshypo"       ), 
+  write_bed_tss(bed_losshyper     , "losshyper"       ), 
+  # write_bed_tss(bed_rnd_island , "rnd_island" ), 
+  write_bed_tss(bed_rnd_opensea, "rnd_opensea"), 
+  NULL
+)
+
+bwfiles = db$file
+samplesLabel = gsub("-human", "", paste(paste0(db$Experiment.target, "_", db$Biosample.term.name), collapse=" "))
+mf = mget_mf(bwfiles, bed_files, samplesLabel, prefix="loss")
+```
+
+![hm_all](hm_gain.png)
+![hm_nog](hm_loss.png)
+
+
+
+
+# Session Information
+
+```{r, results="verbatim"}
+sessionInfo()
+```
+
