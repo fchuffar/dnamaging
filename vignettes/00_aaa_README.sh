@@ -5,14 +5,14 @@ rsync -auvP ~/projects/dnamaging/ cargo:~/projects/dnamaging/ --exclude="gsea_ou
 ## CUSTOM
 # cp 00_aaa_README.sh 00_aaa_custom_README.sh
 # # config
-# projects=episoma
+# project=episoma
 # study=epic_episoma_chuga
 # echo ${project}
 # echo ${study}
 # rsync -auvP ~/projects/${project}/results/${study}/ cargo:~/projects/${project}/results/${study}/ --dry-run
 
 # # data
-# cd ~/projects/${project}/results/${study}/
+# cd ~/projects/${project}/results/${study}/vignettes
 # ln -s ~/projects/datashare .
 # ls -lha datashare/${study}/raw
 
