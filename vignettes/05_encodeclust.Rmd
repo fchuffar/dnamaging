@@ -448,7 +448,7 @@ genes = lapply(bed_files, function(bed_file) {
   write.table(genes, paste0(tag, "_", bed_file, ".txt"), quote=FALSE, row.names=FALSE, col.names=FALSE)
   return(genes)
 })
-
+names(genes) = bed_files
 ```
 
 
