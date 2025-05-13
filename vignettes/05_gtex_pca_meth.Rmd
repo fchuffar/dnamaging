@@ -1,0 +1,107 @@
+---
+title: "expr in GTEx"
+author: "Fabien Jossaud, Florent Chuffart, Julien Thevenon"
+date: "`r Sys.time()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+```{r, echo=FALSE, eval=TRUE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=10, fig.height=10, eval=TRUE, echo=FALSE, warning=FALSE)
+source("common.R")
+```
+
+# expr in GTEx
+
+```{r missmethyl}
+if(!exists("tissue")) {tissue = "Lung"}
+```
+
+
+# GTeX methylome data
+
+```{r gtex dataset init, echo = FALSE}
+# Calling GTEx transcriptome 
+s = study_gtex_meth = mreadRDS("~/projects/gtex/results/study_gtex_meth608.rds")
+
+layout(matrix(1:2, 1), respect=TRUE)
+barplot(sort(table(s$exp_grp$tissue)), las=2)
+```
+
+
+# PCA
+
+```{r pca}
+data = t(s$data)
+head(data)[,1:10]
+pca = prcomp(data, scale=FALSE)
+v = pca$sdev * pca$sdev
+p = v / sum(v) * 100
+
+pc_max = which(cumsum(p) >= 95)[1]
+cols = as.numeric(s$exp_grp[rownames(pca$x),]$tissue)
+# library(mclust)
+# em = Mclust(pca$x[,1:2], G=2)
+# col=em$class
+
+# layout(matrix(c(3,3,1,5,5,5,
+#                 2,2,4,5,5,5,
+#                 2,2,4,5,5,5,
+#                 NULL), 3, byrow=TRUE), respect=TRUE)
+layout(matrix(1:8, 2, byrow=FALSE), respect=TRUE)
+barplot(p[1:pc_max], main="% of expl. var.")
+barplot(cumsum(p[1:pc_max]), main="cum. % of expl. var.")
+i=1
+for (i in 1:6) {
+  j=i+1
+  plot(pca$x[,i], pca$x[,j], xlab=paste0("PC", i, "(", signif(p[i], 3), "%)"), ylab=paste0("PC", j, "(", signif(p[j], 3), "%)"), col=adjustcolor(cols, alpha.f=0.3), pch=16)
+  for (lev in levels(s$exp_grp$tissue)) {
+    tmp_idx = rownames(s$exp_grp)[s$exp_grp$tissue==lev]
+    text(mean(pca$x[tmp_idx,i]), mean(pca$x[tmp_idx,j]), lev)
+  }
+}
+# plot.new()
+# legend("topright", levels(s$exp_grp$tissue), pch=16, col=1:length(levels(s$exp_grp$tissue)))
+
+
+
+layout(1, respect=TRUE)
+foo = pca$x[,1:pc_max]
+rownames(foo) = s$exp_grp[rownames(foo),]$tissue
+rownames(foo)[duplicated(rownames(foo))] = NA
+nodePar = list(lab.cex = 0.6, pch = c(NA, 19), 
+                cex = 0.7, col = cols)
+dendr = as.dendrogram(hclust(dist(foo), method="ward.D2"))
+# set(dendr, "leaves_cols", cols)
+
+plot(dendr)
+
+# dend %>% set("leaves_pch", c(17, 18, 19)) %>%  # node point type
+#   set("leaves_cex", 2) %>%  # node point size
+#   set("leaves_col", c("blue", "red", "green")) %>% #node point color
+#   plot(main = "Leaves points")
+
+# umap = umap::umap(pca$x[,1:pc_max], method="umap-learn")
+
+# # rownames(umap_trai$layout)
+# layout(matrix(1:2,1), respect=TRUE)
+# plot(  umap$layout            , col=cols)
+
+
+```
+
+
+
+
+
+
+# Session Information
+
+```{r, results="verbatim"}
+sessionInfo()
+```
+
