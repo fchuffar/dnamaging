@@ -102,14 +102,18 @@ conda activate missmethyl_env
 # BiocManager::install("missMethyl")
 # devtools::install_github("achilleasNP/IlluminaHumanMethylationEPICanno.ilm10b5.hg38")
 
+
+rmarkdown::render("05_gtex_pca_meth.Rmd")
+rmarkdown::render("05_gtex_pca_meth.Rmd")
+
+
 {
   gse = "GSE147740" ; 
-  rmarkdown::render("05_statdescfig.Rmd")
-  rmarkdown::render("05_ewasfig.Rmd")
-  rmarkdown::render("05_gtex_pca_meth.Rmd")
-  rmarkdown::render("05_encodeclust.Rmd")
-  rmarkdown::render("05_predimethstatsfig.Rmd")
-  rmarkdown::render("05_gseaclust.Rmd")
+  rmarkdown::render("05_statdescfig.Rmd"      )                       
+  rmarkdown::render("05_ewasfig.Rmd"          )                       
+  rmarkdown::render("05_encodeclust.Rmd"      )                       
+  rmarkdown::render("05_predimethstatsfig.Rmd")                       
+  rmarkdown::render("05_gseaclust.Rmd"        )                                    
 }
 
 rmarkdown::render("05_encodefig.Rmd")

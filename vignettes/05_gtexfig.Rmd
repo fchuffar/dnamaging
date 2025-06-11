@@ -157,6 +157,8 @@ d$age = study_gtex_trscr$exp_grp[d$sample,]$age
 
 gtex = function()  {
   layout(1, respect=TRUE)
+  bp = beanplot::beanplot(bw=.3, expr ~ age, d, what=c(1,1,1,0), 
+    col=adjustcolor("grey", alpha.f=0.3), main=paste0("expression distribution (", length(unique(d$gene)), " genes)"), ylab="expression (z-score)")
   bp = beanplot::beanplot(bw=.3, expr ~ age, d, what=c(0,1,0,0), 
     col=adjustcolor("grey", alpha.f=0.3), main=paste0("expression distribution (", length(unique(d$gene)), " genes)"), ylab="expression (z-score)")
   for (idx in rev(levels(idxs))) {

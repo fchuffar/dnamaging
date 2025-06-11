@@ -78,7 +78,6 @@ res = lapply(gses, function(gse) {
   res
 })
 res = do.call(rbind, res)
-res = data.frame(res)
 res
 
 res = res[res$newas=="1000000",]

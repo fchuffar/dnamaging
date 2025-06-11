@@ -425,17 +425,17 @@ sapply(probes_per_bed_files, length)
 
 probes_per_bed_files$bonferroni01 = probes[["bonferroni01"       ]]
 
-premimeth_probes = read.table("predimeth_probes_GSE147740_50.bed")[,4]
-premimeth_probes_per_bed_files = lapply(names(probes_per_bed_files), function(bed_file) {  
-  tmp_pbs = premimeth_probes[premimeth_probes %in% probes_per_bed_files[[bed_file]]]
+predimeth_probes = read.table("predimeth_probes_GSE147740_50.bed")[,4]
+predimeth_probes_per_bed_files = lapply(names(probes_per_bed_files), function(bed_file) {  
+  tmp_pbs = predimeth_probes[predimeth_probes %in% probes_per_bed_files[[bed_file]]]
   write.table(tmp_pbs, paste0("predimeth_", bed_file, ".grp"), quote=FALSE, row.names=FALSE, col.names=FALSE)
   return(tmp_pbs)
 })
-names(premimeth_probes_per_bed_files) = names(probes_per_bed_files)
-sapply(premimeth_probes_per_bed_files, length)
+names(predimeth_probes_per_bed_files) = names(probes_per_bed_files)
+sapply(predimeth_probes_per_bed_files, length)
 
 grp_files = sapply(names(metaclusters), function(k) {
-  tmp_pbs = premimeth_probes_per_bed_files[[paste0(k, ".bed")]]
+  tmp_pbs = predimeth_probes_per_bed_files[[paste0(k, ".bed")]]
   grp_file = paste0("predimeth_", strsplit(k, "\\.")[[1]][1], ".grp")
   print(grp_file)
   write.table(tmp_pbs, grp_file, quote=FALSE, row.names=FALSE, col.names=FALSE)
@@ -453,8 +453,8 @@ grp_files["rndopensea"] = grp_file
 
 chi = data.frame(
   all = sapply(probes_per_bed_files, length),
-  pdm = sapply(premimeth_probes_per_bed_files, length),
-  exp = round(sapply(probes_per_bed_files, length) / length(probes_per_bed_files$bon) * length(premimeth_probes_per_bed_files$bon))
+  pdm = sapply(predimeth_probes_per_bed_files, length),
+  exp = round(sapply(probes_per_bed_files, length) / length(probes_per_bed_files$bon) * length(predimeth_probes_per_bed_files$bon))
 )
 chi$rat = signif(chi$pdm / chi$all,3)
 chi$enr = signif(chi$pdm / chi$exp,3)

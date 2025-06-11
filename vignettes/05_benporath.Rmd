@@ -34,8 +34,22 @@ barplot(table(flatanno[flatanno$symbol %in% gs,]$group), las=2)
 flatanno[flatanno$group %in% c("TSS200"),]
 
 unique(flatanno[flatanno$symbol %in% gs & flatanno$group %in% c("TSS200"),]$symbol)
-unique(flatanno[flatanno$symbol %in% gs & flatanno$group %in% c("TSS200", "TSS1500"),]$symbol)
+unique(flatanno[flatanno$symbol %in% gs & flatanno$group %in% c("TSS200"),]$symbol)
 unique(flatanno[flatanno$symbol %in% gs & flatanno$group %in% c("TSS200", "TSS1500", "5'UTR"),]$symbol)
+
+idx = probes_per_bed_files$metacluster15.bed
+
+unique(flatanno[flatanno$cpg %in% idx & flatanno$symbol %in% gs & flatanno$group %in% c("TSS200", "TSS1500", "5'UTR"),]$symbol)
+
+unique(flatanno[flatanno$cpg %in% idx & flatanno$symbol %in% gs,]$symbol)
+unique(flatanno[flatanno$cpg %in% idx & !flatanno$symbol %in% gs,]$symbol)
+
+
+# for () {
+#   idx = predimeth_probes_per_bed_files$metacluster15.bed
+#   unique(flatanno[flatanno$cpg %in% idx & flatanno$symbol %in% gs & flatanno$group %in% c("TSS200", "TSS1500", "5'UTR"),]$symbol)
+# }
+
 ```
 
 
