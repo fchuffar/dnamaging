@@ -1,0 +1,648 @@
+---
+title: "Multiomic integration using mediation"
+author: "Florent Chuffart"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+
+
+```{r echo=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide")
+```
+
+```{r}
+# conda activate meth3d_env # ~/projects/meth3d/meth3d_env.sh
+if (!exists("mreadtablegz")) {mreadtablegz = memoise::memoise(function(gzfile, ...){read.table(gzfile(gzfile), ...)},cache=cachem::cache_mem(max_size = 10 * 1024 * 1024^2))}
+if (!exists("mreadRDS")) {mreadRDS = memoise::memoise(readRDS, cache=cachem::cache_mem(max_size = 10 * 1024 * 1024^2))}
+
+```
+
+```{r data}
+# load data
+srna = mreadRDS("~/projects/gtex/results/study_gtex_trscr608.rds")
+all(rownames(srna$exp_grp) == colnames(srna$data))
+rownames(srna$exp_grp) = paste0(srna$exp_grp$subject, "_", srna$exp_grp$tissue)
+colnames(srna$data) = rownames(srna$exp_grp)
+srna$exp_grp = srna$exp_grp[order(srna$exp_grp$age, srna$exp_grp$subject),]
+srna$data = srna$data[,rownames(srna$exp_grp)]
+
+smet = mreadRDS("~/projects/gtex/results/study_gtex_meth608.rds")
+all(rownames(smet$exp_grp) == colnames(smet$data))
+rownames(smet$exp_grp) = paste0(smet$exp_grp$subject, "_", smet$exp_grp$tissue)
+colnames(smet$data) = rownames(smet$exp_grp)
+smet$exp_grp = smet$exp_grp[order(smet$exp_grp$age, smet$exp_grp$subject),]
+smet$data = smet$data[,rownames(smet$exp_grp)]
+
+genome = "hg19"
+```
+
+
+# Epic V1 hg38 annotated platform
+
+```{r hg38}
+library(IlluminaHumanMethylationEPICmanifest)
+library(IlluminaHumanMethylationEPICanno.ilm10b5.hg38)
+library(minfi)
+annoEPIC_hg38 = getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b5.hg38)
+all(rownames(smet$platform) %in% rownames(annoEPIC_hg38))
+smet$platform[,1] = annoEPIC_hg38[rownames(smet$platform),"CHR_hg38"]
+smet$platform[,2] = as.numeric(annoEPIC_hg38[rownames(smet$platform),"Start_hg38"])
+smet$platform = smet$platform[!is.na(smet$platform[2]),]
+smet$platform = smet$platform[!duplicated(paste0(smet$platform[,1], ":", smet$platform[,2])),]
+smet$data = smet$data[rownames(smet$platform),]
+genome = "hg38"
+
+g = mreadRDS(paste0("~/projects/genes/bed_", genome, "_epimeddb.rds"))
+g$tss = as.numeric(apply(g, 1, function(row) {ifelse(row[[6]]=="+", row[[2]], row[[3]])}))
+head(g)
+sum(rownames(g) %in% rownames(srna$data))
+srna$data = srna$data[rownames(srna$data) %in% rownames(g),]
+srna$platform = g[rownames(srna$data),] 
+
+dim(srna$platform)
+head(srna$platform)
+
+dim(smet$platform)
+head(smet$platform)[,1:10]
+```
+
+
+```{r cross}
+cross2bed = function(tss, probescope) {
+  tss_bed_file = paste0("tss.", genome, ".bed")
+  options(scipen = 999)
+  write.table(tss, file=tss_bed_file, sep="\t", quote=FALSE, row.names=FALSE, col.names=FALSE)
+  annots_bed_files = c(
+      tss_bed_file,
+      NULL    
+    )
+  annots = sapply(gsub(paste0(".", genome, ".bed"), "", annots_bed_files, fixed=TRUE), function(tag) {
+      print(tag)
+      annotatr::read_annotations(con=paste0(tag, ".", genome, ".bed"), genome=genome, name=tag, format="bed")    
+      paste0("", genome, "_custom_", tag)
+    })
+  annotations_tss = annotatr::build_annotations(genome=genome, annotations=annots)
+
+
+  tmp_probescope_filename = "tmp_probescope.bed"
+  print(tmp_probescope_filename)
+  options(scipen = 999)
+  write.table(probescope, file=tmp_probescope_filename, sep="\t", quote=FALSE, row.names=FALSE, col.names=FALSE)
+  pf_regions = annotatr::read_regions(con=tmp_probescope_filename, genome=genome, format="bed")
+  pf_regions = GenomicRanges::trim(pf_regions)
+
+
+  probescope_annotated = annotatr::annotate_regions(
+      regions = pf_regions,
+      annotations = annotations_tss,
+      ignore.strand = TRUE,
+      quiet = FALSE)
+  # A GRanges object is returned
+  df_probescope_annotated = data.frame(probescope_annotated)
+  df_probescope_annotated$probescope_id = paste0(df_probescope_annotated[,1], ":", df_probescope_annotated[,2], "-", df_probescope_annotated[,3])
+
+  dim(df_probescope_annotated)
+  df_probescope_annotated$gene = rownames(tss)[as.numeric(do.call(rbind, strsplit(df_probescope_annotated$annot.id, ":"))[,2])]
+
+  # stop("EFN")
+  rownames(probescope) = paste0(probescope[,1], ":", probescope[,2]+1, "-", probescope[,3])
+  df_probescope_annotated$probe = probescope[df_probescope_annotated$probescope_id,4]
+  sum(is.na(df_probescope_annotated$probe))
+  probescope$key = paste0(probescope[,1], ":", probescope[,2]+1)
+  for (i in which(is.na(df_probescope_annotated$probe))) {
+    # print(df_probescope_annotated[i,]$probe)
+    idx = which(probescope$key == strsplit(df_probescope_annotated[i,]$probescope_id, "-")[[1]][1])
+    df_probescope_annotated[i,]$probe = probescope[idx,4]
+  }
+  sum(is.na(df_probescope_annotated$probe))
+
+  probe_gene_jointure = df_probescope_annotated[,c("gene", "probe")]
+  return(probe_gene_jointure)
+}
+if (!exists("mcross2bed")) {mcross2bed = memoise::memoise(cross2bed)}
+
+tss = srna$platform
+tss[,2] = tss$tss
+tss[,3] = tss[,2]+1
+tss[,4] = rownames(tss)
+tss[,5] = 0
+# tss[,6] = "+"
+tss = tss[order(tss[,1], tss[,2]), 1:6]
+
+wsize=200000
+
+probescope = smet$platform[intersect(rownames(smet$platform), probes_per_bed_files$bonferroni01),1:6]
+probescope[,2] = probescope[,2] - wsize/2
+probescope[,3] = probescope[,2] + wsize
+probescope[,4] = rownames(probescope)
+probescope[,5] = 0
+probescope[,6] = "+"
+probescope[,2] = round((probescope[,2]+probescope[,3])/2) - wsize/2
+probescope[,3] = probescope[,2] + wsize
+probescope[,2] = sapply(probescope[,2], max, 0)
+probescope = probescope[order(probescope[,1], probescope[,2]), ]
+
+probe_gene_jointure = mcross2bed(tss, probescope)
+```
+
+```{r standardization}
+# Filtering genes and probes
+tmp_idxg = intersect(rownames(srna$data), unique(probe_gene_jointure$gene))
+tmp_idxp = intersect(rownames(smet$data), unique(probe_gene_jointure$probe))
+srna$data = srna$data[tmp_idxg,]
+smet$data = smet$data[tmp_idxp,]
+srna$platform = srna$platform[rownames(srna$data),]
+smet$platform = smet$platform[rownames(smet$data),]
+dim(srna$data)
+dim(smet$data)
+
+layout(matrix(1:2,1, byrow=FALSE), respect=TRUE)
+plot(density(srna$data))
+plot(density(smet$data))
+srna$data = (srna$data - apply(srna$data, 1, mean)) / apply(srna$data, 1, sd)
+smet$data = log10(smet$data / (1-smet$data))
+smet$data = (smet$data - apply(smet$data, 1, mean)) / apply(smet$data, 1, sd)
+
+srna$data = srna$data[!apply(is.na(srna$data), 1, all),]
+srna$platform = srna$platform[rownames(srna$data),]
+smet$data = smet$data[!apply(is.na(smet$data), 1, all),]
+smet$platform = smet$platform[rownames(smet$data),]
+probe_gene_jointure = probe_gene_jointure[probe_gene_jointure$gene  %in% rownames(srna$data),]
+probe_gene_jointure = probe_gene_jointure[probe_gene_jointure$probe %in% rownames(smet$data),]
+layout(matrix(1:2,1, byrow=FALSE), respect=TRUE)
+plot(density(srna$data))
+plot(density(smet$data))
+
+```
+
+
+```{r echo=TRUE, results="verbatim"}
+head(probe_gene_jointure)
+dim(probe_gene_jointure)
+layout(matrix(1:2,1, byrow=FALSE), respect=TRUE)
+barplot(table(table(probe_gene_jointure$gene)), las=2, main="#probes per gene distr.")
+barplot(table(table(probe_gene_jointure$probe)), las=2, main="#genes per probe distr.")
+```
+
+# Multiomic dataset
+
+GTEx / GSE213478 (methylome + transciptome)
+
+
+
+
+```{r results="verbatim"}
+table(srna$exp_grp$sex, srna$exp_grp$age)
+# table(srna$exp_grp$subject, srna$exp_grp$age)
+# stop("EFN")
+```
+
+
+
+```{r results="verbatim"}
+table(srna$exp_grp$sex, srna$exp_grp$age)
+
+srna$exp_grp = srna$exp_grp[srna$exp_grp$tissue%in%c("Lung"),]
+srna$data = srna$data[,rownames(srna$exp_grp)]
+dim(srna$data)
+
+## Filtering tissue (meth)
+smet$exp_grp = smet$exp_grp[smet$exp_grp$tissue%in%c("Lung"),]
+smet$data = smet$data[,rownames(smet$exp_grp)]
+dim(smet$data)
+```
+
+
+
+# Mediation
+
+## Design
+
+```{r results="verbatim"}
+table(srna$exp_grp$age)
+```
+
+## Direct model 
+
+```{r echo=TRUE}
+f = expr ~ age
+```
+
+```{r m, eval=TRUE}
+options(scipen = 0)
+d = srna$exp_grp
+if (!all(colnames(srna$data) == rownames(srna$exp_grp))) {stop("colnames(srna$data) DO NOT mathch rownames(srna$exp_grp)")}
+ewas_func = function(cln, f, d) {
+  # d$expr = srna$data[1,]
+  d$expr = cln
+  m = lm(f, d)
+  # boxplot(expr~age, d, las=2)
+  res = c(beta=m$coefficients[[2]], pv=anova(m)[1,5])
+  return(res)
+}
+da = epimedtools::monitored_apply(srna$data, 1, ewas_func, f=f, d=d)
+da = data.frame(t(da))
+```
+
+```{r}
+da[order(da$pv), ]
+da$padj = p.adjust(da$pv, method="BH")
+da$padj_bon = p.adjust(da$pv, method="bonferroni")
+
+layout(matrix(1:2,1, byrow=FALSE), respect=TRUE)
+smoothScatter(da$beta, -log10(da$pv))
+abline(h=-log10(0.05), col=2)
+smoothScatter(da$beta, -log10(da$padj))
+abline(h=-log10(0.05), col=2)
+
+sum(da$padj<0.01, na.rm=TRUE)
+sum(da$padj_bon<0.05, na.rm=TRUE)
+
+idx_genesoi = rownames(da)[da$padj<0.01 & !is.na(da$padj)]
+# idx_genesoi = rownames(da[order(da$pv), ])[1:1000]
+length(idx_genesoi)
+```
+
+## Indirect model 1
+
+```{r echo=TRUE}
+f1 = meth ~ age
+```
+
+
+```{r m1, eval=TRUE}
+sub_probe_gene_jointure = probe_gene_jointure
+# sub_probe_gene_jointure = probe_gene_jointure[probe_gene_jointure[,1] %in% idx_genesoi,]
+idx_probes = unique(sub_probe_gene_jointure[,2])
+length(idx_probes)
+d = smet$exp_grp
+head(smet$exp_grp)
+
+if (!all(colnames(smet$data) == rownames(smet$exp_grp))) {stop("colnames(smet$data) DO NOT match rownames(smet$exp_grp)")}
+ewas1_func = function(cln, f1, d) {
+  # d$meth = smet$data[1,]
+  d$meth = cln
+  m = lm(f1, d)
+  # boxplot(meth~age, d, las=2)
+  res = c(beta=m$coefficients[[2]], pv=anova(m)[1,5])
+  return(res)
+}
+da1 = epimedtools::monitored_apply(smet$data[idx_probes,], 1, ewas1_func, f1=f1, d=d)
+da1 = data.frame(t(da1))
+```
+```{r plot1}
+da1$padj = p.adjust(da1$pv, method="BH")
+da1$padj_bon = p.adjust(da1$pv, method="bonferroni")
+
+layout(matrix(1:2,1, byrow=FALSE), respect=TRUE)
+smoothScatter(da1$beta, -log10(da1$pv))
+abline(h=-log10(0.05), col=2)
+smoothScatter(da1$beta, -log10(da1$padj))
+abline(h=-log10(0.05), col=2)
+
+head(da1)
+
+sum(da1$padj<0.01, na.rm=TRUE)
+sum(da1$padj_bon<0.05, na.rm=TRUE)
+
+idx_probesoi = rownames(da1)[da1$padj<0.01 & !is.na(da1$padj)]
+# idx_probesoi = rownames(da1[order(da1$pv), ])[1:1000]
+
+length(idx_probesoi)
+```
+
+## indirect effect 2
+FALSE
+```{r echo=TRUE}
+f2 = expr ~ meth + age
+```
+
+```{r m2, eval=TRUE}
+sub_probe_gene_jointure = probe_gene_jointure[probe_gene_jointure[,2] %in% idx_probesoi,]
+# sub_probe_gene_jointure = probe_gene_jointure[probe_gene_jointure[,1] %in% idx_genesoi & probe_gene_jointure[,2] %in% idx_probesoi,]
+dim(sub_probe_gene_jointure)
+
+if (!all(colnames(smet$data) == rownames(smet$exp_grp))) {stop("colnames(smet$data) DO NOT match rownames(smet$exp_grp)")}
+rownames(smet$exp_grp) = paste0(smet$exp_grp$subject, "_", smet$exp_grp$age)
+colnames(smet$data) = rownames(smet$exp_grp)
+dim(smet$exp_grp)
+
+if (!all(colnames(srna$data) == rownames(srna$exp_grp))) {stop("colnames(srna$data) DO NOT match rownames(srna$exp_grp)")}
+rownames(srna$exp_grp) = paste0(srna$exp_grp$subject, "_", srna$exp_grp$age)
+colnames(srna$data) = rownames(srna$exp_grp)
+dim(srna$exp_grp)
+
+# stop("EFN")
+
+idx_samples = rownames(smet$exp_grp)
+smet$exp_grp = smet$exp_grp[idx_samples,]
+srna$exp_grp = srna$exp_grp[idx_samples,]
+smet$data = smet$data[,idx_samples]
+srna$data = srna$data[,idx_samples]
+
+d = smet$exp_grp
+if (!all(colnames(smet$data) == rownames(smet$exp_grp))) {stop("colnames(smet$data) DO NOT match rownames(smet$exp_grp)")}
+if (!all(colnames(smet$data) == colnames(srna$data))) {stop("colnames(smet$data) DO NOT match rownames(smet$exp_grp)")}
+ewas2_func = function(p, f2, d, sub_probe_gene_jointure) {
+# da2 = epimedtools::monitored_apply(smet$data, 1, function(row) {
+  # d$meth = smet$data[1,]
+  # p = idx_probesoi[1]
+  # p = idx_probesoi[40]
+  sub_sub_probe_gene_jointure = sub_probe_gene_jointure[sub_probe_gene_jointure[,2]==p,]
+  res = lapply(sub_sub_probe_gene_jointure[,1], function(g, p, f2, d) {
+    # # g = sub_sub_probe_gene_jointure[1,1]
+    # # print(g)
+    d$meth = smet$data[p,]
+    d$expr = srna$data[g,]
+    m = lm(f2, d)
+    s = summary(m)
+    # plot(d$meth, d$expr)
+    # abline(m)
+    res = data.frame(g=g, p=p, beta_meth=m$coefficients[[2]], beta_age=m$coefficients[[3]], pv_meth=s$coefficients[2,4], pv_age=s$coefficients[3,4])
+  }, p=p, f2=f2, d=d)
+  res = do.call(rbind, res)
+  return(res)
+}
+da2 = epimedtools::monitored_apply(t(t(idx_probesoi)), 1, ewas2_func, f2=f2, d=d, sub_probe_gene_jointure=sub_probe_gene_jointure)
+da2 = do.call(rbind, da2)
+rownames(da2) = paste0(da2$g, "_", da2$p)
+# check
+p = "cg01152145" ; g = "NOXA1"
+meth = smet$data[p,]
+expr = srna$data[g,]
+age = smet$exp_grp$age
+lm(expr ~ meth + age)
+lm(f2, d)
+da2[paste0(g, "_", p),]
+```
+
+```{r plot2, eval=TRUE}
+layout(matrix(1:6,2, byrow=FALSE), respect=TRUE)
+smoothScatter(da2$beta_meth, -log10(da2$pv_meth))
+smoothScatter(da2$beta_age, -log10(da2$pv_age))
+```
+
+```{r mediation}
+rownames(sub_probe_gene_jointure) = paste0(sub_probe_gene_jointure$gene, "_", sub_probe_gene_jointure$probe)
+results = sub_probe_gene_jointure
+
+results$a    = da1[results$probe,]$beta
+results$b    = da2[rownames(results),]$beta_meth
+results$ade  = da2[rownames(results),]$beta_age
+results$c    = da[results$gene,]$beta
+results$acme = results$a * results$b
+results$pmed = results$acme / results$c
+results$chr = srna$platform[results$gene,]$chr
+results$tss = srna$platform[results$gene,]$tss
+results$pos = smet$platform[results$probe,]$pos
+results$delta = abs(results$pos - results$tss)
+results$pv_meth = da2[rownames(results),]$pv_meth
+results$pv1 = da1[results$probe,]$pv
+results$pmax2 = apply(results[, c("pv_meth", "pv1")], 1, max)^2
+saveRDS(results, paste0("results_", nrow(results), ".rds"))
+
+tmp_idxg = 1:length(unique(results$gene))
+names(tmp_idxg) = unique(results$gene)
+results$idxg = tmp_idxg[results$gene]
+
+tmp_idxp = 1:length(unique(results$probe))
+names(tmp_idxp) = unique(results$probe)
+results$idxp = tmp_idxp[results$probe]
+
+layout(matrix(1:6,2, byrow=FALSE), respect=TRUE)
+
+plot(results$acme, -log10(results$pmax2), pch=".", xlab="ACME", ylab="pmax2")
+ntop = 200
+tmp_idx = rownames(results[order(results$pmax2),])[1:ntop]
+points(results[tmp_idx,]$acme, -log10(results[tmp_idx,]$pmax2), col=2)
+
+plot(results$idxg, results$idxp, pch=".", xlab="genes", ylab="probes")
+abline(a=0, b=length(unique(results$probe))/length(unique(results$gene)), col="grey")
+points(results[tmp_idx,]$idxg, results[tmp_idx,]$idxp, col=adjustcolor(2, alpha.f=30/ntop), pch=16)
+
+plot(results$acme, results$ade, pch=".")
+points(results[tmp_idx,]$acme, results[tmp_idx,]$ade, col=2)
+abline(h=0, v=0, col=1)
+
+plot(results$acme, results$delta, pch=".")
+points(results[tmp_idx,]$acme, results[tmp_idx,]$delta, col=2)
+
+```
+
+```{r mediation_pkg, eval=FALSE}
+
+layout(matrix(1:6,2, byrow=FALSE), respect=TRUE)
+i = rev(tmp_idx[order(results[tmp_idx,]$acme)])[6]
+plot(results$acme, results$delta, pch=".")
+points(results[tmp_idx,]$acme, results[tmp_idx,]$delta, col=2)
+points(results[i,]$acme, results[i,]$delta, col=2, pch=16)
+text(results[i,]$acme, results[i,]$delta, i)
+
+p = results[i,"probe"]
+g = results[i,"gene"]
+d = smet$exp_grp
+d$meth = smet$data[p,]
+d$expr = srna$data[g,]
+
+f = f = expr ~ age
+f1 = meth ~ age
+f2 = expr ~ meth + age
+fit = lm(f, d)
+fita = lm(f1, d)
+fitb = lm(f2, d)
+fitmed = mediation::mediate(fita, fitb, treat ="age", mediator = "meth")
+main = paste0(g, " " , p)
+plot(fitmed, main=paste0("Mediation ", main))
+plot(as.factor(as.character(d$age)), d$expr, las=2, xlab="", ylab="expression (z-score)")
+plot(as.factor(as.character(d$age)), d$meth, las=2, xlab="", ylab="methylion (M-value, z-score)")
+plot(d$meth, d$expr, las=2, xlab="", ylab="expression (z-score)", col=as.numeric(as.factor(as.character(d$age))))
+segments(d[d$age=="Ovary",]$meth, d[d$age=="Ovary",]$expr, d[d$age=="Lung",]$meth, d[d$age=="Lung",]$expr, col="grey", lty=2)
+
+# load data
+srna = mreadRDS("study_gtex_trscr608.rds")
+all(rownames(srna$exp_grp) == colnames(srna$data))
+rownames(srna$exp_grp) = paste0(srna$exp_grp$subject, "_", srna$exp_grp$age)
+colnames(srna$data) = rownames(srna$exp_grp)
+srna$exp_grp = srna$exp_grp[order(srna$exp_grp$age, srna$exp_grp$subject),]
+srna$data = srna$data[,rownames(srna$exp_grp)]
+
+smet = mreadRDS("study_gtex_meth608.rds")
+all(rownames(smet$exp_grp) == colnames(smet$data))
+rownames(smet$exp_grp) = paste0(smet$exp_grp$subject, "_", smet$exp_grp$age)
+colnames(smet$data) = rownames(smet$exp_grp)
+smet$exp_grp = smet$exp_grp[order(smet$exp_grp$age, smet$exp_grp$subject),]
+smet$data = smet$data[,rownames(smet$exp_grp)]
+
+
+
+srna$exp_grp = srna$exp_grp[srna$exp_grp$age%in%c("Lung", "Ovary"),]
+tmp_tab = table(srna$exp_grp$subject)
+srna$exp_grp = srna$exp_grp[srna$exp_grp$subject %in% rownames(tmp_tab)[tmp_tab>1],]
+srna$data    =    srna$data[,rownames(srna$exp_grp)]   
+smet$exp_grp = smet$exp_grp[rownames(srna$exp_grp), ] 
+smet$data    =    smet$data[, rownames(srna$exp_grp)]  
+
+d = smet$exp_grp
+d$meth = smet$data[p,]
+d$expr = srna$data[g,]
+
+f = f = expr ~ age
+f1 = meth ~ age
+f2 = expr ~ meth + age
+fit = lm(f, d)
+fita = lm(f1, d)
+fitb = lm(f2, d)
+fitmed = mediation::mediate(fita, fitb, treat="age", mediator = "meth")
+main = paste0(g, " " , p)
+layout(matrix(1:6,2, byrow=FALSE), respect=TRUE)
+plot(fitmed, main=main)
+plot(as.factor(as.character(d$age)), d$expr, las=2, xlab="", ylab="expression (z-score)")
+plot(as.factor(as.character(d$age)), d$meth, las=2, xlab="", ylab="methylion (M-value, z-score)")
+plot(d$meth, d$expr, las=2, xlab="", ylab="expression (z-score)", col=as.numeric(as.factor(as.character(d$age))))
+
+
+```
+
+
+```{r check, eval=FALSE}
+d = smet$exp_grp
+if (!all(colnames(smet$data) == rownames(smet$exp_grp))) {stop("colnames(smet$data) DO NOT match rownames(smet$exp_grp)")}
+if (!all(colnames(smet$data) == colnames(srna$data))) {stop("colnames(smet$data) DO NOT match rownames(smet$exp_grp)")}
+library(mediation)
+for (i in 1:10) {
+  # p = "cg14164839" ; g = "RPS6KA1"
+  p = results[i,"probe"]
+  g = results[i,"gene"]
+  d$meth = smet$data[p,]
+  d$expr = srna$data[g,]
+
+  f = f = expr ~ age
+  f1 = meth ~ age
+  f2 = expr ~ meth + age
+  fit = lm(f, d)
+  fita = lm(f1, d)
+  fitb = lm(f2, d)
+  fitmed = mediate(fita, fitb, treat="age", mediator = "meth")
+  print(summary(fitmed))
+  print("ADE")
+  print(fitmed$z0)
+  print(fitb$coefficients[[3]])
+  print(results[paste0(g, "_", p), ]$ade)  
+  print("ACME")
+  print(fitmed$d0)
+  print(fita$coef[[2]] * fitb$coef[[2]])
+  print(results[paste0(g, "_", p), ]$acme)  
+}
+```
+
+
+# combp
+
+```{r combp, eval=FALSE}
+head(results)
+genes = unique(results$gene)
+gidxed_res = epimedtools::monitored_apply(t(t(genes)), 1, function(g) {
+  r = results[results$gene==g,]
+})
+names(gidxed_res) = genes
+# for (pval_thresh in c(0.000001) { #, 0.00001, 0.0001) {
+empty_res = data.frame(X.chrom=NA, start=NA, end=NA, min_p=NA, n_probes=NA, z_p=NA, z_sidak_p=NA, gene=NA)[-1,]
+pval_thresh = 0.000001
+  foo = epimedtools::monitored_apply(t(t(genes)), 1, function(g) {
+    print(g)
+    # r = gidxed_res[[1]]
+    r = gidxed_res[[g]]
+    if (nrow(r) == 1 ) {
+      return(empty_res)
+    }
+    prefix = paste0(g, "_", wsize, "bp")
+    # build and write bed file
+    bed = r[,c("chr", "pos", "pos", "probe", "pmax2")]
+    # head(bed)
+    bed[,3] = bed[,2]+1
+    bed$probe = rownames(r)
+    bed$strand = "+"
+    colnames(bed) = c("chrom", "start", "end", "probes", "pval", "strand")
+    # head(bed)
+    # write ewas res for combp
+    bed_ewas_filename = paste0("ewas4combp_", prefix,".bed")
+    bed[,1] = as.character(bed[,1])
+    bed = bed[order(bed[,1], bed[,2]),]
+    options(scipen=999)
+    write.table(bed,file=bed_ewas_filename , sep="\t", quote=FALSE, row.names=FALSE, col.names=TRUE)
+    options(scipen=0)
+    # bed_on_disk = read.table(bed_ewas_filename, sep="\t", header=TRUE)
+
+    # Run comb-p, run!!
+    prefix2 = paste0(prefix, "_", pval_thresh)
+    combp_res_acf_file = paste0("dmr_", prefix2, ".acf.txt")
+    if (file.exists(combp_res_acf_file)) {
+      combp_res_acf = read.table(combp_res_acf_file, comment="w", header=TRUE)
+      if (nrow(combp_res_acf)==0) {
+        return(empty_res)
+      }
+    }
+    combp_res_probes_file = paste0("dmr_", prefix2, ".fdr.bed.gz")    
+    if (!file.exists(combp_res_probes_file)) {
+      Sys.setenv(PYTHONPATH = "/summer/epistorage/opt/combined-pvalues/") # export PYTHONPATH="/summer/epistorage/opt/combined-pvalues/"
+      cmd = "/summer/epistorage/opt/combined-pvalues/cpv/comb-p"
+      arg = paste0("pipeline -c 5 --seed ", pval_thresh, " --dist 1000 -p dmr_", prefix2," --region-filter-p 0.05 --region-filter-n 2 ", bed_ewas_filename)
+      print(paste(cmd, arg))
+      system2(cmd, arg)
+    }
+
+    # recuparation du fichier dmrbycombp1000_SGCE.fdr.bed après comb-p
+    # ewas = read.table(paste0("ewas4combp_", prefix, ".bed"), header=TRUE)
+    # combp_res_probes = read.table(gzfile(paste0("dmr_", prefix2, ".fdr.bed.gz")), comment="@", header=TRUE)
+    combp_res_region_filename = paste0("dmr_", prefix2, ".regions-t.bed")
+    if (file.exists(combp_res_region_filename)) {  
+      combp_res_region = read.table(combp_res_region_filename, comment="@", header=TRUE)
+      # head(combp_res_region[order(-combp_res_region$n_probes, combp_res_region$z_sidak_p),])
+      # reg = combp_res_region[order(-combp_res_region$n_probes, combp_res_region$z_sidak_p),][1,]
+      # probes = ewas[as.character(ewas[,1])==as.character(reg[[1]]) & ewas[,2]>=reg[[2]] & ewas[,2]<=reg[[3]],4]
+      if (nrow(combp_res_region)!=0) {
+        combp_res_region$gene = g
+      } else {
+        return(empty_res)
+      }
+    } else {
+      return(empty_res)
+    }
+    return(combp_res_region)
+  })
+  foo = do.call(rbind,foo)
+
+  # build and write bed file
+  bed = foo
+  head(bed)
+  bed[,4] = bed$gene
+  bed[,6] = "+"
+  bed = bed[,1:6]
+  colnames(bed) = c("#chrom", "start", "end", "probes", "pval", "strand")
+  head(bed)
+  # write ewas res for combp
+  bed_dmrs_filename = paste0("dmrs_", wsize,".bed")
+  bed[,1] = as.character(bed[,1])
+  bed = bed[order(bed[,1], bed[,2]),]
+  options(scipen=999)
+  write.table(bed,file=bed_dmrs_filename , sep="\t", quote=FALSE, row.names=FALSE, col.names=TRUE)
+  options(scipen=0)
+
+```
+
+
+# Session Information
+
+```{r, results="verbatim"}
+sessionInfo()
+```
+
+
+
+

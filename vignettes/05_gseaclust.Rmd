@@ -1,0 +1,289 @@
+---
+title: "PrediMeth episignature on TCGA cohorts"
+author: "Fabien Jossaud, Florent Chuffart, Julien Thevenon"
+date: "`r Sys.time()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+```{r, echo=FALSE, eval=TRUE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=10, fig.height=10, eval=TRUE, echo=FALSE, warning=FALSE)
+source("common.R")
+```
+
+
+
+```{r gsea function}
+gsea_plot = function(grp_file, rnk_file, out_dir, cmd="/summer/epistorage/opt/GSEA_4.1.0/gsea-cli.sh", nperm=1000, RMOUTDIR=TRUE, main) {
+  
+  info_gsea = list()
+  
+  if (missing(out_dir)) {
+    out_dir = tempfile(pattern="gsea_out_", tmpdir=".")
+  }
+  dir.create(out_dir)
+  arg = paste0("GSEAPreranked -gmx ", grp_file, " -collapse No_Collapse -mode Max_probe -norm meandiv -nperm ", nperm , " -rnk ", rnk_file, " -scoring_scheme weighted -rpt_label my_analysis -create_svgs false -include_only_symbols true -make_sets true -plot_top_x 20 -rnd_seed timestamp -set_max 5000 -set_min 15 -zip_report false -out ", out_dir)
+  print(paste(cmd, arg))
+  system2(cmd, arg)
+  suffix = strsplit(list.files(out_dir)[1], ".", fixed=TRUE)[[1]][3]
+  
+  endplot_filename = paste0(out_dir, "/my_analysis.GseaPreranked.", suffix, "/enplot_", grp_file, "_1.png")
+  endplot_filename
+  summary_neg = read.table(paste0(out_dir, "/my_analysis.GseaPreranked.", suffix, "/gsea_report_for_na_neg_", suffix, ".tsv"), sep="\t", header=TRUE) ;   
+  summary_pos = read.table(paste0(out_dir, "/my_analysis.GseaPreranked.", suffix, "/gsea_report_for_na_pos_", suffix, ".tsv"), sep="\t", header=TRUE) ;   
+  stats = rbind(summary_neg, summary_pos)
+  if (nrow(summary_pos)>0) {
+    s = summary_pos    
+  } else if (nrow(summary_neg)>0) {
+    s = summary_neg    
+  }
+  n =  s$SIZE
+  pv = s$NOM.p.val
+  if (pv == 0 | pv == "---") { pv = 1/nperm}
+  pv = signif(pv, 2)  
+  
+  info_gsea$pv = pv
+  info_gsea$n = n
+  
+  addImg <- function(
+    obj, # an image file imported as an array (e.g. png::readPNG, jpeg::readJPEG)
+    x = NULL, # mid x coordinate for image
+    y = NULL, # mid y coordinate for image
+    width = NULL, # width of image (in x coordinate units)
+    interpolate = TRUE # (passed to graphics::rasterImage) A logical vector (or scalar) indicating whether to apply linear interpolation to the image when drawing. 
+  ){
+    if(is.null(x) | is.null(y) | is.null(width)){stop("Must provide args 'x', 'y', and 'width'")}
+    USR <- par()$usr # A vector of the form c(x1, x2, y1, y2) giving the extremes of the user coordinates of the plotting region
+    PIN <- par()$pin # The current plot dimensions, (width, height), in inches
+    DIM <- dim(obj) # number of x-y pixels for the image
+    ARp <- DIM[1]/DIM[2] # pixel aspect ratio (y/x)
+    WIDi <- width/(USR[2]-USR[1])*PIN[1] # convert width units to inches
+    HEIi <- WIDi * ARp # height in inches
+    HEIu <- HEIi/PIN[2]*(USR[4]-USR[3]) # height in units
+    rasterImage(image = obj, 
+      xleft = x-(width/2), xright = x+(width/2),
+      ybottom = y-(HEIu/2), ytop = y+(HEIu/2), 
+      interpolate = interpolate)
+  }
+  img = png::readPNG(endplot_filename)
+  if (RMOUTDIR) {unlink(out_dir, recursive=TRUE)}    
+  par(mar=c(0.5, 0, 1.1, 0))
+  plot(NA, NA, xlim=0:1, ylim=0:1, axes=FALSE, main=paste0(main, " n: ", n, " pv: ", pv, ""), xlab="", ylab="")
+  addImg(img, x=.5,y=.5,width=1)
+  par(mar=c(5.1, 4.1, 4.1, 2.1))  
+  return(list(imp=img, stats=stats))
+}
+if (!exists("mgsea_plot")) {mgsea_plot = memoise::memoise(gsea_plot)}
+```
+
+
+```{r gsea apply, fig.width=9, fig.height=3, results="hide"}
+tcga_studies = c(    
+  "TCGA-KIRC" , # 160                
+  "TCGA-KIRP" , # 42                
+  # "TCGA-KICH" , # 0                
+  # "TCGA-LGG"  , # 0                
+  # "TCGA-GBM"  , # 1                
+  # "TCGA-ACC"  , # 0                
+  "TCGA-HNSC" , # 49                
+  "TCGA-LUAD" , # 27                
+  "TCGA-LUSC" , # 40                
+  # "BRB"       , # 7                
+  "TCGA-BRCA" , # 85                
+  "TCGA-BLCA" , # 21                
+  # "TCGA-CESC" , # 3                
+  # "TCGA-CHOL" , # 9                
+  "TCGA-COAD" , # 36                
+  # "TCGA-DLBC" , # 0                
+  # "TCGA-ESCA" , # 16                
+  # "TCGA-LAML" , # 0                
+  "TCGA-LIHC" , # 49                
+  # "TCGA-MESO" , # 0                
+  # "TCGA-PAAD" , # 10                
+  # "TCGA-PCPG" , # 3                
+  "TCGA-PRAD" , # 50                
+  # "TCGA-READ" , # 7                
+  # "TCGA-SARC" , # 2                
+  # "TCGA-SKCM" , # 2                
+  # "TCGA-STAD" , # 2                
+  # "TCGA-TGCT" , # 0                
+  "TCGA-THCA" , # 56                
+  # "TCGA-THYM" , # 2                    
+  # "TCGA-UCS"  , # 0                
+  # "TCGA-UVM"  , # 0                
+  # "TCGA-OV"   , # 0                     
+  NULL
+)
+# for (tcga_study in tcga_studies) {
+#   # layout(matrix(1:2, 1, byrow=TRUE), respect=TRUE)
+#   # for (tcga_study in c("TCGA-BRCA", "TCGA-KIRP")) {
+#   # tcga_study = "TCGA-BRCA"
+#   s = mreadRDS(paste0("~/projects/datashare/", tcga_study, "/study_preproc_", tcga_study, ".rds"))
+#   e = s$exp_grp
+#   idx = intersect(e[e$tissue_status == "normal",]$id_patient, e[e$tissue_status == "tumoral",]$id_patient)
+#   e = e[e$id_patient%in%idx,]
+#   tab1 = table(e[e$tissue_status == "normal",]$id_patient)
+#   tab2 = table(e[e$tissue_status == "tumoral",]$id_patient)
+#   idx = intersect(names(tab1)[tab1==1], names(tab2)[tab2==1])    
+#   e = e[e$id_patient%in%idx,]
+#   tab = table(e$id_patient, e$tissue_status)
+#   print(paste(tcga_study, nrow(tab)))
+# }
+
+
+# tcga_studies = c("TCGA-KIRP", "TCGA-BRCA", "TCGA-KIRC", "TCGA-LUAD", "TCGA-LUSC", "BRB")
+# tcga_studies = c("TCGA-KIRP") #, "TCGA-BRCA", "TCGA-KIRC", "TCGA-LUAD", "TCGA-LUSC", "BRB")
+gsea = function()  {
+  gsea_results = NULL
+
+  for (tcga_study in tcga_studies) {
+    # layout(matrix(1:2, 1, byrow=TRUE), respect=TRUE)
+    # for (tcga_study in c("TCGA-BRCA", "TCGA-KIRP")) {
+    # tcga_study = "TCGA-BRCA"
+    s = mreadRDS(paste0("~/projects/datashare/", tcga_study, "/study_preproc_", tcga_study, ".rds"))
+    e = s$exp_grp
+    idx = intersect(e[e$tissue_status == "normal",]$id_patient, e[e$tissue_status == "tumoral",]$id_patient)
+    e = e[e$id_patient%in%idx,]
+    tab1 = table(e[e$tissue_status == "normal",]$id_patient)
+    tab2 = table(e[e$tissue_status == "tumoral",]$id_patient)
+    idx = intersect(names(tab1)[tab1==1], names(tab2)[tab2==1])    
+    e = e[e$id_patient%in%idx,]
+    tab = table(e$id_patient, e$tissue_status)
+    tab
+
+    if (!all(tab==1)|nrow(tab)==0) {stop(paste0("Problem pairing samples for ", tcga_study))}
+
+    qt = quantile(e$age)
+    layout(1, respect=TRUE)
+    plot(density(e$age), main=tcga_study)
+    abline(v=qt, lty=2, col="grey")
+    user_idxs = list()
+    user_idxs[["all"]] = rownames(e)
+    user_idxs[["yng"]] = rownames(e)[e$age<=qt[2]]
+    user_idxs[["old"]] = rownames(e)[e$age>=qt[4]]
+    rnk_files = sapply(names(user_idxs), function(k){
+      idx = user_idxs[[k]]
+      d = s$data[,idx]
+      da = apply(d[,idx[e[idx,]$tissue_status=="tumoral"]], 1, mean) - apply(d[,idx[e[idx,]$tissue_status=="normal"]], 1, mean)
+      da = sort(da)
+      gsea_input = cbind(names(da), da)
+      head(gsea_input)
+      dim(gsea_input)
+      rnk_file = paste0("gsea_input_", k, "_", tcga_study, ".rnk")
+      print(paste("gsea_input were exported in", rnk_file, "file."))
+      write.table(gsea_input, rnk_file, sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
+      return(rnk_file)
+    })
+    for (grp_file in grp_files) {
+      layout(matrix(1:3, 1, byrow=TRUE), respect=TRUE)
+      for (k in names(rnk_files)) {
+        rnk_file = rnk_files[[k]]
+        gsea_res = gsea_plot(grp_file, rnk_file, main=paste(tcga_study, k), nperm=1000)$stats  
+        gsea_res$rnk_file = rnk_file
+        gsea_res$grp_file = grp_file
+        rnk = read.table(rnk_file)
+        grp = read.table(grp_file)
+        grp1 = rnk[rnk[,1]%in%grp[,1],2]
+        grp2 = rnk[!rnk[,1]%in%grp[,1],2]
+        gsea_res$mw_pv = wilcox.test(grp1, grp2)$p.value
+        gsea_res$t_pv = t.test(grp1, grp2)$p.value
+        m = lm(rnk[,2]~as.numeric(rnk[,1]%in%grp[,1]))
+        gsea_res$f_pv = anova(m)[1,5]
+        gsea_res$beta = m$coefficients[[2]]
+        if (is.null(gsea_results)) {
+          gsea_results = gsea_res
+        } else {
+          gsea_results = rbind(gsea_results, gsea_res)
+        }
+      }
+    }
+  }
+  return(gsea_results)
+}
+
+
+gsea_results = gsea()
+# pdf("gseafig.pdf", width=8, height=6)
+# # png("gseafig.png", width=800, height=600)
+# gsea()
+# dev.off()
+
+# gsea_results = NULL
+
+# for (tcga_study in tcga_studies) {
+#   print(tcga_study)
+#   user_idxs = list()
+#   user_idxs[["all"]] = 1
+#   user_idxs[["yng"]] = 1
+#   user_idxs[["old"]] = 1
+#   rnk_files = sapply(names(user_idxs), function(k){
+#     rnk_file = paste0("gsea_input_", k, "_", tcga_study, ".rnk")
+#     return(rnk_file)
+#   })
+#   for (grp_file in grp_files) {
+#     for (k in names(rnk_files)) {
+#       rnk_file = rnk_files[[k]]
+#       gsea_res = mgsea_plot(grp_file, rnk_file, main=paste(tcga_study, k))$stats
+#       gsea_res$rnk_file = rnk_file
+#       gsea_res$grp_file = grp_file
+#       rnk = read.table(rnk_file)
+#       grp = read.table(grp_file)
+#       grp1 = rnk[rnk[,1]%in%grp[,1],2]
+#       grp2 = rnk[!rnk[,1]%in%grp[,1],2]
+#       gsea_res$mw_pv = wilcox.test(grp1, grp2)$p.value
+#       gsea_res$t_pv = t.test(grp1, grp2)$p.value
+#       m = lm(rnk[,2]~as.numeric(rnk[,1]%in%grp[,1]))
+#       gsea_res$f_pv = anova(m)[1,5]
+#       gsea_res$beta = m$coefficients[[2]]
+#       if (is.null(gsea_results)) {
+#         gsea_results = gsea_res
+#       } else {
+#         gsea_results = rbind(gsea_results, gsea_res)
+#       }
+#     }
+#   }
+# }
+
+gsea_results$age = substr(gsea_results$rnk_file, 12, 14)
+gsea_results$kc = substr(gsea_results$rnk_file, 16, 24)
+gsea_results$cluster = substr(gsea_results$grp_file, 11, 22)
+layout(matrix(1:3, 1, byrow=TRUE), respect=TRUE)
+plot(gsea_results$beta, -log10(gsea_results$f_pv), col=as.numeric(as.factor(gsea_results$cluster)))
+plot(gsea_results$beta, -log10(gsea_results$t_pv), col=as.numeric(as.factor(gsea_results$cluster)))
+plot(gsea_results$beta, -log10(gsea_results$mw_pv), col=as.numeric(as.factor(gsea_results$cluster)))
+legend("bottomright", levels(as.factor(gsea_results$cluster)), pch=1, col=1:length(levels(as.factor(gsea_results$cluster))))
+gsea_results$gsea_pv = gsea_results$NOM.p.val
+gsea_results[gsea_results$gsea_pv==0 | gsea_results$gsea_pv == "---",]$gsea_pv = 0.001
+gsea_results$gsea_pv = as.numeric(gsea_results$gsea_pv)
+plot(gsea_results$beta, -log10(gsea_results$gsea_pv), col=as.numeric(as.factor(gsea_results$cluster)))
+
+plot(gsea_results$beta, gsea_results$NES, col=as.numeric(as.factor(gsea_results$cluster)))
+
+
+plot(gsea_results$beta, -log10(gsea_results$mw_pv), col=as.numeric(as.factor(gsea_results$cluster)))
+for (kc in unique(gsea_results$kc)) {
+  for (cl in unique(gsea_results$cluster)) {
+    foo = gsea_results[gsea_results$kc==kc&gsea_results$cluster==cl,]
+    arrows(foo$beta[1:2], -log10(foo$mw_pv)[1:2], foo$beta[2:3], -log10(foo$mw_pv)[2:3], col=adjustcolor("grey", alpha.f=0.3))
+  }
+}
+
+
+  
+ 
+```
+
+
+
+
+
+# Session Information
+
+```{r, results="verbatim"}
+sessionInfo()
+```
+

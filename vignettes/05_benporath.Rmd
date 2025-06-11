@@ -1,0 +1,50 @@
+---
+title: "BENPORATH_PRC2_TARGETS gene set"
+author: "Fabien Jossaud, Florent Chuffart, Julien Thevenon"
+date: "`r Sys.time()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+```{r, echo=FALSE, eval=TRUE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=10, fig.height=10, eval=TRUE, echo=FALSE, warning=FALSE)
+source("common.R")
+```
+
+
+
+```{r}
+gs = read.table("BENPORATH_PRC2_TARGETS.v2024.1.Hs.grp")[,1]
+
+options(scipen = 3)
+library(missMethyl)
+flatanno = missMethyl:::.getFlatAnnotation("EPIC")     
+missingcpg = rownames(ewas)[!rownames(ewas) %in% flatanno$cpg]
+flatanno = rbind(flatanno, data.frame(symbol=NA, group="NoGene", cpg=missingcpg, alias=NA, entrezid=NA))
+flatanno$group = factor(flatanno$group, levels = c("TSS1500", "TSS200", "5'UTR", "1stExon", "Body", "ExonBnd", "3'UTR", "NoGene"))
+
+sum(gs %in% flatanno$symbol)
+flatanno[flatanno$symbol %in% gs,]
+barplot(table(flatanno[flatanno$symbol %in% gs,]$group), las=2)
+
+flatanno[flatanno$group %in% c("TSS200"),]
+
+unique(flatanno[flatanno$symbol %in% gs & flatanno$group %in% c("TSS200"),]$symbol)
+unique(flatanno[flatanno$symbol %in% gs & flatanno$group %in% c("TSS200", "TSS1500"),]$symbol)
+unique(flatanno[flatanno$symbol %in% gs & flatanno$group %in% c("TSS200", "TSS1500", "5'UTR"),]$symbol)
+```
+
+
+
+
+
+# Session Information
+
+```{r, results="verbatim"}
+sessionInfo()
+```
+

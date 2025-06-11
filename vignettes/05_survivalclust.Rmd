@@ -1,0 +1,243 @@
+---
+title: "Build predictive visu"
+author: "Fabien Jossaud, Florent Chuffart"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+
+
+```{r echo=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=9, eval=TRUE, echo=FALSE, results="hide")
+info = list(start_time = Sys.time())
+source("common.R")
+```
+
+```{r results="verbatim"}
+
+tcga_studies = c(
+  "TCGA-KIRC", 
+  "TCGA-KIRP", 
+  "TCGA-KICH", 
+  "TCGA-LUAD", 
+  "TCGA-LUSC", 
+  "BRB",
+  "TCGA-LGG" ,
+  "TCGA-GBM" ,
+  "TCGA-ACC" ,
+  "TCGA-HNSC",
+  "TCGA-BRCA",
+  "TCGA-BLCA",
+  "TCGA-CESC",
+  "TCGA-CHOL",
+  "TCGA-COAD",
+  "TCGA-DLBC",
+  "TCGA-ESCA",
+  "TCGA-LAML",
+  "TCGA-LIHC",
+  "TCGA-MESO",
+  "TCGA-PAAD",
+  "TCGA-PCPG",
+  "TCGA-PRAD",
+  "TCGA-READ",
+  "TCGA-SARC",
+  "TCGA-SKCM",
+  "TCGA-STAD",
+  "TCGA-TGCT",
+  "TCGA-THCA",
+  "TCGA-THYM",
+  "TCGA-UCS" ,
+  "TCGA-UVM" ,
+  "TCGA-OV"  ,
+  NULL
+)
+```
+
+```{r  results="verbatim" }
+survival = function()  {
+  ret = NULL
+  for (tcga_study in tcga_studies) {
+    print(tcga_study)
+    s = mreadRDS(paste0("~/projects/datashare/", tcga_study, "/study_preproc_", tcga_study, ".rds"))
+    idx_kc = rownames(s$exp_grp)[s$exp_grp$tissue_status=="tumoral"]
+
+    # random approach
+    set.seed(1)
+    p =  sample(rownames(s$data), 5000)
+    data = t(s$data[p, idx_kc])
+    pcarnd = prcomp(data, scale=FALSE)
+
+    for (grp_file in grp_files) {
+      p = intersect(read.table(grp_file)[,1], rownames(s$data))
+
+      # PCA
+      data = t(s$data[p, idx_kc])
+      idx_sample = rownames(data)
+
+      pca = prcomp(data, scale=FALSE)
+      v = pca$sdev * pca$sdev
+      p = v / sum(v) * 100
+
+      library(mclust)
+      em = Mclust(pca$x[,1:2], G=2)
+      col=em$class
+
+      layout(matrix(c(3,3,1,5,5,5,
+                      2,2,4,5,5,5,
+                      2,2,4,5,5,5,
+                      NULL), 3, byrow=TRUE), respect=TRUE)
+      par(mar=c(0, 0, 4.1, 2.1))  
+      barplot(p[1:20], main="% of expl. var.")
+      i=1
+      j=2
+      par(mar=c(5.1, 4.1, 0, 0))  
+      plot(pca$x[,i], pca$x[,j], xlab=paste0("PC", i, "(", signif(p[i], 3), "%)"), ylab=paste0("PC", j, "(", signif(p[j], 3), "%)"), col=col)
+
+      den = density(pca$x[,1])
+      par(mar=c(0, 4.1, 4.1, 0))  
+      plot(den, lty=2, col="grey", main="EM clustering on PC1:2", xlab="", ylab="", xlim=range(pca$x[,1]), xaxt="n", yaxt="n")
+      den1 = density(pca$x[col==1,1], bw=den$bw, weights=rep(1/nrow(pca$x), sum(col==1)))
+      den2 = density(pca$x[col==2,1], bw=den$bw, weights=rep(1/nrow(pca$x), sum(col==2)))
+      lines(den1, col=1)
+      lines(den2, col=2)
+
+      den = density(pca$x[,2])
+      par(mar=c(5.1, 0, 0, 2.1))  
+      plot(den$y, den$x, lty=2, col="grey", type="l", xlab="", ylab="", ylim=range(pca$x[,2]), xaxt="n", yaxt="n")
+      den1 = density(pca$x[col==1,2], bw=den$bw, weights=rep(1/nrow(pca$x), sum(col==1)))
+      den2 = density(pca$x[col==2,2], bw=den$bw, weights=rep(1/nrow(pca$x), sum(col==2)))
+      lines(den1$y, den1$x, col=1)
+      lines(den2$y, den2$x, col=2)
+
+      if (!all(idx_sample == names(col))) {stop("mcluster loss labels")}
+      par(mar=c(5.1, 4.1, 4.1, 2.1))  
+      epimedtools::scurve(ss=s$exp_grp[idx_sample,]$os, v=col, col=palette()[1:length(unique(col))], 
+      main=paste0(tcga_study, " ", grp_file), 
+      xlab=("duration (month)"), ylab="survival rate")
+
+      d = data.frame(
+        pcrnd1 = pcarnd$x[idx_kc,1],
+        pcrnd2 = pcarnd$x[idx_kc,2],
+        # pcrnd3 = pcarnd$x[idx_kc,3],
+        # pcrnd4 = pcarnd$x[idx_kc,4],
+        # pcrnd5 = pcarnd$x[idx_kc,5],
+        pc1 = pca$x[idx_kc,1],
+        pc2 = pca$x[idx_kc,2],
+        # pc3 = pca$x[idx_kc,3],
+        # pc4 = pca$x[idx_kc,4],
+        # pc5 = pca$x[idx_kc,5],
+        # pc6 = pca$x[idx_kc,6],
+        age = s$exp_grp[idx_kc,]$age
+      )
+      d$ss = s$exp_grp[idx_kc,]$os
+
+      m_lo = survival::coxph(ss ~ 1, data=d)
+      m_up = survival::coxph(ss ~ ., data=d)
+      m_step = step(m_lo, method="both", scope=list(upper=m_up,lower=m_lo), trace=FALSE)
+      print(paste0("###### ", tcga_study, " ", grp_file))
+      print(m_step)
+      tmp_ret = data.frame(f=as.character(m_step$formula)[3], tcga_study=tcga_study, grp_file=grp_file)
+      tmp_ret[,colnames(d)] = NA
+      if (tmp_ret$f!="1") {tmp_ret[,rownames(anova(m_step))[-1]] = anova(m_step)[-1,4]}
+      if (is.null(ret)) {
+        ret = tmp_ret
+      } else {
+        ret = rbind(ret, tmp_ret)
+      }
+    }
+  }
+  return(ret)      
+}
+      #     m1 = survival::coxph(ss ~ age + pc1 + pcrnd1, data=d)
+      #     m2 = survival::coxph(ss ~ age + pc1, data=d)
+      #     anova(m1, m2)
+
+      #     m1 = survival::coxph(ss ~ age + pcrnd1, data=d)
+      #     m2 = survival::coxph(ss ~ age + pcrnd1 + pc1, data=d)
+      #     anova(m1, m2)
+
+      #     m1 = survival::coxph(ss ~ age + pcrnd1)
+      #     m2 = survival::coxph(ss ~ age + pcrnd1 + pc1)
+      #     anova(m1, m2)
+
+      # cbind(ss, d$ss)[,1] == cbind(ss, d$ss)[,3]
+      # cbind(ss, d$ss)[,4] == cbind(ss, d$ss)[,2]
+      # cbind(age, d$age)
+      # cbind(pcrnd1, d$pcrnd1)
+      # cbind(pc1, d$pc1)
+
+      #     m1 = survival::coxph(ss ~ age + pcrnd1)
+      #     m2 = survival::coxph(ss ~ age + pcrnd1 + pcrnd2)
+      #     print(anova(m1,m2, test="chi2"))
+
+      #     m1 = survival::coxph(ss ~ age + pcrnd1 + pcrnd2)
+      #     m2 = survival::coxph(ss ~ age + pcrnd1 + pcrnd2 + pcrnd3)
+      #     print(anova(m1,m2, test="chi2"))
+
+      #     pc1 = pca$x[idx_kc,1]
+      #     pc2 = pca$x[idx_kc,2]
+      #     pc3 = pca$x[idx_kc,3]
+      #     pc4 = pca$x[idx_kc,4]
+      #     pc5 = pca$x[idx_kc,5]
+      #     pc6 = pca$x[idx_kc,6]
+
+      #     ma   = survival::coxph(ss ~ age)
+      #     mar1 = survival::coxph(ss ~ age + pcrnd1)
+      #     mar12 = survival::coxph(ss ~ age + pcrnd1 + pcrnd2)
+      #     mar123 = survival::coxph(ss ~ age + pcrnd1 + pcrnd2 + pcrnd3)
+      #     m2 = survival::coxph(ss ~ age + pcrnd1 + pcrnd2 + pc1)
+      #     m1 = survival::coxph(ss ~ age + pcrnd1 + pcrnd2)
+      #     m2 = survival::coxph(ss ~ age + pcrnd1 + pcrnd2 + pc1 + pc2)
+      #     m1 = survival::coxph(ss ~ age + pcrnd1 + pcrnd2)
+      #     m2 = survival::coxph(ss ~ age + pcrnd1 + pcrnd2 + pc1 + pc2 + pc3)
+      #     m1 = survival::coxph(ss ~ age + pcrnd1 + pcrnd2)
+      #     m2 = survival::coxph(ss ~ age + pcrnd1 + pcrnd2 + pc1 + pc2 + pc3 + pc4)
+      #     m1 = survival::coxph(ss ~ age + pcrnd1 + pcrnd2)
+      #     m2 = survival::coxph(ss ~ age + pcrnd1 + pcrnd2 + pc1 + pc2 + pc3 + pc5)
+      #     m1 = survival::coxph(ss ~ age + pcrnd1 + pcrnd2)
+      #     m2 = survival::coxph(ss ~ age + pcrnd1 + pcrnd2 + pc1 + pc2 + pc3 + pc5 + pc6)
+      #     m1 = survival::coxph(ss ~ pcrnd1 + pcrnd2)
+      #     m2 = survival::coxph(ss ~ pcrnd1 + pcrnd2 + pc1 + pc2 + pc3 + pc5 + pc6)
+      #     print(anova(m1,m2, test="chi2"))
+
+
+
+stats = survival()
+# pdf("survivalfig.pdf", width=8, height=4)
+# # png("survivalfig.png", width=800, height=600)
+# survival()
+# dev.off()
+stats$lpc1 = -log10(stats$pc1)
+stats$sgrp_file = substr(stats$grp_file, nchar(stats$grp_file)-13, nchar(stats$grp_file))
+stats[!is.na(stats$pc1),c("tcga_study", "sgrp_file", "lpc1", "f")]
+
+```
+
+# pairs
+
+```{r, eval=FALSE}
+layout(1, respect=TRUE)
+rn = rownames(pcas[[1]]$rotation)
+for (tcga_study in tcga_studies) {
+  rn = intersect(rn, rownames(pcas[[tcga_study]]$rotation))
+}
+foo = pcas[[tcga_studies[1]]]$rotation[rn,1]
+for (tcga_study in tcga_studies[-1]) {
+  foo = cbind(foo, pcas[[tcga_study]]$rotation[rn,1])
+}
+colnames(foo) = tcga_studies
+pairs(foo)
+```
+
+
+# Session Information
+
+```{r, results="verbatim"}
+sessionInfo()
+```
+

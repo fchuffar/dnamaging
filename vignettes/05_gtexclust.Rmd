@@ -22,9 +22,54 @@ if(!exists("tissue")) {tissue = "Lung"}
 ```
 
 
-# GTeX transcriptomic dataset
+# GTEx methylome dataset
 
-```{r gtex dataset init, echo = FALSE}
+```{r gtex_meth, echo=FALSE}
+# Calling GTEx transcriptome 
+study_gtex_meth = mreadRDS("~/projects/gtex/results/study_gtex_meth608.rds")
+idx_samples = rownames(study_gtex_meth$exp_grp)[study_gtex_meth$exp_grp$tissue == tissue]
+idx_samples = idx_samples[order(study_gtex_meth$exp_grp[idx_samples,]$age)]
+# ages = study_gtex_meth$exp_grp[idx_samples, "age"]
+
+layout(matrix(1:2, 1), respect=TRUE)
+barplot(sort(table(study_gtex_meth$exp_grp$tissue)), las=2)
+barplot(table(study_gtex_meth$exp_grp[idx_samples,]$age), las=2, main=paste0(tissue, " (", length(idx_samples), ")"))
+```
+
+```{r ewas_gtex_meth}
+layout(matrix(1:8, 2), respect=TRUE)
+for (k in names(probes_per_bed_files)) {
+  print(k)
+  pbs = intersect(probes_per_bed_files[[k]], rownames(study_gtex_meth$data))
+  age = study_gtex_meth$exp_grp[idx_samples,]$age
+
+
+  # if (!exists("ewas_gtex")) 
+  {
+    ewas_gtex = mepimedtools_monitored_apply(study_gtex_meth$data[pbs, idx_samples], 1, function(row) {
+      # row = d[1,]
+      m = lm(row~age)
+      data.frame(beta = m$coef[[2]], lpv=-log10(anova(m)[1,5]))
+    })
+    ewas_gtex = do.call(rbind, ewas_gtex)
+  }
+
+  # plot(ewas_gtex)
+  m = lm(ewas_gtex[pbs,1]~ewas[pbs,1])
+  plot(ewas_gtex[pbs,1], ewas[pbs,1], pch=".", main=paste0(k, " R^2=", signif(summary(m)$r.squared * 100, 3), "%"))
+  points(ewas_gtex[intersect(pbs, predimeth_probes),1], ewas[intersect(pbs, predimeth_probes),1], col=4)
+  abline(a=0, b=1, col=2)
+  abline(m, col=2, lty=2)
+  abline(h=0, v=0, col="grey", lty=2)
+  # plot(ewas_gtex[pbs,2], ewas[pbs,2], pch=".")
+}
+```
+
+
+
+# GTEx transcriptomic dataset
+
+```{r gtex_trscr}
 # Calling GTEx transcriptome 
 study_gtex_trscr = mreadRDS("~/projects/gtex/results/study_gtex_trscr608.rds")
 idx_samples = rownames(study_gtex_trscr$exp_grp)[study_gtex_trscr$exp_grp$tissue == tissue]
@@ -33,26 +78,88 @@ idx_samples = idx_samples[order(study_gtex_trscr$exp_grp[idx_samples,]$age)]
 
 layout(matrix(1:2, 1), respect=TRUE)
 barplot(sort(table(study_gtex_trscr$exp_grp$tissue)), las=2)
-barplot(sort(table(study_gtex_trscr$exp_grp[idx_samples,]$age)), las=2, main=paste0(tissue, " (", length(idx_samples), ")"))
+barplot(table(study_gtex_trscr$exp_grp[idx_samples,]$age), las=2, main=paste0(tissue, " (", length(idx_samples), ")"))
 ```
 
 
 # List of genes 
 
-```{r list of genes}
-# beta_meth = "hyper"
-# clusters = c(1,2,4)
-# n_clust = length(clusters)
 
-# gene_clusters <- lapply(clusters, function(i) {
-#   file_path <- paste0("cluster_",beta_meth, "_", i, ".txt")  
-#   unlist(read.table(file_path))
-# })
+```{r}
+flatanno = missMethyl:::.getFlatAnnotation("EPIC")     
+missingcpg = rownames(ewas)[!rownames(ewas) %in% flatanno$cpg]
+flatanno = rbind(flatanno, data.frame(symbol=NA, group="NoGene", cpg=missingcpg, alias=NA, entrezid=NA))
+flatanno$group = factor(flatanno$group, levels = c("TSS1500", "TSS200", "5'UTR", "1stExon", "Body", "ExonBnd", "3'UTR", "NoGene"))
 
-# names(gene_clusters) <- paste0("Cluster_", 1:n_clust)
-# idx_genes = unique(unlist(gene_clusters))
+dim(flatanno)
+head(flatanno)
+
+plot(study_gtex_trscr$exp_grp[idx_samples,]$age)
+
+layout(matrix(1:8, 2), respect=TRUE)
+
+
+for (k in names(probes_per_bed_files)) {
+  print(k)
+  pbs = probes_per_bed_files[[k]]
+  pbs = predimeth_probes_per_bed_files[[k]]
+  foo = flatanno[flatanno$cpg%in%pbs & flatanno$group %in% c("TSS200", "TSS1500", "5'UTR"),]
+  foo = flatanno[flatanno$cpg%in%pbs & flatanno$group %in% c("TSS200"),]
+  
+
+  idx_genes = unique(foo$symbol)
+  # idx_genes = genes[[5]]
+  idx_genes = intersect(rownames(study_gtex_trscr$platform), idx_genes)
+  length(idx_genes)
+  data = study_gtex_trscr$data[idx_genes,idx_samples]
+  data = data[apply(data, 1, function(l) {length(unique(l))})>1, ] # Remove no variation genes 
+
+
+  if (length(idx_genes)>0) {
+    brut_plot = plot_meth_hm(data, 
+      main=k, 
+    #   rsc=rsc                         , 
+    #   csc=csc                         , 
+      nb_grp_row=4                     ,
+      nb_grp_col=4                     , 
+      hcmeth_cols=FALSE                , 
+      # hcmeth_cols="eucl_dist"                , 
+      hcmeth_rows="eucl_dist"               , 
+      # hcmeth_rows="cor"               , 
+      # hcmeth_rows= FALSE               ,
+      # normalization="zscore_rows"      ,
+      normalization=FALSE              ,
+      ordering_func=median             , 
+      colors=c("cyan", "black", "red") , 
+      # range_exp=c(-4,4)              ,
+      PCA=FALSE                        
+    )
+
+    norm_plot = plot_meth_hm(data, 
+      main=k, 
+    #   rsc=rsc                         , 
+    #   csc=csc                         , 
+      nb_grp_row=4                     ,
+      nb_grp_col=4                     , 
+      hcmeth_cols=FALSE                , 
+      # hcmeth_cols="eucl_dist"                , 
+      hcmeth_rows="cor"               , 
+      # hcmeth_rows= FALSE               ,
+      normalization="zscore_rows"      ,
+      # normalization=FALSE              ,
+      ordering_func=median             , 
+      colors=c("cyan", "black", "red") , 
+      range_exp=c(-4,4)              ,
+      PCA=FALSE                        
+    )
+  }
+}
+
+# for () {
+#   idx = predimeth_probes_per_bed_files$metacluster15.bed
+#   unique(flatanno[flatanno$cpg %in% idx & flatanno$symbol %in% gs & flatanno$group %in% c("TSS200", "TSS1500", "5'UTR"),]$symbol)
+# }
 ```
-
 # Heatmap 
 
 ```{r heatmap transcriptome}
@@ -124,8 +231,11 @@ norm_plot = plot_meth_hm(data,
 
 ```
 
+# 1
+
+
 ```{r beanplot}
-# data_orig = data
+if (!exists("data_orig")) { data_orig = data }
 data = data_orig
 
 is = c()
@@ -177,7 +287,11 @@ gtex()
 
 
 
+```
 
+# 2
+
+```{r}
 
 
 
@@ -218,6 +332,12 @@ for (cluster in names(genes)) {
 }
 
 
+```
+
+# 3
+
+
+```{r}
 
 
 
@@ -263,6 +383,11 @@ for (key in c("TCGA-BRCA", "TCGA-KIRP", "TCGA-KIRC", "TCGA-LUAD", "TCGA-LUSC", "
 # }
 # is = unique(is)
 # data = data[-is,]
+
+
+```
+
+```{r eval=FALSE}
 
 d = lapply(rownames(data), function(g) {
   data.frame(gene=g, sample=colnames(data), expr=data[g,])

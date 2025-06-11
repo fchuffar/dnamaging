@@ -20,13 +20,13 @@ source("common.R")
 
 ```{r results="verbatim"}
 
-gses = c(
+tcga_studies = c(
   "TCGA-KIRC", 
   "TCGA-KIRP", 
   "TCGA-KICH", 
-  # "TCGA-LUAD", 
-  # "TCGA-LUSC", 
-  # "BRB",
+  "TCGA-LUAD", 
+  "TCGA-LUSC", 
+  "BRB",
   # "TCGA-LGG" ,
   # "TCGA-GBM" ,
   # "TCGA-ACC" ,
@@ -60,15 +60,15 @@ gses = c(
 
 ```{r}
 survival = function()  {
-  for (gse in gses) {
+  for (tcga_study in tcga_studies) {
     for (setofprobes in c("PrediMeth", "random")){
       predimeth_probes = read.table("predimeth_probes_up_GSE147740_50.bed")
       if (setofprobes=="random") {
         set.seed(1)
         predimeth_probes = s$platform[sample(rownames(s$platform), length(predimeth_probes)), 1:6]
       }
-      print(gse)
-      s = mreadRDS(paste0("~/projects/datashare/", gse, "/study_preproc_", gse, ".rds"))
+      print(tcga_study)
+      s = mreadRDS(paste0("~/projects/datashare/", tcga_study, "/study_preproc_", tcga_study, ".rds"))
     
 
       # layout(matrix(1:2,1), respect=TRUE)
@@ -121,7 +121,7 @@ survival = function()  {
 
       if (!all(idx_sample == names(col))) {stop("mcluster loss labels")}
       par(mar=c(5.1, 4.1, 4.1, 2.1))  
-      epimedtools::scurve(ss=s$exp_grp[idx_sample,]$os, v=col, col=palette()[1:length(unique(col))], main=paste0(gse, " ", setofprobes), xlab=("duration (month)"), ylab="survival rate")
+      epimedtools::scurve(ss=s$exp_grp[idx_sample,]$os, v=col, col=palette()[1:length(unique(col))], main=paste0(tcga_study, " ", setofprobes), xlab=("duration (month)"), ylab="survival rate")
     }
   }
 }
@@ -142,14 +142,14 @@ dev.off()
 ```{r, eval=FALSE}
 layout(1, respect=TRUE)
 rn = rownames(pcas[[1]]$rotation)
-for (gse in gses) {
-  rn = intersect(rn, rownames(pcas[[gse]]$rotation))
+for (tcga_study in tcga_studies) {
+  rn = intersect(rn, rownames(pcas[[tcga_study]]$rotation))
 }
-foo = pcas[[gses[1]]]$rotation[rn,1]
-for (gse in gses[-1]) {
-  foo = cbind(foo, pcas[[gse]]$rotation[rn,1])
+foo = pcas[[tcga_studies[1]]]$rotation[rn,1]
+for (tcga_study in tcga_studies[-1]) {
+  foo = cbind(foo, pcas[[tcga_study]]$rotation[rn,1])
 }
-colnames(foo) = gses
+colnames(foo) = tcga_studies
 pairs(foo)
 ```
 

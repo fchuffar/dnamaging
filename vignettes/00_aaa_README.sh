@@ -101,10 +101,17 @@ conda activate missmethyl_env
 # devtools::install_github("fchuffar/dnamaging")
 # BiocManager::install("missMethyl")
 # devtools::install_github("achilleasNP/IlluminaHumanMethylationEPICanno.ilm10b5.hg38")
-rmarkdown::render("05_encode.Rmd")
 
-gse = "GSE147740" ; rmarkdown::render("05_statdescfig.Rmd")
-rmarkdown::render("05_ewasfig.Rmd")
+{
+  gse = "GSE147740" ; 
+  rmarkdown::render("05_statdescfig.Rmd")
+  rmarkdown::render("05_ewasfig.Rmd")
+  rmarkdown::render("05_gtex_pca_meth.Rmd")
+  rmarkdown::render("05_encodeclust.Rmd")
+  rmarkdown::render("05_predimethstatsfig.Rmd")
+  rmarkdown::render("05_gseaclust.Rmd")
+}
+
 rmarkdown::render("05_encodefig.Rmd")
 rmarkdown::render("05_missmethyltab.Rmd")
 
@@ -120,7 +127,6 @@ conda activate umap_env
 # mamba install -c anaconda -c bioconda -c conda-forge -c r r-base libopenblas bioconductor-geoquery bioconductor-affy bioconductor-biobase r-seqinr r-rcpparmadillo r-devtools r-fastmap r-matrix r-kernsmooth r-catools r-gtools r-nortest r-survival r-beanplot r-gplots r-dbi bioconductor-epidish umap-learn r-umap umap 
 # devtools::install_github("fchuffar/epimedtools")
 # devtools::install_github("fchuffar/dnamaging")
-rmarkdown::render("05_gtex_pca_meth.Rmd")
 
 ls -lha ~/projects/datashare/GSE40279
 ls -lha ~/projects/datashare/GSE42861

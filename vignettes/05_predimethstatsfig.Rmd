@@ -20,13 +20,99 @@ source("common.R")
 ```{r params}
 if(!exists("gse")){gse="GSE147740"}
 if(!exists("seed")){seed = 1}
-if(!exists("nb_run")){nb_run = 50}
-if (!exists("nb_ewas")) nb_ewas = 1000000
-if (!exists("dist_nn")) dist_nn = 1000
+if(!exists("runmax")){runmax = 99}
+if (!exists("newas")) newas = 1000000
+if (!exists("neighb")) neighb = 1000
 
 source("common.R")
 source("params_default.R")
 options(scipen=3)
+
+```
+
+```{r}
+res = lapply(0:runmax, function(run) {
+	print(run)
+	res = data.frame(gse=gse, newas=newas, run=run)
+	info_file = paste0("info_model_r", run, "_", gse, "_modelcalllm_meth~age_ewas", newas, "_nn", neighb, ".rds")
+	models_file = paste0(   "models_r", run, "_", gse, "_modelcalllm_meth~age_ewas", newas, "_nn", neighb, ".rds")
+	if (file.exists(info_file)) {
+		res$done=TRUE
+		# print(info_file)
+		# info_file = "info_model_r0_GSE40279_modelcalllm_meth~age_ewas500000_nn1000.rds"
+		infomodel = readRDS(info_file)
+		# models_file = "models_r0_GSE40279_modelcalllm_meth~age_ewas500000_nn1000.rds"
+		models = readRDS(models_file)
+		res$exec_time = as.numeric(infomodel$exec_time)
+		res$rmse = infomodel$gender.bootstrap.RMSE
+		res$nbprobes = infomodel$gender.bootstrap.nb_probes_mod
+		res$probes = list(models[[2]]$coeff$probes)
+	} else {
+		print(paste0(info_file, " missing"))
+		res$done=FALSE
+		res$exec_time = 0.1
+		res$rmse = 0
+		res$nbprobes = 0
+		res$probes = list()
+	}
+	res
+})
+res = do.call(rbind, res)
+print(dim(res))
+```
+
+```{r}
+# probes_per_bed_files$metacluster15.bed
+# unique(unlist(res$probes))
+foo = sapply(probes_per_bed_files, function(pbs) {
+	sum(unique(unlist(res$probes)) %in% pbs)
+})
+barplot(foo, las=2)
+barplot(foo, las=2)
+
+bar = lapply(1:nrow(res), function(i) {
+	sapply(probes_per_bed_files, function(pbs) {
+		sum(res[i,]$probes[[1]] %in% pbs)
+	})
+})
+bar = do.call(rbind, bar)
+res = cbind(res, bar)
+
+
+
+
+
+
+layout(matrix(1:8, 2), respect=TRUE)
+foo = sapply(names(probes_per_bed_files), function(k) {
+	plot(cumsum(res[,k]), main=k, col=which(names(probes_per_bed_files)%in%k))
+})
+
+layout(1, respect=TRUE)
+plot(0, 0, col=0, xlim=c(0, nrow(res)), ylim=c(0,1))
+foo = sapply(names(probes_per_bed_files)[-c(6:7)], function(k) {
+	points(cumsum(res[,k]) / sum(res[,k]), col=which(names(probes_per_bed_files)%in%k))
+})
+legend("bottomright", pch=1, col=1:length(probes_per_bed_files), paste0(names(probes_per_bed_files), " (", lapply(probes_per_bed_files, length), ")"))
+
+
+
+
+head(ewas)
+
+
+layout(matrix(1:8, 2), respect=TRUE)
+foo = sapply(names(probes_per_bed_files), function(k) {
+	pbs = probes_per_bed_files[[k]]
+	plot(density(ewas[pbs,]$lpv), main=k, col=which(names(probes_per_bed_files)%in%k))
+})
+legend("bottomright", pch=1, col=1:length(probes_per_bed_files), paste0(names(probes_per_bed_files), " (", lapply(probes_per_bed_files, length), ")"))
+
+
+
+
+
+
 
 ```
 
@@ -35,12 +121,12 @@ study_filename = paste0("./datashare/", gse, "/study_preproc_", gse, ".rds")
 s = mreadRDS(study_filename)
 null_rmse = sd(s$exp_grp$age)
 
-x = c(0:nb_run)
+x = c(0:runmax)
 r2_bs = c()
 rmse_bs = c()
 nb_pb_bs = c()
-for (run in 0:nb_run){
-	tmp_info_model_bs = mreadRDS(paste0("info_model_r",run,"_",gse,"_modelcalllm_meth~age_ewas", nb_ewas, "_nn", dist_nn, ".rds"))
+for (run in 0:runmax){
+	tmp_info_model_bs = mreadRDS(paste0("info_model_r",run,"_",gse,"_modelcalllm_meth~age_ewas", newas, "_nn", neighb, ".rds"))
 	tmp_nb_pb_bs = tmp_info_model_bs$gender.bootstrap.nb_probes_mod
 	tmp_rmse_bs = tmp_info_model_bs$gender.bootstrap.RMSE
 	tmp_r2_bs = tmp_info_model_bs$gender.bootstrap.R2
@@ -50,6 +136,9 @@ for (run in 0:nb_run){
 }
 
 ###### RMSE/R2 
+
+
+
 
 ```
 

@@ -17,7 +17,7 @@ knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, 
 info = list(start_time = Sys.time())
 source("common.R")
 neighb = 1000
-runmax=50
+runmax=99
 gses = c(
   # "GSE40279" , # 450k, n=656  # Genome-wide Methylation Profiles Reveal Quantitative Views of Human Aging Rates
   # "GSE42861" , # 450k, n=689  # Differential DNA methylation in Rheumatoid arthritis

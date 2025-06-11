@@ -96,6 +96,20 @@ if (!all(rownames(ewas) %in% rownames(pfepichg38))) {
 
 # EWAS
 
+```{r volcanobf, fig.width=7, fig.height=7}
+x = ewas$beta
+y = ewas$lpv
+xlab = "age effect (meth. prop. per year)"
+ylab = "-log10(pval)"
+main = paste0("methylation~age (", nrow(ewas), " probes)")
+col = as.numeric(ewas$pvbonf<0.01)+ 1
+layout(1, respect=TRUE)
+plot(x, y, xlab=xlab, ylab=ylab, main=main, col=adjustcolor(col, alpha.f=.3), pch=16)
+legend("topleft", pch=16, col=1:2, c(paste0(">= 1% (", sum(!ewas$pvbonf<0.01), " probes)"), paste0("< 1% (", sum(ewas$pvbonf<0.01), " probes)")), title="Bonferroni")
+```
+
+
+
 ```{r ewas, fig.width=7, fig.height=7}
 # layout(matrix(1:2,1), respect=TRUE)
 # plot(ewas$beta, ewas$lpv, pch=".")

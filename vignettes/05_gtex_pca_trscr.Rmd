@@ -22,11 +22,11 @@ if(!exists("tissue")) {tissue = "Lung"}
 ```
 
 
-# GTeX methylome data
+# GTEx trabscriptome data
 
 ```{r gtex dataset init, echo = FALSE}
 # Calling GTEx transcriptome 
-s = study_gtex_meth = mreadRDS("~/projects/gtex/results/study_gtex_meth608.rds")
+s = study_gtex_meth = mreadRDS("~/projects/gtex/results/study_gtex_trscr608.rds")
 
 layout(matrix(1:2, 1), respect=TRUE)
 barplot(sort(table(s$exp_grp$tissue)), las=2)
