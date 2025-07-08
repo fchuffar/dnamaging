@@ -1,3 +1,4 @@
+if (!exists("mprcomp")) {mprcomp = memoise::memoise(prcomp, cache=cachem::cache_mem(max_size = 10*1024 * 1024^2)) }
 if (!exists("mreadRDS")) {mreadRDS = memoise::memoise(readRDS, cache=cachem::cache_mem(max_size = 10*1024 * 1024^2)) }
 if (!exists("mget_df_preproc")) {mget_df_preproc = memoise::memoise(dnamaging::get_df_preproc, cache = cachem::cache_mem(max_size = 10*1024 * 1024^2))}
 if (!exists("mget_full_cpg_matrix")) {mget_full_cpg_matrix = memoise::memoise(dnamaging::get_full_cpg_matrix, cache = cachem::cache_mem(max_size = 10*1024 * 1024^2))}
@@ -469,7 +470,7 @@ ewas_func2 = function(d, e, USE_PARAPPLY, model_formula, nb_fact_of_interest=1, 
   if (USE_PARAPPLY) {
     print("ewas using parallel::parApply...")
     if (!exists("cl")) {
-      nb_cores = parallel::detectCores()
+      nb_cores = min(32, parallel::detectCores())
       cl <<- parallel::makeCluster(nb_cores,  type="FORK")
       # parallel::stopCluster(cl)
     }
@@ -870,3 +871,64 @@ build_dmr_candidates = function(pf, pf_chr_colname=1, pf_pos_colname=2, extend_r
 if (!exists("mbuild_dmr_candidates")) {mbuild_dmr_candidates = memoise::memoise(build_dmr_candidates)}
 
 
+
+addImg <- function(
+  obj, # an image file imported as an array (e.g. png::readPNG, jpeg::readJPEG)
+  x = NULL, # mid x coordinate for image
+  y = NULL, # mid y coordinate for image
+  width = NULL, # width of image (in x coordinate units)
+  interpolate = TRUE # (passed to graphics::rasterImage) A logical vector (or scalar) indicating whether to apply linear interpolation to the image when drawing. 
+){
+  if(is.null(x) | is.null(y) | is.null(width)){stop("Must provide args 'x', 'y', and 'width'")}
+  USR <- par()$usr # A vector of the form c(x1, x2, y1, y2) giving the extremes of the user coordinates of the plotting region
+  PIN <- par()$pin # The current plot dimensions, (width, height), in inches
+  DIM <- dim(obj) # number of x-y pixels for the image
+  ARp <- DIM[1]/DIM[2] # pixel aspect ratio (y/x)
+  WIDi <- width/(USR[2]-USR[1])*PIN[1] # convert width units to inches
+  HEIi <- WIDi * ARp # height in inches
+  HEIu <- HEIi/PIN[2]*(USR[4]-USR[3]) # height in units
+  rasterImage(image = obj, 
+    xleft = x-(width/2), xright = x+(width/2),
+    ybottom = y-(HEIu/2), ytop = y+(HEIu/2), 
+    interpolate = interpolate)
+}
+
+
+gsea_plot = function(grp_filename, rnk_filename, out_dir, cmd="/summer/epistorage/opt/GSEA_4.1.0/gsea-cli.sh", nperm=1000, RMOUTDIR=TRUE, main) {
+  
+  info_gsea = list()
+  
+  if (missing(out_dir)) {
+    out_dir = tempfile(pattern="gsea_out_", tmpdir=".")
+  }
+  dir.create(out_dir)
+  arg = paste0("GSEAPreranked -gmx ", grp_filename, " -collapse No_Collapse -mode Max_probe -norm meandiv -nperm ", nperm , " -rnk ", rnk_filename, " -scoring_scheme weighted -rpt_label my_analysis -create_svgs false -include_only_symbols true -make_sets true -plot_top_x 20 -rnd_seed timestamp -set_max 5000 -set_min 15 -zip_report false -out ", out_dir)
+  print(paste(cmd, arg))
+  system2(cmd, arg)
+  suffix = strsplit(list.files(out_dir)[1], ".", fixed=TRUE)[[1]][3]
+  
+  endplot_filename = paste0(out_dir, "/my_analysis.GseaPreranked.", suffix, "/enplot_", grp_filename, "_1.png")
+  endplot_filename
+  summary_neg = read.table(paste0(out_dir, "/my_analysis.GseaPreranked.", suffix, "/gsea_report_for_na_neg_", suffix, ".tsv"), sep="\t", header=TRUE) ;   
+  summary_pos = read.table(paste0(out_dir, "/my_analysis.GseaPreranked.", suffix, "/gsea_report_for_na_pos_", suffix, ".tsv"), sep="\t", header=TRUE) ;   
+  if (nrow(summary_pos)>0) {
+    s = summary_pos    
+  } else if (nrow(summary_neg)>0) {
+    s = summary_neg    
+  }
+  n =  s$SIZE
+  pv = s$NOM.p.val
+  if (pv == 0 | pv == "---") { pv = 1/nperm}
+  pv = signif(pv, 2)  
+  
+  info_gsea$pv = pv
+  info_gsea$n = n
+  
+  img = png::readPNG(endplot_filename)
+  if (RMOUTDIR) {unlink(out_dir, recursive=TRUE)}    
+  par(mar=c(0.5, 0, 1.1, 0))
+  plot(NA, NA, xlim=0:1, ylim=0:1, axes=FALSE, main=paste0(main, " n: ", n, " pv: ", pv, ""), xlab="", ylab="")
+  addImg(img, x=.5,y=.5,width=1)
+  par(mar=c(5.1, 4.1, 4.1, 2.1))  
+  return(info_gsea)
+}

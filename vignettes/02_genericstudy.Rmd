@@ -18,7 +18,6 @@ start_time = Sys.time()
 
 ```{r params}
 # gse = "GSE42861" ; rmarkdown::render("02_genericstudy.Rmd", output_file=paste0("01_genericstudy_", gse, ".html"))
-# seed=1 ; gse = "GSE42861"; nb_core=12; rmarkdown::render('00_fullpipeline1.Rmd', output_file=paste0("00_fullpipeline1_", gse, ".html"))
 ```
 
 

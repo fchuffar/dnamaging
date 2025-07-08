@@ -1,5 +1,6 @@
 # Use **strsplit** + **do.call(rbind,** to get a params in list of filenames
-gses = do.call(rbind, strsplit(list.files(pattern="info_build"), "info_build_|\\.rds"))[,2]
+# gses = do.call(rbind, strsplit(list.files(pattern="info_build"), "info_build_|\\.rds"))[,2]
+source("gses_studies.R")
 
 # use lapply instead of for loop to build a data.frame
 data_info = lapply(gses, function(gse) {

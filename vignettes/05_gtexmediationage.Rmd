@@ -1,5 +1,5 @@
 ---
-title: "Multiomic integration using mediation"
+title: "Multi-omic integration using mediation"
 author: "Florent Chuffart"
 date: "`r Sys.Date()`"
 output: 
@@ -14,14 +14,10 @@ output:
 
 ```{r echo=FALSE}
 knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=FALSE, results="hide")
+source("common.R")
 ```
 
-```{r}
-# conda activate meth3d_env # ~/projects/meth3d/meth3d_env.sh
-if (!exists("mreadtablegz")) {mreadtablegz = memoise::memoise(function(gzfile, ...){read.table(gzfile(gzfile), ...)},cache=cachem::cache_mem(max_size = 10 * 1024 * 1024^2))}
-if (!exists("mreadRDS")) {mreadRDS = memoise::memoise(readRDS, cache=cachem::cache_mem(max_size = 10 * 1024 * 1024^2))}
-
-```
+# Data
 
 ```{r data}
 # load data
@@ -41,6 +37,7 @@ smet$data = smet$data[,rownames(smet$exp_grp)]
 
 genome = "hg19"
 ```
+
 
 
 # Epic V1 hg38 annotated platform
@@ -72,6 +69,7 @@ dim(smet$platform)
 head(smet$platform)[,1:10]
 ```
 
+# Crossing genes and probes
 
 ```{r cross}
 cross2bed = function(tss, probescope) {
@@ -136,8 +134,10 @@ tss[,5] = 0
 tss = tss[order(tss[,1], tss[,2]), 1:6]
 
 wsize=200000
-
-probescope = smet$platform[intersect(rownames(smet$platform), probes_per_bed_files$bonferroni01),1:6]
+wsize=10000
+# targeted_probes = probes_per_bed_files$bonferroni01
+targeted_probes = read.table("predimeth_probes_GSE147740_99.bed")[,4]
+probescope = smet$platform[intersect(rownames(smet$platform), targeted_probes),1:6]
 probescope[,2] = probescope[,2] - wsize/2
 probescope[,3] = probescope[,2] + wsize
 probescope[,4] = rownames(probescope)
@@ -150,6 +150,20 @@ probescope = probescope[order(probescope[,1], probescope[,2]), ]
 
 probe_gene_jointure = mcross2bed(tss, probescope)
 ```
+
+
+Genes are assigned to probes that lie within `r wsize` bp of their genomic position, i.e. within `r wsize` bp upstream of the gene’s start or downstream of its end.”
+
+
+```{r echo=TRUE, results="verbatim"}
+head(probe_gene_jointure)
+dim(probe_gene_jointure)
+layout(matrix(1:2,1, byrow=FALSE), respect=TRUE)
+barplot(table(table(probe_gene_jointure$gene)), las=2, main="#probes per gene distr.")
+barplot(table(table(probe_gene_jointure$probe)), las=2, main="#genes per probe distr.")
+```
+
+# Standardization
 
 ```{r standardization}
 # Filtering genes and probes
@@ -182,13 +196,6 @@ plot(density(smet$data))
 ```
 
 
-```{r echo=TRUE, results="verbatim"}
-head(probe_gene_jointure)
-dim(probe_gene_jointure)
-layout(matrix(1:2,1, byrow=FALSE), respect=TRUE)
-barplot(table(table(probe_gene_jointure$gene)), las=2, main="#probes per gene distr.")
-barplot(table(table(probe_gene_jointure$probe)), las=2, main="#genes per probe distr.")
-```
 
 # Multiomic dataset
 
@@ -234,7 +241,7 @@ table(srna$exp_grp$age)
 f = expr ~ age
 ```
 
-```{r m, eval=TRUE}
+```{r m, eval=TRUE, message=FALSE, warning=FALSE}
 options(scipen = 0)
 d = srna$exp_grp
 if (!all(colnames(srna$data) == rownames(srna$exp_grp))) {stop("colnames(srna$data) DO NOT mathch rownames(srna$exp_grp)")}
@@ -264,7 +271,8 @@ abline(h=-log10(0.05), col=2)
 sum(da$padj<0.01, na.rm=TRUE)
 sum(da$padj_bon<0.05, na.rm=TRUE)
 
-idx_genesoi = rownames(da)[da$padj<0.01 & !is.na(da$padj)]
+# idx_genesoi = rownames(da)[da$padj<0.01 & !is.na(da$padj)]
+idx_genesoi = rownames(da)[!is.na(da$padj)]
 # idx_genesoi = rownames(da[order(da$pv), ])[1:1000]
 length(idx_genesoi)
 ```
@@ -278,7 +286,7 @@ f1 = meth ~ age
 
 ```{r m1, eval=TRUE}
 sub_probe_gene_jointure = probe_gene_jointure
-# sub_probe_gene_jointure = probe_gene_jointure[probe_gene_jointure[,1] %in% idx_genesoi,]
+sub_probe_gene_jointure = sub_probe_gene_jointure[sub_probe_gene_jointure[,1] %in% idx_genesoi,]
 idx_probes = unique(sub_probe_gene_jointure[,2])
 length(idx_probes)
 d = smet$exp_grp
@@ -317,14 +325,14 @@ idx_probesoi = rownames(da1)[da1$padj<0.01 & !is.na(da1$padj)]
 length(idx_probesoi)
 ```
 
-## indirect effect 2
-FALSE
+## Indirect model 2
+
 ```{r echo=TRUE}
 f2 = expr ~ meth + age
 ```
 
-```{r m2, eval=TRUE}
-sub_probe_gene_jointure = probe_gene_jointure[probe_gene_jointure[,2] %in% idx_probesoi,]
+```{r m2, eval=TRUE, message=FALSE, warning=FALSE}
+# sub_probe_gene_jointure = probe_gene_jointure[probe_gene_jointure[,2] %in% idx_probesoi,]
 # sub_probe_gene_jointure = probe_gene_jointure[probe_gene_jointure[,1] %in% idx_genesoi & probe_gene_jointure[,2] %in% idx_probesoi,]
 dim(sub_probe_gene_jointure)
 
@@ -372,21 +380,24 @@ ewas2_func = function(p, f2, d, sub_probe_gene_jointure) {
 da2 = epimedtools::monitored_apply(t(t(idx_probesoi)), 1, ewas2_func, f2=f2, d=d, sub_probe_gene_jointure=sub_probe_gene_jointure)
 da2 = do.call(rbind, da2)
 rownames(da2) = paste0(da2$g, "_", da2$p)
-# check
-p = "cg01152145" ; g = "NOXA1"
-meth = smet$data[p,]
-expr = srna$data[g,]
-age = smet$exp_grp$age
-lm(expr ~ meth + age)
-lm(f2, d)
-da2[paste0(g, "_", p),]
+# # check
+# p = "cg11667847" ; g = "TMEM203"
+# meth = smet$data[p,]
+# expr = srna$data[g,]
+# age = smet$exp_grp$age
+# lm(expr ~ meth + age)
+# m = lm(f2, d)
+# m 
+# da2[paste0(g, "_", p),]
 ```
 
 ```{r plot2, eval=TRUE}
-layout(matrix(1:6,2, byrow=FALSE), respect=TRUE)
+layout(matrix(1:2,1, byrow=FALSE), respect=TRUE)
 smoothScatter(da2$beta_meth, -log10(da2$pv_meth))
 smoothScatter(da2$beta_age, -log10(da2$pv_age))
 ```
+
+## Results
 
 ```{r mediation}
 rownames(sub_probe_gene_jointure) = paste0(sub_probe_gene_jointure$gene, "_", sub_probe_gene_jointure$probe)
@@ -402,9 +413,14 @@ results$chr = srna$platform[results$gene,]$chr
 results$tss = srna$platform[results$gene,]$tss
 results$pos = smet$platform[results$probe,]$pos
 results$delta = abs(results$pos - results$tss)
+results$pv_tot = da[results$gene,]$pv
+results$pv1 = da1[results$probe,]$pv
+results$pv_age = da2[rownames(results),]$pv_age
 results$pv_meth = da2[rownames(results),]$pv_meth
 results$pv1 = da1[results$probe,]$pv
 results$pmax2 = apply(results[, c("pv_meth", "pv1")], 1, max)^2
+results[is.na(results$pmax2),]$pmax2 = 1
+results$pmax2fdr = p.adjust(results$pmax2, method = "BH")
 saveRDS(results, paste0("results_", nrow(results), ".rds"))
 
 tmp_idxg = 1:length(unique(results$gene))
@@ -415,16 +431,28 @@ tmp_idxp = 1:length(unique(results$probe))
 names(tmp_idxp) = unique(results$probe)
 results$idxp = tmp_idxp[results$probe]
 
-layout(matrix(1:6,2, byrow=FALSE), respect=TRUE)
 
-plot(results$acme, -log10(results$pmax2), pch=".", xlab="ACME", ylab="pmax2")
-ntop = 200
-tmp_idx = rownames(results[order(results$pmax2),])[1:ntop]
+# ntop = 20
+# tmp_idx = rownames(results[order(results$pmax2),])[1:ntop]
+tmp_idx = rownames(results[
+  results$pmax2<0.05 & 
+  results$pv_tot<0.05 & 
+  # results$pv_age<0.05 & 
+  sign(results$ade) == sign(results$acme) & 
+  abs(results$c)>0.00000001,])
+length(tmp_idx)
+
+layout(matrix(1:2, 1, byrow=FALSE), respect=TRUE)
+
+plot(results$c, -log10(results$pv_tot), pch=".", xlab="TOTAL", ylab="-log10(pval)")
+points(results[tmp_idx,]$c, -log10(results[tmp_idx,]$pv_tot), col=2)
+
+plot(results$acme, -log10(results$pmax2), pch=".", xlab="ACME", ylab="-log10(pmax2)")
 points(results[tmp_idx,]$acme, -log10(results[tmp_idx,]$pmax2), col=2)
 
-plot(results$idxg, results$idxp, pch=".", xlab="genes", ylab="probes")
-abline(a=0, b=length(unique(results$probe))/length(unique(results$gene)), col="grey")
-points(results[tmp_idx,]$idxg, results[tmp_idx,]$idxp, col=adjustcolor(2, alpha.f=30/ntop), pch=16)
+# plot(results$idxg, results$idxp, pch=".", xlab="genes", ylab="probes")
+# abline(a=0, b=length(unique(results$probe))/length(unique(results$gene)), col="grey")
+# points(results[tmp_idx,]$idxg, results[tmp_idx,]$idxp, col=adjustcolor(2, alpha.f=30/ntop), pch=16)
 
 plot(results$acme, results$ade, pch=".")
 points(results[tmp_idx,]$acme, results[tmp_idx,]$ade, col=2)
@@ -435,79 +463,188 @@ points(results[tmp_idx,]$acme, results[tmp_idx,]$delta, col=2)
 
 ```
 
-```{r mediation_pkg, eval=FALSE}
-
-layout(matrix(1:6,2, byrow=FALSE), respect=TRUE)
-i = rev(tmp_idx[order(results[tmp_idx,]$acme)])[6]
-plot(results$acme, results$delta, pch=".")
-points(results[tmp_idx,]$acme, results[tmp_idx,]$delta, col=2)
-points(results[i,]$acme, results[i,]$delta, col=2, pch=16)
-text(results[i,]$acme, results[i,]$delta, i)
-
-p = results[i,"probe"]
-g = results[i,"gene"]
-d = smet$exp_grp
-d$meth = smet$data[p,]
-d$expr = srna$data[g,]
-
-f = f = expr ~ age
-f1 = meth ~ age
-f2 = expr ~ meth + age
-fit = lm(f, d)
-fita = lm(f1, d)
-fitb = lm(f2, d)
-fitmed = mediation::mediate(fita, fitb, treat ="age", mediator = "meth")
-main = paste0(g, " " , p)
-plot(fitmed, main=paste0("Mediation ", main))
-plot(as.factor(as.character(d$age)), d$expr, las=2, xlab="", ylab="expression (z-score)")
-plot(as.factor(as.character(d$age)), d$meth, las=2, xlab="", ylab="methylion (M-value, z-score)")
-plot(d$meth, d$expr, las=2, xlab="", ylab="expression (z-score)", col=as.numeric(as.factor(as.character(d$age))))
-segments(d[d$age=="Ovary",]$meth, d[d$age=="Ovary",]$expr, d[d$age=="Lung",]$meth, d[d$age=="Lung",]$expr, col="grey", lty=2)
-
-# load data
-srna = mreadRDS("study_gtex_trscr608.rds")
-all(rownames(srna$exp_grp) == colnames(srna$data))
-rownames(srna$exp_grp) = paste0(srna$exp_grp$subject, "_", srna$exp_grp$age)
-colnames(srna$data) = rownames(srna$exp_grp)
-srna$exp_grp = srna$exp_grp[order(srna$exp_grp$age, srna$exp_grp$subject),]
-srna$data = srna$data[,rownames(srna$exp_grp)]
-
-smet = mreadRDS("study_gtex_meth608.rds")
-all(rownames(smet$exp_grp) == colnames(smet$data))
-rownames(smet$exp_grp) = paste0(smet$exp_grp$subject, "_", smet$exp_grp$age)
-colnames(smet$data) = rownames(smet$exp_grp)
-smet$exp_grp = smet$exp_grp[order(smet$exp_grp$age, smet$exp_grp$subject),]
-smet$data = smet$data[,rownames(smet$exp_grp)]
 
 
 
-srna$exp_grp = srna$exp_grp[srna$exp_grp$age%in%c("Lung", "Ovary"),]
-tmp_tab = table(srna$exp_grp$subject)
-srna$exp_grp = srna$exp_grp[srna$exp_grp$subject %in% rownames(tmp_tab)[tmp_tab>1],]
-srna$data    =    srna$data[,rownames(srna$exp_grp)]   
-smet$exp_grp = smet$exp_grp[rownames(srna$exp_grp), ] 
-smet$data    =    smet$data[, rownames(srna$exp_grp)]  
 
-d = smet$exp_grp
-d$meth = smet$data[p,]
-d$expr = srna$data[g,]
+```{r eval=FALSE}
+names(predimeth_probes_per_bed_files)
+sapply(predimeth_probes_per_bed_files, length)
 
-f = f = expr ~ age
-f1 = meth ~ age
-f2 = expr ~ meth + age
-fit = lm(f, d)
-fita = lm(f1, d)
-fitb = lm(f2, d)
-fitmed = mediation::mediate(fita, fitb, treat="age", mediator = "meth")
-main = paste0(g, " " , p)
-layout(matrix(1:6,2, byrow=FALSE), respect=TRUE)
-plot(fitmed, main=main)
-plot(as.factor(as.character(d$age)), d$expr, las=2, xlab="", ylab="expression (z-score)")
-plot(as.factor(as.character(d$age)), d$meth, las=2, xlab="", ylab="methylion (M-value, z-score)")
-plot(d$meth, d$expr, las=2, xlab="", ylab="expression (z-score)", col=as.numeric(as.factor(as.character(d$age))))
+results$cluster = 1
+for (k in names(predimeth_probes_per_bed_files)[1:5]) {
+  results[results$probe %in% predimeth_probes_per_bed_files[[k]],]$cluster = k
+}
+table(results$cluster, useNA="always")
+
+layout(matrix(1:6, 2, byrow=FALSE), respect=TRUE)
+
+plot(results$acme, -log10(results$pmax2fdr), pch=".", xlab="ACME", ylab="-log10 pmax2 + FDR 5% (BH)", col=as.numeric(as.factor(results$cluster)))
+# ntop = 20
+# tmp_idx = rownames(results[order(results$pmax2),])[1:ntop]
+tmp_idx = rownames(results[results$pmax2fdr<0.05 ,])
+points(results[tmp_idx,]$acme, -log10(results[tmp_idx,]$pmax2fdr), col=as.numeric(as.factor(results[tmp_idx,]$cluster)))
+
+plot(results$idxg, results$idxp, pch=".", xlab="genes", ylab="probes", col=as.numeric(as.factor(results$cluster)))
+abline(a=0, b=length(unique(results$probe))/length(unique(results$gene)), col="grey")
+points(results[tmp_idx,]$idxg, results[tmp_idx,]$idxp, col=adjustcolor(as.numeric(as.factor(results[tmp_idx,]$cluster)), alpha.f=30/ntop), pch=16)
+
+plot(results$acme, results$ade, pch=".", col=as.numeric(as.factor(results$cluster)))
+points(results[tmp_idx,]$acme, results[tmp_idx,]$ade, col=as.numeric(as.factor(results[tmp_idx,]$cluster)))
+abline(h=0, v=0, col=1)
+
+plot(results$acme, results$delta, pch=".", col=as.numeric(as.factor(results$cluster)))
+points(results[tmp_idx,]$acme, results[tmp_idx,]$delta, col=as.numeric(as.factor(results[tmp_idx,]$cluster)))
 
 
+subresults = results[tmp_idx,]
+subresults$score1 = 0
+subresults$score2 = 0
+foo = sort(table(subresults[tmp_idx,]$gene))
+subresults$score1 = foo[subresults$gene]
+bar = sort(table(subresults[tmp_idx,]$probe))
+subresults$score2 = bar[subresults$probe]
+subresults$score3 = subresults$score1 + subresults$score2
+subresults[order(subresults$score3),]
+
+```{r resulst xlsx, results="verbatim", echo=TRUE}
+head(results[tmp_idx,])
+dim(results[tmp_idx,])
+table_mediation_filename = paste0("table_mediation_", gse, ".xlsx")
+table_mediation = results[tmp_idx,]
+WriteXLS::WriteXLS(table_mediation, table_mediation_filename)
 ```
+
+Table of mediation results is exported as [`r table_mediation_filename`](`r table_mediation_filename`).
+
+```{r mediation_pkg, eval=TRUE}
+for (i in tmp_idx) {
+  layout(matrix(1:6,2, byrow=FALSE), respect=TRUE)
+
+  plot(results$acme, results$delta, pch=".")
+  points(results[tmp_idx,]$acme, results[tmp_idx,]$delta, col=2)
+  points(results[i,]$acme, results[i,]$delta, col=4, pch=16, cex=3)
+  text(results[i,]$acme, results[i,]$delta, i)
+
+  plot(results$acme, results$ade, pch=".")
+  points(results[tmp_idx,]$acme, results[tmp_idx,]$ade, col=2)
+  points(results[i,]$acme, results[i,]$ade, col=4, pch=16, cex=3)
+  text(results[i,]$acme, results[i,]$ade, i)
+  abline(h=0, v=0, col=1)
+
+  p = results[i,"probe"]
+  g = results[i,"gene"]
+  d = smet$exp_grp
+  d$meth = smet$data[p,]
+  d$expr = srna$data[g,]
+
+  f = expr ~ age
+  f1 = meth ~ age
+  f2 = expr ~ meth + age
+  fit = lm(f, d)
+  fita = lm(f1, d)
+  fitb = lm(f2, d)
+  if (!exists("mmediate")) {mmediate = memoise::memoise(mediation::mediate)}
+  fitmed = mmediate(fita, fitb, treat ="age", mediator = "meth")
+  summary(fitmed)
+  results[i,]$ade
+
+  main = paste0(g, " " , p)
+  plot(fitmed, main=paste0("Mediation ", main))
+  plot(as.factor(as.character(d$age)), d$expr, las=2, xlab="", ylab="expression (z-score)")
+  plot(as.factor(as.character(d$age)), d$meth, las=2, xlab="", ylab="methylation (M-value, z-score)")
+  plot(d$meth, d$expr, las=2, xlab="methylation (M-value, z-score)", ylab="expression (z-score)", col=as.numeric(as.factor(as.character(d$age))))
+}
+```
+
+
+```{r mediation_tcga, eval=TRUE}
+# key = "TCGA-LUAD"
+key = "TCGA-LUSC"
+smetkc = mreadRDS(paste0("~/projects/datashare/", key, "/study_preproc_", key, ".rds"))
+e = smetkc$exp_grp
+idx = intersect(e[e$tissue_status == "normal",]$id_patient, e[e$tissue_status == "tumoral",]$id_patient)
+e = e[e$id_patient%in%idx,]
+tab1 = table(e[e$tissue_status == "normal",]$id_patient)
+tab2 = table(e[e$tissue_status == "tumoral",]$id_patient)
+idx = intersect(names(tab1)[tab1==1], names(tab2)[tab2==1])    
+e = e[e$id_patient%in%idx,]
+tab = table(e$id_patient, e$tissue_status)
+tab
+emetkc = e
+smetkc$data = smetkc$data[,rownames(emetkc)]
+smetkc$exp_grp = smetkc$exp_grp[rownames(emetkc),]
+
+srnakc = mreadRDS(paste0("~/projects/tcga_studies/study_", key, "_trscr.rds"))
+e = srnakc$exp_grp
+idx = intersect(e[e$tissue_status == "normal",]$id_patient, e[e$tissue_status == "tumoral",]$id_patient)
+e = e[e$id_patient%in%idx,]
+tab1 = table(e[e$tissue_status == "normal",]$id_patient)
+tab2 = table(e[e$tissue_status == "tumoral",]$id_patient)
+idx = intersect(names(tab1)[tab1==1], names(tab2)[tab2==1])    
+e = e[e$id_patient%in%idx,]
+tab = table(e$id_patient, e$tissue_status)
+tab
+ernakc = e
+srnakc$data = srnakc$data[,rownames(ernakc)]
+srnakc$exp_grp = srnakc$exp_grp[rownames(ernakc),]
+
+
+
+for (i in tmp_idx[results[tmp_idx,]$probe %in% rownames(smetkc$data) & results[tmp_idx,]$gene %in% rownames(srnakc$data)]) {
+  layout(matrix(1:8,2, byrow=FALSE), respect=TRUE)
+
+  plot(results$acme, results$delta, pch=".")
+  points(results[tmp_idx,]$acme, results[tmp_idx,]$delta, col=2)
+  points(results[i,]$acme, results[i,]$delta, col=4, pch=16, cex=3)
+  text(results[i,]$acme, results[i,]$delta, i)
+
+  plot(results$acme, results$ade, pch=".")
+  points(results[tmp_idx,]$acme, results[tmp_idx,]$ade, col=2)
+  points(results[i,]$acme, results[i,]$ade, col=4, pch=16, cex=3)
+  text(results[i,]$acme, results[i,]$ade, i)
+  abline(h=0, v=0, col=1)
+
+  p = results[i,"probe"]
+  g = results[i,"gene"]
+  d = smet$exp_grp
+  d$meth = smet$data[p,]
+  d$expr = srna$data[g,]
+
+  f = expr ~ age
+  f1 = meth ~ age
+  f2 = expr ~ meth + age
+  fit = lm(f, d)
+  fita = lm(f1, d)
+  fitb = lm(f2, d)
+  if (!exists("mmediate")) {mmediate = memoise::memoise(mediation::mediate)}
+  fitmed = mmediate(fita, fitb, treat ="age", mediator = "meth")
+  summary(fitmed)
+  results[i,]$ade
+
+  main = paste0(g, " " , p)
+  plot(fitmed, main=paste0("Mediation ", main))
+  plot(d$meth, d$expr, las=2, xlab="methylation (M-value, z-score)", ylab="expression (z-score)", col=as.numeric(as.factor(as.character(d$age))))
+  plot(as.factor(as.character(d$age)), d$meth, las=2, xlab="", ylab="methylation (M-value, z-score)")
+  plot(as.factor(as.character(d$age)), d$expr, las=2, xlab="", ylab="expression (z-score)")
+
+
+  dmetkc = smetkc$exp_grp
+  dmetkc$meth = smetkc$data[p,]
+  drnakc = srnakc$exp_grp
+  drnakc$expr = srnakc$data[g,]
+
+  plot(as.factor(dmetkc$tissue_status), dmetkc$meth, las=2, xlab="", ylab="methylation (beta-value)")
+  plot(as.factor(drnakc$tissue_status), drnakc$expr, las=2, xlab="", ylab="expression (pseudolog norm count)")
+
+
+}
+```
+
+
+
+
+
 
 
 ```{r check, eval=FALSE}

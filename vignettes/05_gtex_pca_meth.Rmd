@@ -38,7 +38,7 @@ barplot(sort(table(s$exp_grp$tissue)), las=2)
 ```{r pca}
 data = t(s$data)
 head(data)[,1:10]
-pca = prcomp(data, scale=FALSE)
+pca = mprcomp(data, scale=FALSE)
 v = pca$sdev * pca$sdev
 p = v / sum(v) * 100
 

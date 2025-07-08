@@ -118,6 +118,45 @@ tcga_studies = c(
   # "TCGA-OV"   , # 0                     
   NULL
 )
+
+tcga_studies = c(    
+  # "TCGA-KIRC" , # 160                
+  # "TCGA-KIRP" , # 42                
+  # # "TCGA-KICH" , # 0                
+  # # "TCGA-LGG"  , # 0                
+  # # "TCGA-GBM"  , # 1                
+  # # "TCGA-ACC"  , # 0                
+  # "TCGA-HNSC" , # 49                
+  "TCGA-LUAD" , # 27                
+  "TCGA-LUSC" , # 40                
+  # # "BRB"       , # 7                
+  # "TCGA-BRCA" , # 85                
+  # "TCGA-BLCA" , # 21                
+  # # "TCGA-CESC" , # 3                
+  # # "TCGA-CHOL" , # 9                
+  # "TCGA-COAD" , # 36                
+  # # "TCGA-DLBC" , # 0                
+  # # "TCGA-ESCA" , # 16                
+  # # "TCGA-LAML" , # 0                
+  # "TCGA-LIHC" , # 49                
+  # # "TCGA-MESO" , # 0                
+  # # "TCGA-PAAD" , # 10                
+  # # "TCGA-PCPG" , # 3                
+  # "TCGA-PRAD" , # 50                
+  # # "TCGA-READ" , # 7                
+  # # "TCGA-SARC" , # 2                
+  # # "TCGA-SKCM" , # 2                
+  # # "TCGA-STAD" , # 2                
+  # # "TCGA-TGCT" , # 0                
+  # "TCGA-THCA" , # 56                
+  # # "TCGA-THYM" , # 2                    
+  # # "TCGA-UCS"  , # 0                
+  # # "TCGA-UVM"  , # 0                
+  # # "TCGA-OV"   , # 0                     
+  NULL
+)
+
+
 # for (tcga_study in tcga_studies) {
 #   # layout(matrix(1:2, 1, byrow=TRUE), respect=TRUE)
 #   # for (tcga_study in c("TCGA-BRCA", "TCGA-KIRP")) {
@@ -162,7 +201,7 @@ gsea = function()  {
     plot(density(e$age), main=tcga_study)
     abline(v=qt, lty=2, col="grey")
     user_idxs = list()
-    user_idxs[["all"]] = rownames(e)
+    # user_idxs[["all"]] = rownames(e)
     user_idxs[["yng"]] = rownames(e)[e$age<=qt[2]]
     user_idxs[["old"]] = rownames(e)[e$age>=qt[4]]
     rnk_files = sapply(names(user_idxs), function(k){
@@ -178,11 +217,11 @@ gsea = function()  {
       write.table(gsea_input, rnk_file, sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
       return(rnk_file)
     })
-    for (grp_file in grp_files) {
+    for (grp_file in grp_files[1:5]) {
       layout(matrix(1:3, 1, byrow=TRUE), respect=TRUE)
       for (k in names(rnk_files)) {
         rnk_file = rnk_files[[k]]
-        gsea_res = gsea_plot(grp_file, rnk_file, main=paste(tcga_study, k), nperm=1000)$stats  
+        gsea_res = gsea_plot(grp_file, rnk_file, main=paste(tcga_study, k), nperm=10000)$stats  
         gsea_res$rnk_file = rnk_file
         gsea_res$grp_file = grp_file
         rnk = read.table(rnk_file)
@@ -247,6 +286,10 @@ gsea_results = gsea()
 #     }
 #   }
 # }
+
+```
+
+```{r gsea results}
 
 gsea_results$age = substr(gsea_results$rnk_file, 12, 14)
 gsea_results$kc = substr(gsea_results$rnk_file, 16, 24)

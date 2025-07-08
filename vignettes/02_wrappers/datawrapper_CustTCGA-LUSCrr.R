@@ -5,7 +5,6 @@ orig_study = readRDS(paste0("~/projects/datashare/",  gse_orig , "/study_preproc
 all(colnames(orig_study$data) == rownames(orig_study$exp_grp))
 table(orig_study$exp_grp$gender, useNA="always")
 
-
 gender = orig_study$exp_grp$gender
 age = orig_study$exp_grp$age
 
@@ -16,8 +15,11 @@ age = orig_study$exp_grp$age
 # })
 
 if (!exists("cl_bs")) {
-  if(!exists("nb_core")) {nb_core = parallel::detectCores()}
-  cl_bs = parallel::makeCluster(nb_core, type="FORK")
+  if(!exists("nb_cores")) {
+    nb_cores = parallel::detectCores()
+  }
+  nb_cores = min(32, nb_cores)
+  cl_bs = parallel::makeCluster(nb_cores, type="FORK")
 }
 residuals = parallel::parApply(cl_bs, orig_study$data, 1, function(meth, gender, age) {
   if (length(unique(na.omit(gender)))>1) {

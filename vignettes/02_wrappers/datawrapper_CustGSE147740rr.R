@@ -1,4 +1,5 @@
-orig_study = readRDS(paste0("~/projects/datashare/GSE147740/study_preproc_GSE147740.rds"))
+gse_orig = substr(gse, 5, nchar(gse)-2)
+orig_study = readRDS(paste0("~/projects/datashare/",  gse_orig , "/study_preproc_",  gse_orig , ".rds"))
 
 # colnames(orig_study$data) == rownames(orig_study$exp_grp)
 all(colnames(orig_study$data) == rownames(orig_study$exp_grp))
@@ -24,8 +25,11 @@ CC_PC4 = orig_study$exp_grp$CC_PC4
 # })
 
 if (!exists("cl_bs")) {
-  if(!exists("nb_core")) {nb_core = parallel::detectCores()}
-  cl_bs = parallel::makeCluster(nb_core, type="FORK")
+  if(!exists("nb_cores")) {
+    nb_cores = parallel::detectCores()
+  }
+  nb_cores = min(32, nb_cores)
+  cl_bs = parallel::makeCluster(nb_cores, type="FORK")
 }
 residuals = parallel::parApply(cl_bs, orig_study$data, 1, function(meth, gender, CC_PC1, CC_PC2, CC_PC3, CC_PC4) {
   m = lm(meth ~ gender + CC_PC1 + CC_PC2 + CC_PC3 + CC_PC4)

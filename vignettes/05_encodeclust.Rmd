@@ -425,7 +425,7 @@ sapply(probes_per_bed_files, length)
 
 probes_per_bed_files$bonferroni01 = probes[["bonferroni01"       ]]
 
-predimeth_probes = read.table("predimeth_probes_GSE147740_50.bed")[,4]
+predimeth_probes = read.table(paste0("predimeth_probes_", gse, "_99.bed"))[,4]
 predimeth_probes_per_bed_files = lapply(names(probes_per_bed_files), function(bed_file) {  
   tmp_pbs = predimeth_probes[predimeth_probes %in% probes_per_bed_files[[bed_file]]]
   write.table(tmp_pbs, paste0("predimeth_", bed_file, ".grp"), quote=FALSE, row.names=FALSE, col.names=FALSE)

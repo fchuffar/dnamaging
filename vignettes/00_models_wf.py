@@ -1,31 +1,34 @@
 import os 
 import os.path
+# trick to load gse define as R vector
+def c(*args): return list(args)
 
-gses_descs = []
-gses_ewas = []
-gses_model = []
 
-gses = [
-  # Epigentic clocks
-  # "GSE40279" , # 450k, n=656  # Genome-wide Methylation Profiles Reveal Quantitative Views of Human Aging Rates
-  # "GSE42861" , # 450k, n=689  # Differential DNA methylation in Rheumatoid arthritis
-  # "GSE87571" , # 450k, n=750  # Continuous Aging of the Human DNA Methylome Throughout the Human Lifespan
-  "GSE147740", # Epic, n=1129 # DNA methylation analysis of human peripheral blood mononuclear cell collected in the AIRWAVE study
-  "CustGSE147740rr",
-  # "GSE152026", # Epic, n=934 # Blood DNA methylation profiles from first episode psychosis patients and controls I
-  # # 27k
-  # "GSE41037"   # **************27k*************** Aging effects on DNA methylation modules in blood tissue
-]
+# gses = [
+#   # Epigentic clocks
+#   # "GSE40279" , # 450k, n=656  # Genome-wide Methylation Profiles Reveal Quantitative Views of Human Aging Rates
+#   # "GSE42861" , # 450k, n=689  # Differential DNA methylation in Rheumatoid arthritis
+#   # "GSE87571" , # 450k, n=750  # Continuous Aging of the Human DNA Methylome Throughout the Human Lifespan
+#   "GSE147740", # Epic, n=1129 # DNA methylation analysis of human peripheral blood mononuclear cell collected in the AIRWAVE study
+#   "CustGSE147740rr",
+#   # "GSE152026", # Epic, n=934 # Blood DNA methylation profiles from first episode psychosis patients and controls I
+#   # # 27k
+#   # "GSE41037"   # **************27k*************** Aging effects on DNA methylation modules in blood tissue
+# ]
 
+
+
+exec(open("gses_models.R").read())
+
+gses_models
 
 prefix = os.getcwd()
 neighb = 1000
 
-runmax=99
-info_combp = [f"{prefix}/info_combp_{gse}_modelcalllm_meth~age_{pval_tresh}.rds"  for gse in gses for pval_tresh in ["1e-30", "1e-20", "1e-10", "1e-5"]]
+info_combp = [f"{prefix}/info_combp_{gse}_modelcalllm_meth~age_{pval_tresh}.rds"  for gse in gses_models for pval_tresh in ["1e-30", "1e-20", "1e-10", "1e-5"]]
 
-# runmax=2
-info_model = [f"{prefix}/info_model_r{runmax}_{gse}_modelcalllm_meth~age_ewas{newas}_nn{neighb}.rds"  for gse in gses for newas in ["1000000"]]
+runmax=99
+info_model = [f"{prefix}/info_model_r{runmax}_{gse}_modelcalllm_meth~age_ewas{newas}_nn{neighb}.rds"  for gse in gses_models for newas in ["1000000"]]
 # info_model = [f"{prefix}/info_model_r{runmax}_{gse}_modelcalllm_meth~age_ewas{newas}_nn{neighb}.rds"  for gse in ["GSE42861"] for newas in ["1000"]]
 
 
@@ -116,75 +119,6 @@ cd {wildcards.prefix}
 rm -Rf /tmp/wd_{wildcards.gse}
 """
 
-
-
-# rule R03_ewas:
-#     input:
-#       rmd = "{prefix}/03_ewas.Rmd",
-#       df  = "{prefix}/df_preproc_{gse}.rds",
-#     output:
-#       html    = "{prefix}/03_ewas{nbewasprobes}_{gse}.html"    ,
-#       rout    = "{prefix}/03_ewas{nbewasprobes}_{gse}.Rout"    ,
-#       df_ewas = "{prefix}/df_r0_ewas{nbewasprobes}_{gse}.rds"  ,
-#       info    = "{prefix}/info_ewas{nbewasprobes}_{gse}.rds",
-#     threads: 32
-#     shell:"""
-# export PATH="/summer/epistorage/opt/bin:$PATH"
-# export PATH="/summer/epistorage/miniconda3/envs/model_env/bin:$PATH"
-# export OMP_NUM_THREADS=1
-# cd {wildcards.prefix}
-#
-# rm -Rf /tmp/wd_{wildcards.gse}
-# mkdir -p /tmp/wd_{wildcards.gse}
-# cd /tmp/wd_{wildcards.gse}
-# ln -s {wildcards.prefix}/datashare
-# ln -s {wildcards.prefix}/df_preproc_{wildcards.gse}.rds
-# ln -s {wildcards.prefix}/litterature_models.rds
-# cp {wildcards.prefix}/*.Rmd {wildcards.prefix}/*.R .
-#
-# RCODE="gse='{wildcards.gse}' ; nbewasprobes={wildcards.nbewasprobes}; rmarkdown::render('03_ewas.Rmd',output_file=paste0('03_ewas', nbewasprobes,'_',gse, '.html'));"
-# echo $RCODE | Rscript - 2>&1 > 03_ewas{wildcards.nbewasprobes}_{wildcards.gse}.Rout
-#
-# cp 03_ewas{wildcards.nbewasprobes}_{wildcards.gse}.html 03_ewas{wildcards.nbewasprobes}_{wildcards.gse}.Rout df_r0_ewas{wildcards.nbewasprobes}_{wildcards.gse}.rds info_ewas{wildcards.nbewasprobes}_{wildcards.gse}.rds {wildcards.prefix}/.
-# cd {wildcards.prefix}
-# rm -Rf /tmp/wd_{wildcards.gse}
-# """
-
-# rule R04_model:
-#     input:
-#       rmd = "{prefix}/04_model.Rmd",
-#       df  = "{prefix}/df_r0_ewas{nbewasprobes}_{gse}.rds",
-#     output:
-#       html = "{prefix}/04_model_r{runmax}_ewas{nbewasprobes}_{gse}.html"      ,
-#       info = "{prefix}/info_model_r{runmax}_ewas{nbewasprobes}_{gse}.rds"     , #delete nbewasprobes or make 2 nbewasprobes
-#     threads: 32
-#     shell:"""
-# export PATH="/summer/epistorage/opt/bin:$PATH"
-# export PATH="/summer/epistorage/miniconda3/envs/model_env/bin:$PATH"
-# export OMP_NUM_THREADS=1
-# cd {wildcards.prefix}
-#
-# rm -Rf /tmp/wd_{wildcards.gse}
-# mkdir -p /tmp/wd_{wildcards.gse}
-# cd /tmp/wd_{wildcards.gse}
-# ln -s {wildcards.prefix}/datashare
-# ln -s {input.df}
-# ln -s {wildcards.prefix}/df_preproc_{wildcards.gse}.rds
-# ln -s {wildcards.prefix}/litterature_models.rds
-# cp {wildcards.prefix}/*.Rmd {wildcards.prefix}/*.R .
-#
-# for RUN in `seq -w 0 {wildcards.runmax}`
-# do
-#   RCODE="gse='{wildcards.gse}' ; run=${{RUN}}; nbewasprobes={wildcards.nbewasprobes}; nb_core=6; rmarkdown::render('04_model.Rmd', output_file=paste0('04_model_r',run,'_ewas',nbewasprobes,'_',gse,'.html'));"
-#   echo $RCODE
-#   echo $RCODE | Rscript - 2>&1 > 04_model_r${{RUN}}_ewas{wildcards.nbewasprobes}_{wildcards.gse}.Rout
-# done
-#
-# cp 04_model_r*_ewas{wildcards.nbewasprobes}_{wildcards.gse}.html 04_model_r*_ewas{wildcards.nbewasprobes}_{wildcards.gse}.Rout   info_model_r*_ewas{wildcards.nbewasprobes}_{wildcards.gse}.rds {wildcards.prefix}/.
-#
-# cd {wildcards.prefix}
-# rm -Rf /tmp/wd_{wildcards.gse}
-# """
 
 
 
@@ -322,7 +256,7 @@ cd $TMPDIR
 ln -s {wildcards.prefix}/datashare 
 cp {input.rmd} {wildcards.prefix}/common.R {wildcards.prefix}/params_default.R  {wildcards.prefix}/params_{wildcards.gse}.R {wildcards.prefix}/litterature_models.rds . || :
 
-RCODE="gse='{wildcards.gse}_{wildcards.modelcall}_meth~{wildcards.model_formula}_ewas{wildcards.newas}_nn{wildcards.neighb}' ;  nb_core=10 ;run={wildcards.runid} ; rmarkdown::render('04_model.Rmd', output_file=paste0('04_model_r', run, '_', gse, '.html'));"
+RCODE="gse='{wildcards.gse}_{wildcards.modelcall}_meth~{wildcards.model_formula}_ewas{wildcards.newas}_nn{wildcards.neighb}' ;  nb_cores=10 ;run={wildcards.runid} ; rmarkdown::render('04_model.Rmd', output_file=paste0('04_model_r', run, '_', gse, '.html'));"
 echo $RCODE | Rscript - 2>&1 > 04_model_r{wildcards.runid}_{wildcards.gse}_{wildcards.modelcall}_meth~{wildcards.model_formula}_ewas{wildcards.newas}_nn{wildcards.neighb}.Rout
 
 cp  04_model_r{wildcards.runid}_{wildcards.gse}_{wildcards.modelcall}_meth~{wildcards.model_formula}_ewas{wildcards.newas}_nn{wildcards.neighb}.html  04_model_r{wildcards.runid}_{wildcards.gse}_{wildcards.modelcall}_meth~{wildcards.model_formula}_ewas{wildcards.newas}_nn{wildcards.neighb}.Rout info_model_r{wildcards.runid}_{wildcards.gse}_{wildcards.modelcall}_meth~{wildcards.model_formula}_ewas{wildcards.newas}_nn{wildcards.neighb}.rds models_r{wildcards.runid}_{wildcards.gse}_{wildcards.modelcall}_meth~{wildcards.model_formula}_ewas{wildcards.newas}_nn{wildcards.neighb}.rds {wildcards.prefix}/. 

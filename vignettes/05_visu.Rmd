@@ -19,14 +19,16 @@ source("common.R")
 neighb = 1000
 runmax=99
 gses = c(
-  # "GSE40279" , # 450k, n=656  # Genome-wide Methylation Profiles Reveal Quantitative Views of Human Aging Rates
+  "GSE40279" , # 450k, n=656  # Genome-wide Methylation Profiles Reveal Quantitative Views of Human Aging Rates
   # "GSE42861" , # 450k, n=689  # Differential DNA methylation in Rheumatoid arthritis
   # "GSE87571" , # 450k, n=750  # Continuous Aging of the Human DNA Methylome Throughout the Human Lifespan
   "GSE147740", # Epic, n=1129 # DNA methylation analysis of human peripheral blood mononuclear cell collected in the AIRWAVE study
-  "CustGSE147740rr", # Epic, n=1129 # DNA methylation analysis of human peripheral blood mononuclear cell collected in the AIRWAVE study
+  # "CustGSE147740rr", # Epic, n=1129 # DNA methylation analysis of human peripheral blood mononuclear cell collected in the AIRWAVE study
   # "GSE152026", # Epic, n=934 # Blood DNA methylation profiles from first episode psychosis patients and controls I
   NULL
 )
+# source("gses_models.R")
+gses = gses_models
 newass = c("1000", "2000", "3000", "5000", "10000", "20000", "30000", "50000", "100000", "200000", "300000", "500000")
 newass = c("500000", "1000000")
 newass = c("1000000")
@@ -128,10 +130,9 @@ library(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
 pfepic = data.frame(getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b4.hg19))
 
 newas = "1000000"
-lastrun = 50
+lastrun = 99
 for (gse in gses) {
   print(gse)
-  bed_filename = paste0("predimeth_probes_", gse, "_", lastrun, ".bed")
   sub_res = res[res$gse==gse & res$run<=lastrun & res$newas==newas, ]
   foo = apply(sub_res, 1, function(row) {
     data.frame(run=row$run, probes=row$probes)
@@ -155,12 +156,11 @@ for (gse in gses) {
   bed = bed[order(bed[,1], bed[,2]),]
   bed_filename = paste0("predimeth_probes_", gse, "_", lastrun, ".bed")
   write.table(bed, file=bed_filename , sep="\t", quote=FALSE, row.names=FALSE, col.names=TRUE)
-  ewas = mreadRDS(paste0("ewas_", gse, "_modelcalllm_meth~age.rds"))
 
+  ewas = mreadRDS(paste0("ewas_", gse, "_modelcalllm_meth~age.rds"))
   idx = rownames(bed)[ewas[rownames(bed),"beta"]>0]
   bed_filename = paste0("predimeth_probes_up_", gse, "_", lastrun, ".bed")
   write.table(bed[idx,], file=bed_filename , sep="\t", quote=FALSE, row.names=FALSE, col.names=TRUE)
-
   idx = rownames(bed)[ewas[rownames(bed),"beta"]<0]
   bed_filename = paste0("predimeth_probes_dw_", gse, "_", lastrun, ".bed")
   write.table(bed, file=bed_filename , sep="\t", quote=FALSE, row.names=FALSE, col.names=TRUE)

@@ -17,10 +17,6 @@ knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, 
 source("common.R")
 ```
 
-```{r params}
-# source("params_default.R")
-y_key="age"
-```
 
 # Data
 

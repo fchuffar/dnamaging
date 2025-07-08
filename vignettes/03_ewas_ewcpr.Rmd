@@ -138,6 +138,13 @@ if (nrow(d)==nrow(ewas)) {
   stop(paste0("ewas do not have the same dimension as d."))
 }
 
+
+
+ewas = data.frame(ewas)
+ewas$pvbonf = p.adjust(ewas[,"pv"], method="bonferroni")
+ewas$mean_beta = apply(s$data[rownames(ewas),], 1, mean)
+ewas$sd_beta = apply(s$data[rownames(ewas),], 1, sd)
+
 print("***********Before")
 saveRDS(ewas, rds_ewas_filename)
 print("***********After")

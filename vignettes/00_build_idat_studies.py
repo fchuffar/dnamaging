@@ -21,9 +21,9 @@ gses = [
   # "GSE142439"   TO CHECK Epic, n=16  # Transient non-integrative nuclear reprogramming promotes multifaceted reversal of aging in human cells
   # NOIDAT "GSE50923",    # PROBLEM no age # 27k GBM vs. normal brain
   # NOIDAT "GSE60753",    # PROBLEM no age # 450k # Alcohol #
-  # NOIDAT "GSE20067",    # PROBLEM gse="GSE20067"  ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render('04_model.Rmd'); # "incorrect number of dimensions" FCh: problem inselecting probes?
-  # NOIDAT "GSE48461",    # PROBLEM gse="GSE48461"  ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render("04_model.Rmd"); # 450k, glioma
-  # NOIDAT "GSE49393",    # PROBLEM gse="GSE49393"  ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render('04_model.Rmd'); # Brain, Alcohol, n=48, 450k ; 50000 probes == NA
+  # NOIDAT "GSE20067",    # PROBLEM gse="GSE20067"  ; run=1; nbewasprobes=3000; nb_cores=6; rmarkdown::render('04_model.Rmd'); # "incorrect number of dimensions" FCh: problem inselecting probes?
+  # NOIDAT "GSE48461",    # PROBLEM gse="GSE48461"  ; run=1; nbewasprobes=3000; nb_cores=6; rmarkdown::render("04_model.Rmd"); # 450k, glioma
+  # NOIDAT "GSE49393",    # PROBLEM gse="GSE49393"  ; run=1; nbewasprobes=3000; nb_cores=6; rmarkdown::render('04_model.Rmd'); # Brain, Alcohol, n=48, 450k ; 50000 probes == NA
   # NOIDAT "GSE36278" , # 450k, n=142  # Methylation data from glioblastoma tumor samples
   # NOIDAT "GSE40279" , # 450k, n=656  # Genome-wide Methylation Profiles Reveal Quantitative Views of Human Aging Rates
   # NOIDAT "GSE89353" , # 450k, n=600  # Proband : Epimutations as a novel cause of congenital disorders
@@ -61,8 +61,8 @@ gses = [
 
   "GSE109379" ,  # TO CHECK 450k, n=1104 # DNA methylation-based classification of human central nervous system tumors [validation set]
   "GSE85210",    # PROBLEM no age # 450k # n=250 # tobacco
-  "GSE43976",    # PROBLEM gse='GSE43976'  ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render('04_model.Rmd'); # 450k, PB, tobacco # error in
-  "GSE104293",   # PROBLEM gse="GSE104293" ; run=1; nbewasprobes=3000; nb_core=6; rmarkdown::render('04_model.Rmd'); # Glioma # n=130 # 450k
+  "GSE43976",    # PROBLEM gse='GSE43976'  ; run=1; nbewasprobes=3000; nb_cores=6; rmarkdown::render('04_model.Rmd'); # 450k, PB, tobacco # error in
+  "GSE104293",   # PROBLEM gse="GSE104293" ; run=1; nbewasprobes=3000; nb_cores=6; rmarkdown::render('04_model.Rmd'); # Glioma # n=130 # 450k
   "GSE97362" , # 450k, n=235  # CHARGE and Kabuki syndromes: Gene-specific DNA methylation signatures
   "GSE87648" , # 450k, n=350  # DNA Methylation May Mediate Genetic Risk In Inflammatory Bowel Disease
   # "GSE68838",       # TCGA COAD

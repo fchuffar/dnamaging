@@ -1,0 +1,217 @@
+---
+title: "Post processing `deepTools`"
+author: "Florent Chuffart"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+
+### Heatmap (metaclusters)
+
+```{r hm2, fig.width=9, fig.height=9}
+# stop("EFN")
+metaclusters = list(
+  PRC2=c("cluster_1", "cluster_5"), 
+  ENHA=c("cluster_2"), 
+  PROM=c("cluster_3", "cluster_4"), 
+  DEF1=c("cluster_6"), 
+  DEF2=c("cluster_7")
+)
+
+metacluster_cols = c(
+  "#19198c", 
+  "#195eff", 
+  "#36e6ba", 
+  "#bde633", 
+  "#ff7719"
+)
+names(metacluster_cols) = names(metaclusters)
+
+bed_files = sapply(names(metaclusters), function(tag) {
+  locus_bed = clusters[clusters$V13%in% metaclusters[[tag]], 1:6]
+  rownames(locus_bed) = locus_bed[,4]
+  # tag = paste0("metacluster", paste0(substr(tag, 9, 9), collapse=""))
+  locus_bed_file = write_bed_tss(locus_bed, tag=tag)
+  # names(locus_bed_file) = tag
+  locus_bed_file
+})
+  
+# bed_files = c(
+#   bed_files,
+#   # write_bed_tss(bed_gain       , "gain"       ), 
+#   # # write_bed_tss(bed_loss       , "loss"       ), 
+#   # write_bed_tss(bed_losshypo     , "losshypo"       ), 
+#   # write_bed_tss(bed_losshyper     , "losshyper"       ), 
+#   # write_bed_tss(bed_rnd_island , "rnd_island" ), 
+#   # write_bed_tss(bed_rnd_opensea, "rnd_opensea"), 
+#   NULL
+# )
+
+samplesLabel = gsub("-human", "", paste(paste0(db$Experiment.target, "_", db$Biosample.term.name), collapse=" "))
+samplesLabel = gsub("_lung", "", samplesLabel)
+regionsLabel = gsub(".bed", "", paste(names(bed_files), collapse=" "))
+prefix = paste0("metacluster_", gse)
+mf = mget_mf_clust(bwfiles, bed_files, samplesLabel, prefix=prefix, othargs=paste0(" --refPointLabel 'loc' --legendLocation none --xAxisLabel ''  --colorMap RdBu --regionsLabel ", regionsLabel, " --heatmapWidth 2.8 --heatmapHeight 20"))
+# plotHeatmap -m mt_metaclusters_GSE147740.txt.gz  --samplesLabel H3K4me3_lung H3K4me3_lung H3K4me1_lung H3K4me1_lung H3K4me1_lung H3K27me3_lung H3K27me3_lung -o hm_metaclusters_GSE147740.png --outFileSortedRegions hm_metaclusters_GSE147740.bed --refPointLabel "locus" --legendLocation none --xAxisLabel ""
+
+```
+
+
+![metaclusters](`r paste0("hm_", prefix, ".png")`)
+
+### Clusters (metaclusters)
+
+
+```{r, fig.width=9, fig.height=9}
+plot_terrain(bed_files)
+```
+
+### Figure
+
+```{r figure deepTools, fig.width=6, fig.height=6}
+plot_deeptools = function() {
+  layout(matrix(c(
+                1,1,2,
+                1,1,3,
+                4,5,6,
+                NULL), 3, byrow=TRUE), respect=TRUE)
+  layout(matrix(c(
+                1,1,1,2,5, 
+                1,1,1,3,6, 
+                1,1,1,4,7, 
+                NULL), 3, byrow=TRUE), respect=TRUE)
+
+  par(mar=c(0, 0, 0, 0))
+  img = png::readPNG(paste0("hm_", prefix, ".png"))
+  plot(NA, NA, xlim=0:1, ylim=0:1, axes=FALSE, main=paste0(""), xlab="", ylab="")
+  addImg(img, x=.5,y=.5,width=1)
+  par(mar=c(5.1, 4.1, 4.1, 2.1))  
+
+  for (bed_file_name in names(bed_files)) {
+    par(mar=c(4.1, 4.1, 1.5, 1.0))
+    # idx = rownames(ewas)[ewas$pvbonf<0.01]
+    # idx = probes[["cluster_1.bed"]]
+    locus_bed = read.table(bed_files[[bed_file_name]])
+    idx = unique(unlist(fat_feats[locus_bed[,4],]$probes))
+
+    col = metacluster_cols[[bed_file_name]]
+    xlab = "age effect (meth. prop. per year)"
+    ylab = "mean meth. prop."
+    xlim = c(-0.003, 0.003)
+    ylim = 0:1
+    x = ewas[idx, ]$beta
+    y = ewas[idx, ]$mean_beta
+    main=paste0(bed_file_name, " (", length(idx), " probes)")
+    plot(x, y, xlab=xlab, ylab=ylab, main=main, col=adjustcolor(col, alpha.f=0.01*10000/length(idx)), pch=16, xlim=xlim, ylim=ylim)
+    # fc(z, main=main, plot.axes=FALSE, color.palette=function(n) hcl.colors(n,  palette=colpals[k], rev=TRUE))# , levels=fc$levels, zlim=fc$zlim)
+    # axis(1, at=c(-0.002, 0, 0.002), labels=c(-0.002, 0, 0.002))
+    # axis(2, at=c(0, .5, 1), labels=c(0, .5, 1))
+
+  }
+  par(mar=c(5.1, 4.1, 4.1, 2.1))
+}
+# plot_deeptools()
+png("deeptoolsfig.png", width=1500, height=900, res=150) 
+# pdf("deeptoolsfig.pdf", width=8, height=6) 
+plot_deeptools()
+dev.off()
+```
+
+
+
+
+
+```{r results="verbatim"}
+probes_per_bed_files = lapply(bed_files, function(bed_file) {  
+  print(bed_file)
+  locus_bed = read.table(bed_file)
+  rownames(locus_bed) = locus_bed[,4]
+  head(locus_bed)
+  tmp_probes = unique(unlist(fat_feats[rownames(locus_bed),]$probes))
+  return(tmp_probes)
+})
+names(probes_per_bed_files) = bed_files
+sapply(probes_per_bed_files, length)
+
+probes_per_bed_files$bonferroni01 = probes_bonf01
+
+predimeth_probes = read.table(paste0("predimeth_probes_", gse, "_99.bed"))[,4]
+predimeth_probes_per_bed_files = lapply(names(probes_per_bed_files), function(bed_file) {  
+  tmp_pbs = predimeth_probes[predimeth_probes %in% probes_per_bed_files[[bed_file]]]
+  write.table(tmp_pbs, paste0("predimeth_", bed_file, ".grp"), quote=FALSE, row.names=FALSE, col.names=FALSE)
+  return(tmp_pbs)
+})
+names(predimeth_probes_per_bed_files) = names(probes_per_bed_files)
+sapply(predimeth_probes_per_bed_files, length)
+
+grp_files = sapply(names(bed_files), function(k) {
+  tmp_pbs = predimeth_probes_per_bed_files[[paste0(k, ".bed")]]
+  grp_file = paste0("predimeth_", strsplit(k, "\\.")[[1]][1], ".grp")
+  print(grp_file)
+  write.table(tmp_pbs, grp_file, quote=FALSE, row.names=FALSE, col.names=FALSE)
+  return(grp_file)
+})
+
+# grp_file = "rnd5000_island.grp"
+# write.table(idx_rnd_island, grp_file, quote=FALSE, row.names=FALSE, col.names=FALSE)
+# grp_files["rndisland"] = grp_file
+
+# grp_file = "rnd5000_opensea.grp"
+# write.table(idx_rnd_opensea, grp_file, quote=FALSE, row.names=FALSE, col.names=FALSE)
+# grp_files["rndopensea"] = grp_file
+
+
+chi = data.frame(
+  all = sapply(probes_per_bed_files, length),
+  pdm = sapply(predimeth_probes_per_bed_files, length),
+  exp = round(sapply(probes_per_bed_files, length) / length(probes_per_bed_files$bon) * length(predimeth_probes_per_bed_files$bon))
+)
+chi$rat = signif(chi$pdm / chi$all,3)
+chi$enr = signif(chi$pdm / chi$exp,3)
+chi
+```
+
+
+# Associated genes
+
+
+```{r eval=TRUE}
+genome = "hg38"
+if (!exists("mannotatr_build_annotations")) {mannotatr_build_annotations = memoise::memoise(annotatr::build_annotations)}
+annotations = mannotatr_build_annotations(genome=genome, annotations=paste0(genome, c("_basicgenes")))
+
+genes = lapply(bed_files, function(bed_file) {  
+  print(bed_file)
+  tmp_regions = annotatr::read_regions(con=bed_file, genome=genome, format="bed")
+  # Intersect the regions we read in with the annotations
+  tmp_regions_annotated = annotatr::annotate_regions(
+      regions = tmp_regions,
+      annotations = annotations,
+      ignore.strand = TRUE,
+      quiet = FALSE)
+  # A GRanges object is returned
+  tmp_regions_annotated = data.frame(tmp_regions_annotated)
+  dim(tmp_regions_annotated)
+  # dedup
+  tmp_regions_annotated$annot.type = factor(tmp_regions_annotated$annot.type, levels=paste0(genome, c("_genes_promoters", "_genes_1to5kb", "_genes_5UTRs", "_genes_exons", "_genes_introns", "_genes_3UTRs")))
+  table(tmp_regions_annotated$annot.type)
+  table(tmp_regions_annotated$name)
+  tag = "hg38_genes_promoters"
+  genes = unique(tmp_regions_annotated[tmp_regions_annotated$annot.type%in%tag & !is.na(tmp_regions_annotated$annot.symbol),]$annot.symbol)
+  gene_filename = paste0(tag, "_", bed_file, ".txt")
+  write.table(genes, gene_filename, quote=FALSE, row.names=FALSE, col.names=FALSE)
+  print(paste0("genes writen in ", gene_filename))
+  return(genes)
+})
+names(genes) = bed_files
+```
+
+
+
+
+

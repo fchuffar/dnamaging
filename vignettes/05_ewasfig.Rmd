@@ -48,7 +48,7 @@ study_filename = paste0("~/projects/datashare/", gse, "/study_preproc_", gse, "_
 ```
 
 
-```{r loading ewas, eval=!exists("ewas")}
+```{r loading ewas, eval=TRUE}
 # stop("EFN")
 ewas = mreadRDS(rds_ewas_filename)
 ewas = data.frame(ewas)
@@ -61,10 +61,10 @@ ewas$sd_beta = apply(s$data[rownames(ewas),], 1, sd)
 
 
 ```{r hg38}
-library(IlluminaHumanMethylationEPICmanifest)
-library(IlluminaHumanMethylationEPICanno.ilm10b5.hg38)
-library(minfi)
-pfepichg38 = getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b5.hg38)
+  library(IlluminaHumanMethylationEPICmanifest)
+  library(IlluminaHumanMethylationEPICanno.ilm10b5.hg38)
+  library(minfi)
+  pfepichg38 = getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b5.hg38)
 
 table(pfepichg38$Relation_to_Island, useNA="always")
 pfepichg38[pfepichg38$Relation_to_Island == "N_Shelf", ]$Relation_to_Island = "Shelf" 
@@ -84,9 +84,17 @@ pfepichg38$Relation_to_Island = factor(pfepichg38$Relation_to_Island, levels = c
 # pfepichg38$Relation_to_Island = factor(pfepichg38$Relation_to_Island, levels = c("Island", "Shore", "Shelf", "OpenSea"))
 # dim(pfepichg38)
 
+
+
 all(rownames(pfepichg38) %in% rownames(ewas))
 if (!all(rownames(ewas) %in% rownames(pfepichg38))) {
-  stop("problem annotation hg38.")
+  if (nrow(ewas) < 500000) {PF450K = TRUE}
+  if (!exists("PF450K")) {stop("problem annotation hg38.")}
+  ewas = ewas[intersect(rownames(ewas), rownames(pfepichg38)),]
+  ewas = ewas[!is.na(pfepichg38[rownames(ewas), "CHR_hg38"]),]
+  pfepichg38 = pfepichg38[rownames(ewas),]
+  ewas$Relation_to_Island = pfepichg38[rownames(ewas),]$Relation_to_Island
+  rm("PF450K")
 } else {
   pfepichg38 = pfepichg38[rownames(ewas),]
   ewas$Relation_to_Island = pfepichg38[rownames(ewas),]$Relation_to_Island
@@ -254,7 +262,7 @@ dev.off()
 
 ```
 
-```{r}
+```{r eval=TRUE}
 probes = list()
 probes[["bonferroni01"]]       = rownames(ewas)[ewas$pvbonf<0.01]
 probes[["methylation_gain"]]   = rownames(ewas)[ewas$pvbonf<0.01 & ewas$beta >= 0]
