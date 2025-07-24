@@ -16,11 +16,11 @@ output:
 ```{r hm2, fig.width=9, fig.height=9}
 # stop("EFN")
 metaclusters = list(
-  PRC2=c("cluster_1", "cluster_5"), 
-  ENHA=c("cluster_2"), 
-  PROM=c("cluster_3", "cluster_4"), 
-  DEF1=c("cluster_6"), 
-  DEF2=c("cluster_7")
+  PRC2=c("cluster_3"), 
+  ENHA=c("cluster_4"), 
+  PROM=c("cluster_1", "cluster_2"), 
+  # DEF1=c("cluster_6"),
+  DEFA=c("cluster_5")
 )
 
 metacluster_cols = c(
@@ -28,8 +28,26 @@ metacluster_cols = c(
   "#195eff", 
   "#36e6ba", 
   "#bde633", 
-  "#ff7719"
+  "#ff7719", 
+  NULL
 )
+
+metacluster_cols = c(
+  "#19198c", 
+  "#195eff", 
+  # "#36e6ba", 
+  "#6FCC6C", 
+  "#ff9e19", 
+  NULL
+)
+
+
+# Nom	Code Hex	Aperçu
+# Original	#8AFF87	
+# Plus foncé	#6FCC6C	
+# Encore plus	#5AA859	
+# Très foncé	#3F773E
+
 names(metacluster_cols) = names(metaclusters)
 
 bed_files = sapply(names(metaclusters), function(tag) {
@@ -56,7 +74,7 @@ samplesLabel = gsub("-human", "", paste(paste0(db$Experiment.target, "_", db$Bio
 samplesLabel = gsub("_lung", "", samplesLabel)
 regionsLabel = gsub(".bed", "", paste(names(bed_files), collapse=" "))
 prefix = paste0("metacluster_", gse)
-mf = mget_mf_clust(bwfiles, bed_files, samplesLabel, prefix=prefix, othargs=paste0(" --refPointLabel 'loc' --legendLocation none --xAxisLabel ''  --colorMap RdBu --regionsLabel ", regionsLabel, " --heatmapWidth 2.8 --heatmapHeight 20"))
+mf = mget_mf_clust(bwfiles, bed_files, samplesLabel, prefix=prefix, othargs=paste0(" --refPointLabel 'loc' --legendLocation none --xAxisLabel ''  --colorMap RdBu --regionsLabel ", regionsLabel, " --heatmapWidth 3.5 --heatmapHeight 14"))
 # plotHeatmap -m mt_metaclusters_GSE147740.txt.gz  --samplesLabel H3K4me3_lung H3K4me3_lung H3K4me1_lung H3K4me1_lung H3K4me1_lung H3K27me3_lung H3K27me3_lung -o hm_metaclusters_GSE147740.png --outFileSortedRegions hm_metaclusters_GSE147740.bed --refPointLabel "locus" --legendLocation none --xAxisLabel ""
 
 ```
@@ -73,7 +91,7 @@ plot_terrain(bed_files)
 
 ### Figure
 
-```{r figure deepTools, fig.width=6, fig.height=6}
+```{r figure deepTools, fig.width=12, fig.height=6}
 plot_deeptools = function() {
   layout(matrix(c(
                 1,1,2,
@@ -85,6 +103,10 @@ plot_deeptools = function() {
                 1,1,1,3,6, 
                 1,1,1,4,7, 
                 NULL), 3, byrow=TRUE), respect=TRUE)
+  layout(matrix(c(
+                1,1,2,4, 
+                1,1,3,5, 
+                NULL), 2, byrow=TRUE), respect=TRUE)
 
   par(mar=c(0, 0, 0, 0))
   img = png::readPNG(paste0("hm_", prefix, ".png"))
@@ -115,9 +137,9 @@ plot_deeptools = function() {
   }
   par(mar=c(5.1, 4.1, 4.1, 2.1))
 }
-# plot_deeptools()
-png("deeptoolsfig.png", width=1500, height=900, res=150) 
-# pdf("deeptoolsfig.pdf", width=8, height=6) 
+plot_deeptools()
+# png(paste0("fig_deeptools_", gse, ".png"), width=1800, height=900, res=150) 
+pdf(paste0("fig_deeptools_", gse, ".pdf"), width=8, height=6) 
 plot_deeptools()
 dev.off()
 ```

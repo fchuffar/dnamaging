@@ -86,13 +86,54 @@ plot_gseafig  = function() {
 }
 plot_gseafig()
 # png("gseafig.png", width=1200, height=1200) 
-pdf("gseafig.pdf", width=9, height=9) 
+pdf(paste0("fig_", gse, "_gsea.pdf"), width=9, height=9) 
 plot_gseafig()
 dev.off()
 
 ```
 
 
+
+## Tables
+```{r table ewas}
+tmp_probes = read.table(paste0("predimeth_probes_", gse, "_99.bed"))[,4]
+probes_bonf01 = rownames(ewas)[ewas$pvbonf<0.01]
+table_ewas = ewas[probes_bonf01,]
+table_ewas$gene = pfepichg38[rownames(table_ewas),]$UCSC_RefGene_Name
+table_ewas$group = pfepichg38[rownames(table_ewas),]$UCSC_RefGene_Group
+
+tmp_names = colnames(table_ewas)
+
+# 6 first colums as bed
+table_ewas$chr_hg38 = pfepichg38[rownames(table_ewas),]$CHR_hg38
+table_ewas$start_hg38 = pfepichg38[rownames(table_ewas),]$Start_hg38
+table_ewas$end_hg38 = pfepichg38[rownames(table_ewas),]$End_hg38
+table_ewas$name = rownames(table_ewas)
+table_ewas$predimeth = 0
+table_ewas[intersect(tmp_probes, rownames(ewas)),]$predimeth = 1
+table_ewas$strand_hg38 = pfepichg38[rownames(table_ewas),]$Strand_hg38
+table_ewas$cluster = NA
+
+for (bed_file_name in names(bed_files)) {
+  locus_bed = read.table(bed_files[[bed_file_name]])
+  idx = unique(unlist(fat_feats[locus_bed[,4],]$probes))
+  table_ewas[idx,]$cluster = bed_file_name
+}
+
+
+
+table_ewas = table_ewas[, c(setdiff(colnames(table_ewas), tmp_names), tmp_names)]
+
+table_ewas[,1] = as.character(table_ewas[,1])
+table_ewas = table_ewas[order(table_ewas[,1], table_ewas[,2]),]
+
+table_ewas_filename = paste0("table_ewas_", gse, ".xlsx")
+table_ewas_bed_filename = paste0("table_ewas_", gse, ".bed")
+WriteXLS::WriteXLS(table_ewas, table_ewas_filename)
+write.table(table_ewas, file=table_ewas_bed_filename , sep="\t", quote=FALSE, row.names=FALSE, col.names=TRUE)
+```
+
+Table of ewas results is exported `r table_ewas_filename` for 1% Bonferroni probes.
 
 
 
@@ -321,7 +362,7 @@ plot_pancancer = function() {
 }
 plot_pancancer()
 # png("pancancerfig.png", width=1200, height=1200) 
-pdf("pancancerfig.pdf", width=8, height=6) 
+pdf(paste0("fig_", gse, "_pancancer.pdf"), width=8, height=6) 
 plot_pancancer()
 dev.off()
 ```

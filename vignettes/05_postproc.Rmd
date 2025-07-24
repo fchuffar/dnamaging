@@ -129,46 +129,15 @@ write.table(bed, file=bed_filename , sep="\t", quote=FALSE, row.names=FALSE, col
 # idx = rownames(bed)[ewas[rownames(bed),"beta"]<0]
 # bed_filename = paste0("predimeth_probes_dw_", gse, "_", lastrun, ".bed")
 # write.table(bed, file=bed_filename , sep="\t", quote=FALSE, row.names=FALSE, col.names=TRUE)
-
-
 ```
-
-
-
-# Stat Desc
-
-```{r stat_desc, fig.width=9, fig.height=6}
-s = mreadRDS(study_filename)
-exp_grp = s$exp_grp
-
-rm("s")
-
-
-statdesc = function(exp_grp)  {
-  layout(1, respect=TRUE)
-  beanplot::beanplot(exp_grp$age ~ paste0(exp_grp$gender, " (", table(exp_grp$gender)[exp_grp$gender], " individuals)"), what=c(1,1,1,0), col="grey", main=paste0("age distribution (", nrow(exp_grp), " individuals)"), ylab="age (years)")
-}
-statdesc(exp_grp)
-pdf("statdescfig.pdf", width=8, height=6)
-# # png("statdescfig.png", width=800, height=600)
-statdesc(exp_grp)
-dev.off()
-```
-
-
-
-
-
-
-
 
 # hg38
 
 ```{r hg38}
-  library(IlluminaHumanMethylationEPICmanifest)
-  library(IlluminaHumanMethylationEPICanno.ilm10b5.hg38)
-  library(minfi)
-  pfepichg38 = getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b5.hg38)
+library(IlluminaHumanMethylationEPICmanifest)
+library(IlluminaHumanMethylationEPICanno.ilm10b5.hg38)
+library(minfi)
+pfepichg38 = getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b5.hg38)
 
 table(pfepichg38$Relation_to_Island, useNA="always")
 pfepichg38[pfepichg38$Relation_to_Island == "N_Shelf", ]$Relation_to_Island = "Shelf" 
@@ -177,6 +146,18 @@ pfepichg38[pfepichg38$Relation_to_Island == "S_Shelf", ]$Relation_to_Island = "S
 pfepichg38[pfepichg38$Relation_to_Island == "S_Shore", ]$Relation_to_Island = "Shore" 
 table(pfepichg38$Relation_to_Island, useNA="always")
 pfepichg38$Relation_to_Island = factor(pfepichg38$Relation_to_Island, levels = c("Island", "Shore", "Shelf", "OpenSea"))
+
+
+
+
+
+
+colpals_cpgdensity=c("chartreuse4", "darkorange", "aquamarine3", "darkblue")
+
+colpals_cpgdensity=c("#228B22", "#F4A460", "#87CEFA", "#191970")
+colpals_cpgdensity=c("#006400", "#E69F00", "#56B4E9", "#00007F")
+names(colpals_cpgdensity) = levels(pfepichg38$Relation_to_Island)
+
 
 # library("IlluminaHumanMethylationEPICv2anno.20a1.hg38")
 # pfepichg38 = data.frame(getAnnotation(IlluminaHumanMethylationEPICv2anno.20a1.hg38))
@@ -203,6 +184,50 @@ if (!all(rownames(ewas) %in% rownames(pfepichg38))) {
   pfepichg38 = pfepichg38[rownames(ewas),]
   ewas$Relation_to_Island = pfepichg38[rownames(ewas),]$Relation_to_Island
 }
+```
+
+```{r echo=TRUE, results="verbatim"}
+sum(pfepichg38$Relation_to_Island=="Island") / nrow(pfepichg38)
+foo = do.call(rbind, strsplit(sort(names(table(pfepichg38$Islands_Name)))[-1], ":|-"))
+foo = data.frame(foo)
+foo$len = as.numeric(foo[,3]) - as.numeric(foo[,2])
+sum(foo$len) / nrow(foo)
+
+chrom_len = read.table("~/projects/datashare/genomes/Homo_sapiens/UCSC/hg38/hg38.chrom.sizes")
+sum(foo$len) / sum(chrom_len[1:25,2])
+
+```
+
+# Stat Desc
+
+```{r stat_desc, fig.width=9, fig.height=6}
+s = mreadRDS(study_filename)
+exp_grp = s$exp_grp
+
+d = density(apply(s$data, 1, mean), col="grey", lty=3)
+d_m = density(apply(s$data[,rownames(exp_grp)[exp_grp$gender=="M"]], 1, mean), bw=d$bw)
+d_f = density(apply(s$data[,rownames(exp_grp)[exp_grp$gender=="F"]], 1, mean), bw=d$bw)
+
+idx_Islan = rownames(pfepichg38)[pfepichg38$Relation_to_Island=="Island" ]
+idx_Shore = rownames(pfepichg38)[pfepichg38$Relation_to_Island=="Shore"  ]
+idx_Shelf = rownames(pfepichg38)[pfepichg38$Relation_to_Island=="Shelf"  ]
+idx_OpenS = rownames(pfepichg38)[pfepichg38$Relation_to_Island=="OpenSea"]
+
+d_Islan = density(apply(s$data[idx_Islan,], 1, mean), bw=d$bw)
+d_Shore = density(apply(s$data[idx_Shore,], 1, mean), bw=d$bw)
+d_Shelf = density(apply(s$data[idx_Shelf,], 1, mean), bw=d$bw)
+d_OpenS = density(apply(s$data[idx_OpenS,], 1, mean), bw=d$bw)
+
+
+exp_grp$qtage = cut(exp_grp$age, unique(quantile(exp_grp$age, 0:40/40)), include.lowest=TRUE)
+table(exp_grp$qtage, useNA="ifany")
+d_yng = density(apply(s$data[,rownames(exp_grp)[exp_grp$qtage==levels(exp_grp$qtage)[1]]], 1, mean), bw=d$bw)
+d_old = density(apply(s$data[,rownames(exp_grp)[exp_grp$qtage==rev(levels(exp_grp$qtage))[1]]], 1, mean), bw=d$bw)
+
+rm("s")
+```
+
+```{r child = '05_postprocstatdesc.Rmd', eval=TRUE}
 ```
 
 
@@ -393,87 +418,73 @@ fc = function (x = seq(0, 1, length.out = nrow(z)), y = seq(0, 1,
 
 
 
-## Figure
-
-```{r figure ewas}
-# stop("EFN")
-
-par(mar=c(5.1, 4.1, 4.1, 2.1))
-ewasfig = function()  {
-
-  layout(matrix(c(
-  1,1,2,2,
-  1,1,2,2,
-  3,4,5,6,
-  NULL), 3, byrow=TRUE), respect=TRUE)
-  # layout(matrix(c(
-  # 2,2,3,
-  # 2,2,4,
-  # 5,6,1,
-  # NULL), 3, byrow=TRUE), respect=TRUE)
+```{r child = '05_postprocewas.Rmd', eval=TRUE}
+```
 
 
-  # par(mar=c(2, 2.5, 3.1, 2.5))
-  # par(mar=c(5.1, 4.1, 4.1, 2.1))
-  x = ewas$beta
-  y = ewas$lpv
-  # d = density(y)
-  xlab = "age effect (meth. prop. per year)"
-  ylab = "-log10(pval)"
-  main = paste0("methylation~age (", nrow(ewas), " probes)")
-  col = as.numeric(ewas$pvbonf<0.01)+ 1
-  plot(x, y, xlab=xlab, ylab=ylab, main=main, col=adjustcolor(col, alpha.f=.2), pch=16)
-  # points(x, y, col=adjustcolor(col, alpha.f=.5), pch=".")
-  legend("topleft", pch=16, col=1:2, c(paste0(">= 1% (", sum(!ewas$pvbonf<0.01), " probes)"), paste0("< 1% (", sum(ewas$pvbonf<0.01), " probes)")), title="Bonferroni")
 
 
-  colpals=c("chartreuse4", "darkorange", "aquamarine3", "darkblue")
-  names(colpals) = levels(ewas$Relation_to_Island)
-  idx = rownames(ewas)[ewas$pvbonf<0.01]
-  xlab = "age effect (meth. prop. per year)"
-  ylab = "mean methylation proportion"
-  xlim = c(-0.003, 0.003)
-  ylim = 0:1
-  x = ewas[idx, ]$beta
-  y = ewas[idx, ]$mean_beta
-  # col = colpals[as.numeric(ewas[idx,]$Relation_to_Island)]
-  col = 1
-  main = paste0("Bonferroni 1% (", length(idx), " probes)")
-  plot(x, y, xlab=xlab, ylab=ylab, main=main, col=adjustcolor(col, alpha.f=0.02*10000/length(idx)), pch=16, xlim=xlim, ylim=ylim)
-  for (k in levels(ewas$Relation_to_Island)) {
-    # par(mar=c(2, 2.5, 3.1, 2.5))
-    idx = rownames(ewas)[ewas$pvbonf<0.01]
-      idx = intersect(idx, rownames(ewas)[ewas$Relation_to_Island%in% k])
-    col = colpals[as.numeric(ewas[idx,]$Relation_to_Island)]
-    x = ewas[idx, ]$beta
-    y = ewas[idx, ]$mean_beta
-    main=paste0(k, " (", length(idx), " probes)")
-    plot(x, y, xlab=xlab, ylab=ylab, main=main, col=adjustcolor(col, alpha.f=0.01*10000/length(idx)), pch=16, xlim=xlim, ylim=ylim)
-    # fc(z, main=main, plot.axes=FALSE, color.palette=function(n) hcl.colors(n,  palette=colpals[k], rev=TRUE))# , levels=fc$levels, zlim=fc$zlim)
-    # axis(1, at=c(-0.002, 0, 0.002), labels=c(-0.002, 0, 0.002))
-    # axis(2, at=c(0, .5, 1), labels=c(0, .5, 1))
+# missMethyl
 
-  }
-  # par(mar=c(5.1, 4.1, 4.1, 2.1))
-  # stop("EFN")
+
+## Figure 
+
+```{r missmethyl}
+options(scipen = 0)
+library(missMethyl)
+# params
+array.type = "EPIC"
+plot.bias = FALSE
+prior.prob = TRUE
+anno = NULL
+equiv.cpg = TRUE
+fract.counts = TRUE
+sig.genes = FALSE
+genomic.features = "ALL" #, "TSS200", "TSS1500", "Body",         "1stExon", "3'UTR", "5'UTR", "ExonBnd"), sig.genes = FALSE)
+# collection
+# kegg = missMethyl:::.getKEGG()
+go  = missMethyl:::.getGO()
+head(go$idTable)
+tmp_idTable = go$idTable
+dim(tmp_idTable)
+tmp_idTable = tmp_idTable[tmp_idTable$ONTOLOGY=="BP",]
+dim(tmp_idTable)
+collection = go$idList[tmp_idTable$GOID]
+# reference and target
+sig.cpg = rownames(ewas)[ewas$pvbonf<0.01]
+all.cpg = rownames(ewas)
+# Go!
+if (!exists("mmissmethyl_gsameth")) {mmissmethyl_gsameth=memoise::memoise(missMethyl::gsameth)}
+result <- mmissmethyl_gsameth(sig.cpg = sig.cpg, all.cpg = all.cpg, 
+    collection = collection, array.type = array.type, 
+    plot.bias = plot.bias, prior.prob = prior.prob, anno = anno, 
+    equiv.cpg = equiv.cpg, fract.counts = fract.counts, 
+    genomic.features = genomic.features, sig.genes = sig.genes)
+result <- merge(tmp_idTable, result, by.x = "GOID", 
+    by.y = "row.names")
+rownames(result) <- result$PathwayID
+head(result[order(result$FDR),], 30)
+
+missmethylfig = function (result) {
+  layout(1, respect=TRUE)
+  result = result[result$FDR<0.05,]
+  tag_blacklist = c("cell", "of", "in", "to", "by")
+  tab = sort(table(unlist(strsplit(result$TERM," "))))
+  tab = tab[!names(tab) %in% tag_blacklist]
+  wordcloud::wordcloud(names(tab), tab, main=k, min.freq=3)
 }
-ewasfig()
-# pdf("ewasfig.pdf", width=8, height=6)
-png("ewasfig.png", width=1600, height=1200, res=150)
-ewasfig()
+
+
+missmethylfig(result)
+pdf(paste0("fig_", gse, "_missmethyl.pdf"), width=6, height=6)
+# png("missmethylfig.png", width=1600, height=1200, res=150)
+missmethylfig(result)
 dev.off()
 
 ```
 
 
 
-
-```{r table ewas}
-table_ewas_filename = paste0("table_ewas_", gse, ".xlsx")
-WriteXLS::WriteXLS(ewas[idx,], table_ewas_filename)
-```
-
-Table of ewas results is exported `r table_ewas_filename` for 1% Bonferroni probes.
 
 
 
@@ -545,9 +556,11 @@ plot(dendr)
 ```{r, eval=!exists("NOPCA")}
 plot_gtexpcafig = function() {
   layout(matrix(c(
-  2,2,1,
-  2,2,3,
-  NULL), 2, byrow=TRUE), respect=TRUE)
+  2,2,2,2,1,1,
+  2,2,2,2,1,1,
+  2,2,2,2,3,3,
+  2,2,2,2,3,3,
+  NULL), 4, byrow=TRUE), respect=TRUE)
 
   barplot(p[1:pc_max], main="% of expl. var.", las=2, )
   i=1
@@ -562,14 +575,13 @@ plot_gtexpcafig = function() {
 }
 
 plot_gtexpcafig()
-# pdf("ewasfig.pdf", width=8, height=6)
-png("gtexpcafig.png", width=1200, height=800, res=150)
+w = 8
+pdf("fig_gtexpca.pdf", width=w, height=2/3*w)
+# png("fig_gtexpca.png", width=1200, height=800, res=150)
 plot_gtexpcafig()
 dev.off()
 
 ```
-
-
 
 
 
@@ -667,7 +679,7 @@ db = db[db$Experiment.target %in% c(
   "H3K27me3-human" , # Repression            | Facultative heterochromatin  (PRC2)  |
   "H3K4me3-human"  , # Activation            | Active or poised promoters           |
   "H3K4me1-human"  , # Activation (potential)| Primed/active enhancers              |
-  # "H3K27ac-human"  , # Activation            | Active enhancers, promoters          |
+  "H3K27ac-human"  , # Activation            | Active enhancers, promoters          |
   # "H3K9ac-human"   , # Activation            | Active promoters, enhancers          |
   # "H3K36me3-human" , # Activation            | Coding regions                       |
   # "H3K9me3-human"  , # Repression            | Constitutive heterochromatin (HP1 )  |
@@ -676,21 +688,21 @@ db = db[db$Experiment.target %in% c(
 
 blacklist = c(
   # "ENCFF331IOZ", #     H3K27ac-human                lung
-  # "ENCFF028TDS", #     H3K27ac-human                lung
+  "ENCFF028TDS", #     H3K27ac-human                lung
   # "ENCFF386ZSF", #    H3K27me3-human                lung
-  # "ENCFF238XGJ", #    H3K27me3-human                lung
+  "ENCFF238XGJ", #    H3K27me3-human                lung
   "ENCFF440HPT", #    H3K27me3-human                lung
   # "ENCFF507BZS", #    H3K36me3-human                lung
   # "ENCFF170SDA", #    H3K36me3-human                lung
   # "ENCFF821WNV", #    H3K36me3-human                lung
   # "ENCFF655YLP", #    H3K36me3-human                lung
-  # "ENCFF036EBD", #     H3K4me1-human                lung
+  "ENCFF036EBD", #     H3K4me1-human                lung
   # "ENCFF204IAN", #     H3K4me1-human                lung
-  # "ENCFF262ZVW", #     H3K4me1-human                lung
+  "ENCFF262ZVW", #     H3K4me1-human                lung
   "ENCFF896NVM", #     H3K4me1-human                lung
   "ENCFF926QND", #     H3K4me1-human                lung
   "ENCFF062ZIV", #     H3K4me3-human                lung
-  # "ENCFF485XPN", #     H3K4me3-human                lung
+  "ENCFF485XPN", #     H3K4me3-human                lung
   # "ENCFF999LEM", #     H3K4me3-human                lung
   "ENCFF434JKJ", #     H3K4me3-human                lung
   # "ENCFF645EXF", #      H3K9ac-human                lung
@@ -844,10 +856,10 @@ bed_files = c(
 
 bwfiles = db$file
 samplesLabel = gsub("-human", "", paste(paste0(db$Experiment.target, "_", db$Biosample.term.name), collapse=" "))
-nbclust = 7
+nbclust = 5
 prefix = paste0("allclust", nbclust)
 prefix = paste0("allclust_", gse)
-mf = mget_mf_clust(bwfiles, bed_files, samplesLabel, prefix=prefix, othargs=paste0("--kmeans ", nbclust, " --clusterUsingSamples 1 2 3 4 5 6 7"))
+mf = mget_mf_clust(bwfiles, bed_files, samplesLabel, prefix=prefix, othargs=paste0("--kmeans ", nbclust)) #, " --clusterUsingSamples 1 2 3 4 5 6 7"))
 
 
 # data = as.matrix(mf[,-(1:6)])
@@ -1000,6 +1012,12 @@ res = cbind(res, bar)
 
 
 
+# baz = sapply(1:nrow(res), function(i) {
+# 		sum(!res[i,]$probes[[1]] %in% probes_per_bed_files$bonferroni01)
+# })
+
+# table_ewas = table_ewas[!is.na(table_ewas[,1]),]
+
 
 
 
@@ -1091,7 +1109,7 @@ predimethstatsfig = function() {
 
 layout(1, respect=TRUE)
 predimethstatsfig()
-pdf("predimethstatsfig.pdf", width=6, height=6)
+pdf(paste0("fig_", gse, "_predimethstats.pdf"), width=6, height=6)
 predimethstatsfig()
 dev.off()
 ```

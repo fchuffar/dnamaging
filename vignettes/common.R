@@ -932,3 +932,20 @@ gsea_plot = function(grp_filename, rnk_filename, out_dir, cmd="/summer/epistorag
   par(mar=c(5.1, 4.1, 4.1, 2.1))  
   return(info_gsea)
 }
+
+
+put_a_letter = function(letter, cex=1.8, ...) {
+  par(xpd = NA)
+  di <- dev.size("in")
+  x <- grconvertX(c(0, di[1]), from="in", to="user")
+  y <- grconvertY(c(0, di[2]), from="in", to="user")  
+  fig <- par("fig")
+  x <- x[1] + (x[2] - x[1]) * fig[1:2]
+  y <- y[1] + (y[2] - y[1]) * fig[3:4]
+  txt <- substitute(paste(bold(letter)))
+  x <- x[1] + strwidth(txt, cex=cex) / 2
+  y <- y[2] - strheight(txt, cex=cex) / 2
+  text(x, y, txt, cex=cex, ...)
+  par(xpd = FALSE)
+
+}
