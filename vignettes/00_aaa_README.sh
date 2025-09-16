@@ -41,6 +41,7 @@ conda activate genericstudy_env
 # devtools::install_github("fchuffar/epimedtools")
 # devtools::install_github("achilleasNP/IlluminaHumanMethylationEPICmanifest") 
 # devtools::install_github("achilleasNP/IlluminaHumanMethylationEPICanno.ilm10b5.hg38")
+# BiocManager::install("IlluminaHumanMethylationEPICv2anno.20a1.hg38")
 # gse='GSE41037'; rmarkdown::render('02_genericstudy.Rmd', output_file=paste0('01_build_study_', gse, '.html'));
 # gse='GSE119617'; rmarkdown::render('02_genericstudy.Rmd', output_file=paste0('01_build_study_', gse, '.html'));
 # gse='GSE40279'; rmarkdown::render('02_genericstudy.Rmd', output_file=paste0('01_build_study_', gse, '.html'));
