@@ -154,7 +154,7 @@ RnBeads::rnb.options(
   # import.table.separator = ";",
   # import.bed.style     = "bismarkCov",
   # assembly             = ifelse(pf_idx=="GPL33022", "hg38", "hg19"),
-  assembly             = "hg19",
+  assembly             = "hg38",
   # import.idat.platform = ifelse(pf_idx=="GPL33022", "probesEPICv2"),
   # region.types=c("promoters", "genes", "tiling", "cpgislands", "sites"),
   region.types=c("sites"),
