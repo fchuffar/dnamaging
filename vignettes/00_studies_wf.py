@@ -187,7 +187,6 @@ rule r02_genericstudy:
       # idatstudy_rds = "{prefix}/datashare/{gse}/study_idat_{gse}.rds",
     output: 
       study_rds =   "{prefix}/datashare/{gse}/study_{gse}.rds",
-      df_rds =      "{prefix}/datashare/{gse}/df_{gse}.rds"    ,           
       html =        "{prefix}/02_genericstudy_{gse}.html"      ,           
       info       =  "{prefix}/info_build_{gse}.rds"   ,
     threads: 32
