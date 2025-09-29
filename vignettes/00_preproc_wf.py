@@ -233,7 +233,6 @@ rule R01_genericstudy:
       is_custom = need_previously_study
     output: 
       study_rds =   "{prefix}/datashare/{gse}/study_{gse}.rds",
-      df_rds =      "{prefix}/datashare/{gse}/df_{gse}.rds"    ,           
       html =        "{prefix}/02_genericstudy_{gse}.html"      ,           
       info       =  "{prefix}/info_build_{gse}.rds"   ,
     threads: 32
