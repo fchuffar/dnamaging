@@ -1,0 +1,85 @@
+---
+title: "Post processing `PrediMeth` statistics"
+author: "Florent Chuffart"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+
+## Figure
+
+```{r plot, fig.width=12, fig.height=9}
+	
+################# First Plot (RMSE/nb_probes)
+
+predimethstatsfig = function() {
+  layout(matrix(1:2, 1), respect=TRUE)
+  par(mar=c(0, 0, 0, 0))
+  img = png::readPNG(paste0("wf.png"))
+  plot(NA, NA, xlim=0:1, ylim=0:1, axes=FALSE, main=paste0(""), xlab="", ylab="")
+  addImg(img, x=.5,y=.5,width=1)
+  par(mar=c(5.1, 4.1, 4.1, 2.1))  
+  put_a_letter("a")
+
+
+  s = mreadRDS(study_filename)
+  null_rmse = sd(s$exp_grp$age)
+
+  x = c(0:runmax)
+  r2_bs = c()
+  rmse_bs = c()
+  nb_pb_bs = c()
+  for (run in 0:runmax){
+    tmp_info_model_bs = mreadRDS(paste0("info_model_r",run,"_",gse,"_modelcalllm_meth~age_ewas", newas, "_nn", neighb, ".rds"))
+    tmp_nb_pb_bs = tmp_info_model_bs$gender.bootstrap.nb_probes_mod
+    tmp_rmse_bs = tmp_info_model_bs$gender.bootstrap.RMSE
+    tmp_r2_bs = tmp_info_model_bs$gender.bootstrap.R2
+    rmse_bs = c(rmse_bs,tmp_rmse_bs)
+    r2_bs = c(r2_bs,tmp_r2_bs)	
+    nb_pb_bs = c(nb_pb_bs, tmp_nb_pb_bs)
+  }
+	## add extra space to right margin of plot within frame
+	par(mar=c(5.1, 4.1, 4.1, 5.1))
+	## Plot first set of data and draw its axis
+	plot(x, rmse_bs, xlab="iterations", ylab="RMSE", 
+	     type="b", ylim=c(0,max(null_rmse, rmse_bs)), lty=1, col="black", main=paste0("PrediMeth model trained on ", gse))
+	# axis(2, ylim=c(0,null_rmse+1),col="black",las=1)  ## las=1 makes horizontal labels
+  abline(h=null_rmse, col = "black", lty=2)
+	# abline(v=10, col="black",lty = 2)
+
+	## Allow a second plot on the same graph
+	par(new=TRUE)
+
+	## Plot the second plot and put axis scale on right
+	cum_nb = cumsum(nb_pb_bs)
+
+  plot(x, cum_nb,  xlab="", ylab="", 
+	    axes=FALSE, type="b", col="red", lty=1, ylim=c(0, max(cum_nb)))
+	## a little farther out (line=4) to make room for labels
+	mtext("number of cumulative probes", side=4, col="red", line=4) 
+	axis(4, ylim=c(0,max(cum_nb)+200,10), col="red",col.axis="red",las=1, lwd=0, lwd.ticks=1)
+
+	legend("bottomright",
+	  legend=c("null model RMSE", "RMSE at each iteration", "cumulative number of probes"), 
+		col=c("black", "black", "red"), lty = c(2, 1, 1), pch= c(1,1,NA), cex=1)
+  put_a_letter("b")
+	par(mar=c(5.1, 4.1, 4.1, 2.1))
+}
+
+predimethstatsfig()
+pdf(paste0("fig_", gse, "_predimethstats.pdf"), width=12, height=6)
+predimethstatsfig()
+dev.off()
+```
+
+
+
+
+
+
+
