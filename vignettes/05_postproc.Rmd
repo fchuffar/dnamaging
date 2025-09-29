@@ -24,7 +24,7 @@ if (!exists("model_formula"))   model_formula = "meth~age"  ;
 if (!exists("model_func_name")) model_func_name = "modelcalllm"         ;
 newas = "1000000"
 neighb = 1000
-runmax = 99
+runmax = 45
 # if (file.exists(paste0(model_func_name, ".R"))) {
 #   source(paste0(model_func_name, ".R"))
 # }

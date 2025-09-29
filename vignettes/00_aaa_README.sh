@@ -33,22 +33,23 @@ snakemake -k -s 00_custom_build_idat_studies.py --jobs 50 --cluster "oarsub --pr
 
 
 
-ln -s 00_studies_wf.py 00_custom_studies_wf.py
-source ~/conda_config.sh
-# conda create -n genericstudy_env
-conda activate genericstudy_env
-# mamba install -c anaconda -c bioconda -c conda-forge -c r r-base libopenblas bioconductor-geoquery bioconductor-affy bioconductor-biobase r-seqinr r-rcpparmadillo r-devtools r-fastmap r-matrix r-kernsmooth r-catools r-gtools r-nortest r-survival r-beanplot r-gplots r-sass jquery r-nlme r-bslib r-sourcetools r-fontawesome r-xtable r-httpuv r-dbi r-shiny bioconductor-illuminahumanmethylation450kanno.ilmn12.hg19 bioconductor-illuminahumanmethylationepicanno.ilm10b4.hg19 bioconductor-illuminahumanmethylation27kanno.ilmn12.hg19 bioconductor-epidish r-openxlsx snakemake=7.32.4 r-writexls
-# devtools::install_github("fchuffar/epimedtools")
-# devtools::install_github("achilleasNP/IlluminaHumanMethylationEPICmanifest") 
-# devtools::install_github("achilleasNP/IlluminaHumanMethylationEPICanno.ilm10b5.hg38")
-# BiocManager::install("IlluminaHumanMethylationEPICv2anno.20a1.hg38")
-# gse='GSE41037'; rmarkdown::render('02_genericstudy.Rmd', output_file=paste0('01_build_study_', gse, '.html'));
-# gse='GSE119617'; rmarkdown::render('02_genericstudy.Rmd', output_file=paste0('01_build_study_', gse, '.html'));
-# gse='GSE40279'; rmarkdown::render('02_genericstudy.Rmd', output_file=paste0('01_build_study_', gse, '.html'));
-# gse='GSE42861'; rmarkdown::render('02_genericstudy.Rmd', output_file=paste0('01_build_study_', gse, '.html'));
-# dim(s$data) # problem with GSE42861 : only 374449 probes. not the case with R3.6.1 
-snakemake -k --cores 1 -s 00_custom_studies_wf.py -pn
-snakemake -k -s 00_custom_studies_wf.py  --jobs 50 --cluster "oarsub --project epimed -l /nodes=1,walltime=10:00:00"  --latency-wait 60 -pn
+### DEPRECATED, direct jump to next chunk...
+# ln -s 00_studies_wf.py 00_custom_studies_wf.py
+# source ~/conda_config.sh
+# # conda create -n genericstudy_env
+# conda activate genericstudy_env
+# # mamba install -c anaconda -c bioconda -c conda-forge -c r r-base libopenblas bioconductor-geoquery bioconductor-affy bioconductor-biobase r-seqinr r-rcpparmadillo r-devtools r-fastmap r-matrix r-kernsmooth r-catools r-gtools r-nortest r-survival r-beanplot r-gplots r-sass jquery r-nlme r-bslib r-sourcetools r-fontawesome r-xtable r-httpuv r-dbi r-shiny bioconductor-illuminahumanmethylation450kanno.ilmn12.hg19 bioconductor-illuminahumanmethylationepicanno.ilm10b4.hg19 bioconductor-illuminahumanmethylation27kanno.ilmn12.hg19 bioconductor-epidish r-openxlsx snakemake=7.32.4 r-writexls
+# # devtools::install_github("fchuffar/epimedtools")
+# # devtools::install_github("achilleasNP/IlluminaHumanMethylationEPICmanifest") 
+# # devtools::install_github("achilleasNP/IlluminaHumanMethylationEPICanno.ilm10b5.hg38")
+# # BiocManager::install("IlluminaHumanMethylationEPICv2anno.20a1.hg38")
+# # gse='GSE41037'; rmarkdown::render('02_genericstudy.Rmd', output_file=paste0('01_build_study_', gse, '.html'));
+# # gse='GSE119617'; rmarkdown::render('02_genericstudy.Rmd', output_file=paste0('01_build_study_', gse, '.html'));
+# # gse='GSE40279'; rmarkdown::render('02_genericstudy.Rmd', output_file=paste0('01_build_study_', gse, '.html'));
+# # gse='GSE42861'; rmarkdown::render('02_genericstudy.Rmd', output_file=paste0('01_build_study_', gse, '.html'));
+# # dim(s$data) # problem with GSE42861 : only 374449 probes. not the case with R3.6.1 
+# snakemake -k --cores 1 -s 00_custom_studies_wf.py -pn
+# snakemake -k -s 00_custom_studies_wf.py  --jobs 50 --cluster "oarsub --project epimed -l /nodes=1,walltime=10:00:00"  --latency-wait 60 -pn
 
 
 ln -s 00_preproc_wf.py 00_custom_preproc_wf.py
@@ -102,6 +103,19 @@ conda activate missmethyl_env
 # devtools::install_github("fchuffar/dnamaging")
 # BiocManager::install("missMethyl")
 # devtools::install_github("achilleasNP/IlluminaHumanMethylationEPICanno.ilm10b5.hg38")
+
+
+# rsync -auvP cargo:~/projects/dnamaging/vignettes/datashare/CustGSE147740rr/study_preproc_CustGSE147740rr_modelcalllm_meth~age_ewas1000000_nn1000.rds ~/projects/dnamaging/vignettes/datashare/CustGSE147740rr/ --exclude="df*"
+# rsync -auvP cargo:~/projects/dnamaging/vignettes/ewas_CustGSE147740rr_modelcalllm_meth~age.rds ~/projects/dnamaging/vignettes/ --exclude="df*"
+# rsync -auvP cargo:~/projects/dnamaging/vignettes/info_model_r*_CustGSE147740rr_modelcalllm_meth~age_ewas1000000_nn1000.rds ~/projects/dnamaging/vignettes/ --exclude="df*"
+# rsync -auvP cargo:~/projects/dnamaging/vignettes/models_r*_CustGSE147740rr_modelcalllm_meth~age_ewas1000000_nn1000.rds ~/projects/dnamaging/vignettes/ --exclude="df*"
+
+# NOPCA=TRUE; gse = "CustGSE147740rr" ;  print(gse) ;   rmarkdown::render("05_postproc.Rmd"      , output_file=paste0("05_postproc_"      , gse, ".html"))
+
+
+
+
+
 
 
 rmarkdown::render("05_gtex_pca_meth.Rmd")

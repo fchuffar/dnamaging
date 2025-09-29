@@ -183,16 +183,12 @@ abline(a=0,b=1, lty=2, col="grey")
 ```
 
 ```{r build_bed}
-lpval = ewas[,"lpv"]
-
-pval = 10^-lpval
-
 # build and write bed file
 bed = pf[rownames(ewas),1:2] # Warning, here pf is global, it must be arg and indexed!!
 head(bed)
 bed[,3] = bed[,2]+1
-bed$probes = names(pval)
-bed$pval = pval
+bed$probes = rownames(ewas)
+bed$pval = 10^ewas[,"lpv"]
 bed$strand = "+"
 colnames(bed) = c("#chrom", "start", "end", "probes", "pval", "strand")
 head(bed)

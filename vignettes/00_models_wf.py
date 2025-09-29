@@ -18,9 +18,12 @@ def c(*args): return list(args)
 
 
 
-exec(open("gses_models.R").read())
+# exec(open("gses_models.R").read())
 
-gses_models
+exec(open("gses_studies.R").read())
+
+
+gses_models = gses
 
 prefix = os.getcwd()
 neighb = 1000
