@@ -19,70 +19,6 @@ source("common.R")
 ## Figure
 
 ```{r figure ewas,fig.width=10, fig.height=10*2/3}
-custom_hm = function(x, y, xlim, ylim, xlab, ylab, main, col="darkgrey", ncol=100, nbin=50, LAYOUT=TRUE, LOGCOUNT=FALSE, wrapper_func) {
-  z = MASS::kde2d(x, y, n=nbin, lims=c(xlim, ylim)) # Just for fun??
-  x[x<min(xlim)] = min(xlim)
-  x[x>max(xlim)] = max(xlim)
-  y[y<min(ylim)] = min(ylim)
-  y[y>max(ylim)] = max(ylim)
-  x_breaks = seq(from=min(xlim), to=max(xlim), length=nbin+1)
-  y_breaks = seq(from=min(xlim), to=max(ylim), length=nbin+1)
-  x_bins <- cut(x, breaks=x_breaks, include.lowest=TRUE)
-  y_bins <- cut(y, breaks=y_breaks, include.lowest=TRUE)
-  table_2d <- table(x_bins, y_bins)
-  count_matrix <- as.matrix(table_2d)
-  if (LOGCOUNT) {
-    count_matrix = log(count_matrix+1)
-  }
-  z$z = count_matrix # Not really!!
-
-  # col_drk = adjustcolor(col, red.f = 0.8, green.f = 0.8, blue.f = 0.8)
-  col_drk = col
-  col_gradient = colorRampPalette(c("white", col_drk))(ncol)[-1]
-  if (LAYOUT) {
-    layout(matrix(c(
-      2,2,2,2,3,
-      4,4,4,4,1,
-      4,4,4,4,1,
-      4,4,4,4,1,
-      4,4,4,4,1,
-    NULL), 5, byrow=TRUE), respect=TRUE)
-  }
-
-  par(mar=c(5.1, 4.1, 0, 0))
-  graphics::image(z, xlab=xlab, ylab=ylab, useRaster=TRUE, col=col_gradient, frame.plot=FALSE)
-  # axis(1, at=c(0, 0.5, 1), labels=sort(c(0, xlim)))
-  if (!missing(wrapper_func)) {
-      wrapper_func()
-  }
-
-  par(mar=c(5.1, 0, 0, .1))
-  par(xpd = NA)
-  plot(apply(z$z, 2, sum),z$y, type="l", frame.plot=FALSE, yaxs="i", xaxt="n", yaxt="n", xlab="", ylab="", col=col, lwd=3)
-  par(xpd = FALSE)
-
-  par(mar=c(0, 4.1, 4.1, 0))
-  par(xpd = NA)
-  plot(z$x,apply(z$z, 1, sum), type="l", frame.plot=FALSE, xaxs="i", xaxt="n", yaxt="n", xlab="", ylab="", main=main, col=col, lwd=3) 
-  par(xpd = FALSE)
-
-  par(mar=c(2.1, 0.5, 2.1, 2.1))
-  # plot(density(z$z), xlab="", ylab="", main="", yaxt="n", frame.plot=FALSE)
-  # graphics::image(z$z, xlab=xlab, ylab=ylab, useRaster=TRUE, col=col, frame.plot=FALSE)
-  graphics::image(matrix(1:ncol), col=col_gradient, useRaster=TRUE, frame.plot=FALSE, yaxt="n", xaxt="n")
-  at = seq(from=-.5/ncol, to=1+(.5/ncol), length.out=5)
-  labels = seq(from=min(z$z), to=max(z$z), length.out=5)
-  if (LOGCOUNT) {
-    labels = exp(labels)-1
-  }
-  labels = signif(round(labels),3)
-  # labels = c(, round(mean(range(z$z))), ceiling(max(z$z)))
-  axis(1, at=at, labels=labels, las=2, cex.axis=.8)
-
-  par(mar=c(5.1, 4.1, 4.1, 2.1))
-}
-# stop("EFN")
-
 ewasfig = function()  {
   m0 = matrix(c(
       2,2,2,2,3,
@@ -131,8 +67,9 @@ ewasfig = function()  {
   # legend("topleft", pch=16, col=1:2, c(paste0(">= 1% (", sum(!ewas$pvbonf<0.01), " probes)"), paste0("< 1% (", sum(ewas$pvbonf<0.01), " probes)")), title="Bonferroni")
   xlim = c(-0.005, 0.005)
   ylim = c(0, 80)
-  custom_hm(x, y, xlim, ylim, xlab, ylab, main, col=1, LAYOUT=FALSE, LOGCOUNT=TRUE, wrapper_func=function(){abline(h=min(ewas[ewas$pvbonf<0.01, ]$lpv), col=2)})
-  
+  tmp_i = 1
+  custom_hm(x, y, xlim, ylim, xlab, ylab, main, col=1, LAYOUT=FALSE, LOGCOUNT=TRUE, wrapper_func=function(){abline(h=min(ewas[ewas$pvbonf<0.01, ]$lpv), col=2)}, letter=letters[tmp_i])
+  tmp_i = tmp_i + 1
 
   idx = rownames(ewas)[ewas$pvbonf<0.01]
   xlab = "age effect (meth. prop. per year)"
@@ -143,8 +80,8 @@ ewasfig = function()  {
   y = ewas[idx, ]$mean_beta
   col = "black"
   main = paste0("Bonferroni 1% (", length(idx), " probes)")
-
-  custom_hm(x, y, xlim, ylim, xlab, ylab, main, col, LAYOUT=FALSE)
+  custom_hm(x, y, xlim, ylim, xlab, ylab, main, col, LAYOUT=FALSE, letter=letters[tmp_i])
+  tmp_i = tmp_i + 1
 
   # plot(x, y, xlab=xlab, ylab=ylab, main=main, col=adjustcolor(col, alpha.f=0.02*10000/length(idx)), pch=16, xlim=xlim, ylim=ylim)
   for (k in levels(ewas$Relation_to_Island)) {
@@ -157,8 +94,8 @@ ewasfig = function()  {
     y = ewas[idx, ]$mean_beta
     main=paste0(k, " (", length(idx), " probes)")
     # plot(x, y, xlab=xlab, ylab=ylab, main=main, col=adjustcolor(col, alpha.f=0.01*10000/length(idx)), pch=16, xlim=xlim, ylim=ylim)
-    custom_hm(x, y, xlim, ylim, xlab, ylab, main, col, LAYOUT=FALSE)
-
+    custom_hm(x, y, xlim, ylim, xlab, ylab, main, col, LAYOUT=FALSE, letter=letters[tmp_i])
+    tmp_i = tmp_i + 1
 
   }
   # par(mar=c(5.1, 4.1, 4.1, 2.1))
@@ -178,3 +115,117 @@ dev.off()
 
 ```
 
+```{r figure sup ewas,fig.width=10, fig.height=10*2/3}
+ewasfigsup = function()  {
+  # m0 = matrix(c(
+  #     2,2,2,2,3,
+  #     4,4,4,4,1,
+  #     4,4,4,4,1,
+  #     4,4,4,4,1,
+  #     4,4,4,4,1,
+  # NULL), 5, byrow=TRUE)
+  # m0 = matrix(c(
+  #     3,3,3,3,4,
+  #     1,1,1,1,2,
+  #     1,1,1,1,2,
+  #     1,1,1,1,2,
+  #     1,1,1,1,2,
+  # NULL), 5, byrow=TRUE)
+  # m0 = rbind(m0, m0 + max(m0))
+  # m = cbind(m0, m0+max(m0))
+  # m = cbind(m, m0+max(m))
+  # # m2 = m0
+  # # m2 = cbind(m2, m0+max(m2))
+  # # # m2 = cbind(m2, m0+max(m2))
+  # # # m2 = cbind(m2, m0+max(m2))
+  # # m = rbind(m, m2 + max(m))
+
+  # layout(m, respect=TRUE)
+
+  idx = rownames(ewas)[ewas$pvbonf<0.01 & ewas$beta<0]
+  idx = intersect(idx, rownames(ewas)[ewas$Relation_to_Island%in% "Island"])
+  # idx = intersect(idx, rownames(ewas)[ewas$Relation_to_Island%in% c("Shore","Island")])
+  xlab = "age effect (meth. prop. per year)"
+  ylab = "mean methylation proportion"
+  xlim = c(-0.003, 0.003)
+  ylim = 0:1
+  x = ewas[idx, ]$beta
+  y = ewas[idx, ]$mean_beta
+  col = "black"
+  main = paste0("Bonferroni 1%, beta<0, Island, (", length(idx), " probes)")
+  custom_hm(x, y, xlim, ylim, xlab, ylab, main, col)
+}
+ewasfigsup()
+# w = 10
+# pdf(paste0("figsup_", gse, "_ewas.pdf"), width=w, height=w*2/3)
+# ewasfigsup()
+# dev.off()
+
+
+```
+
+```{r eval=FALSE}
+options(scipen = 0)
+library(missMethyl)
+# params
+array.type = "EPIC"
+plot.bias = FALSE
+prior.prob = TRUE
+anno = NULL
+equiv.cpg = TRUE
+fract.counts = TRUE
+sig.genes = FALSE
+# collection
+# kegg = missMethyl:::.getKEGG()
+go  = missMethyl:::.getGO()
+head(go$idTable)
+tmp_idTable = go$idTable
+dim(tmp_idTable)
+tmp_idTable = tmp_idTable[tmp_idTable$ONTOLOGY=="BP",]
+dim(tmp_idTable)
+collection = go$idList[tmp_idTable$GOID]
+# reference and target
+tmp_idx = rownames(ewas)[ewas$pvbonf<0.01 & ewas$beta<0]
+tmp_idx = rownames(ewas)[ewas$pvbonf<0.01 & ewas$beta<0 & ewas$mean_beta>.5]
+# tmp_idx = intersect(tmp_idx, rownames(ewas)[ewas$Relation_to_Island%in% "Island"])
+tmp_idx = intersect(tmp_idx, rownames(ewas)[ewas$Relation_to_Island%in% c("Shore","Island")])
+sig.cpg = tmp_idx
+tmp_idx = rownames(ewas)
+# tmp_idx = intersect(tmp_idx, rownames(ewas)[ewas$Relation_to_Island%in% "Island"])
+tmp_idx = intersect(tmp_idx, rownames(ewas)[ewas$Relation_to_Island%in% c("Shore","Island")])
+all.cpg = tmp_idx
+genomic.features = "ALL" #, "TSS200", "TSS1500", "Body",         "1stExon", "3'UTR", "5'UTR", "ExonBnd"), sig.genes = FALSE)
+genomic.features = "TSS200"
+genomic.features = c("TSS200" , "TSS1500","5'UTR")
+# Go!
+if (!exists("mmissmethyl_gsameth")) {mmissmethyl_gsameth=memoise::memoise(missMethyl::gsameth)}
+result <- mmissmethyl_gsameth(sig.cpg = sig.cpg, all.cpg = all.cpg, 
+    collection = collection, array.type = array.type, 
+    plot.bias = plot.bias, prior.prob = prior.prob, anno = anno, 
+    equiv.cpg = equiv.cpg, fract.counts = fract.counts, 
+    genomic.features = genomic.features, sig.genes = sig.genes)
+result <- merge(tmp_idTable, result, by.x = "GOID", 
+    by.y = "row.names")
+rownames(result) <- result$PathwayID
+result$TERM = substr(result$TERM, 1, 45)
+head(result[order(result$P.DE),-(1:2)], 30)
+
+missmethylfig = function (result) {
+  layout(1, respect=TRUE)
+  result = result[result$FDR<0.05,]
+  tag_blacklist = c("cell", "of", "in", "to", "by")
+  tab = sort(table(unlist(strsplit(result$TERM," "))))
+  tab = tab[!names(tab) %in% tag_blacklist]
+  wordcloud::wordcloud(names(tab), tab, main=k, min.freq=3)
+}
+
+
+missmethylfig(result)
+pdf(paste0("fig_", gse, "_missmethyl.pdf"), width=6, height=6)
+# png("missmethylfig.png", width=1600, height=1200, res=150)
+missmethylfig(result)
+dev.off()
+
+
+
+```

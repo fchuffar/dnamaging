@@ -90,7 +90,7 @@ res = do.call(rbind, res)
 print(dim(res))
 res
 
-# export p[robes as bed file
+# export probes as bed file
 lastrun = runmax
 print(gse)
 sub_res = res[res$gse==gse & res$run<=lastrun & res$newas==newas, ]
@@ -120,15 +120,8 @@ head(bed)
 bed[,1] = as.character(bed[,1])
 bed = bed[order(bed[,1], bed[,2]),]
 bed_filename = paste0("predimeth_probes_", gse, "_", lastrun, ".bed")
-write.table(bed, file=bed_filename , sep="\t", quote=FALSE, row.names=FALSE, col.names=TRUE)
-
-# ewas = mreadRDS(paste0("ewas_", gse, "_modelcalllm_meth~age.rds"))
-# idx = rownames(bed)[ewas[rownames(bed),"beta"]>0]
-# bed_filename = paste0("predimeth_probes_up_", gse, "_", lastrun, ".bed")
-# write.table(bed[idx,], file=bed_filename , sep="\t", quote=FALSE, row.names=FALSE, col.names=TRUE)
-# idx = rownames(bed)[ewas[rownames(bed),"beta"]<0]
-# bed_filename = paste0("predimeth_probes_dw_", gse, "_", lastrun, ".bed")
-# write.table(bed, file=bed_filename , sep="\t", quote=FALSE, row.names=FALSE, col.names=TRUE)
+bed_predimeth_hg19 = bed
+write.table(bed_predimeth_hg19, file=bed_filename , sep="\t", quote=FALSE, row.names=FALSE, col.names=TRUE)
 ```
 
 # hg38
@@ -198,6 +191,57 @@ sum(foo$len) / sum(chrom_len[1:25,2])
 
 ```
 
+
+
+
+
+# Inject episignature in ewas df
+
+```{r}
+# stop("EFN")
+litterature_models = readRDS("litterature_models.rds")
+probes_bonf01 = rownames(ewas)[ewas$pvbonf<0.01]
+probes_hannum = rownames(litterature_models$hannum_model_mc$coeff)
+probes_horvath = rownames(litterature_models$horvath_model_mc$coeff)
+probes_phenoage = read.table("aging-v10i4-101414-supplementary-material-SD2.csv", sep=",", header=TRUE)$CpG[-1]
+probes_predimeth = bed_predimeth_hg19[,4]
+predimeth_it = bed_predimeth_hg19[,5]
+names(predimeth_it) = rownames(bed_predimeth_hg19)
+
+
+ewas$gene = pfepichg38[rownames(ewas),]$UCSC_RefGene_Name
+ewas$group = pfepichg38[rownames(ewas),]$UCSC_RefGene_Group
+
+tmp_names = colnames(ewas)
+
+# 6 first colums as bed
+ewas$chr_hg38 = pfepichg38[rownames(ewas),]$CHR_hg38
+ewas$start_hg38 = pfepichg38[rownames(ewas),]$Start_hg38
+ewas$end_hg38 = pfepichg38[rownames(ewas),]$End_hg38
+ewas$name = rownames(ewas)
+ewas$beta_age = ewas$beta
+ewas$strand_hg38 = pfepichg38[rownames(ewas),]$Strand_hg38
+
+# signature
+ewas$bonf01 = 0
+ewas[intersect(probes_bonf01, rownames(ewas)),]$bonf01 = 1
+ewas$predimeth = 0
+ewas[intersect(probes_predimeth, rownames(ewas)),]$predimeth = 1
+ewas$predimeth_it = NA
+if (!all(names(predimeth_it) %in% rownames(ewas))) {stop("not all names(predimeth_it) in rownames(ewas)")}
+ewas[names(predimeth_it),]$predimeth_it = predimeth_it
+ewas$hannum = 0
+ewas[intersect(probes_hannum, rownames(ewas)),]$hannum = 1
+ewas$horvath = 0
+ewas[intersect(probes_horvath, rownames(ewas)),]$horvath = 1
+ewas$phenoage = 0
+ewas[intersect(probes_phenoage, rownames(ewas)),]$phenoage = 1
+```
+
+
+
+
+
 # Stat Desc
 
 ```{r stat_desc, fig.width=9, fig.height=6}
@@ -248,13 +292,6 @@ legend("topleft", pch=16, col=1:2, c(paste0(">= 1% (", sum(!ewas$pvbonf<0.01), "
 
 
 ```{r ewas, fig.width=7, fig.height=7}
-# layout(matrix(1:2,1), respect=TRUE)
-# plot(ewas$beta, ewas$lpv, pch=".")
-# plot(ewas$beta, -log10(ewas$pvbonf), pch=".")
-# abline(h=2, col=2)
-# sum(ewas$pvbonf<0.01)
-
-
 fc = function (x = seq(0, 1, length.out = nrow(z)), y = seq(0, 1, 
     length.out = ncol(z)), z, xlim = range(x, finite = TRUE), 
     ylim = range(y, finite = TRUE), zlim = range(z, finite = TRUE), 
@@ -386,34 +423,6 @@ fc = function (x = seq(0, 1, length.out = nrow(z)), y = seq(0, 1,
 
 
 
-```{r probes}
-# probes = list()
-# probes[["bonferroni01"]]       = rownames(ewas)[ewas$pvbonf<0.01]
-# probes[["methylation_gain"]]   = rownames(ewas)[ewas$pvbonf<0.01 & ewas$beta >= 0]
-# probes[["methylation_loss"]]   = rownames(ewas)[ewas$pvbonf<0.01 & ewas$beta <  0]
-# probes[["methylation_losshypo"]] = rownames(ewas)[ewas$pvbonf<0.01 & ewas$beta <  0 & ewas$mean_beta <= .3]
-# probes[["methylation_losshyper"]] = rownames(ewas)[ewas$pvbonf<0.01 & ewas$beta <  0 & ewas$mean_beta > .3]
-# d0 = density(ewas[probes[["bonferroni01"]],]$mean_beta)
-# d1 = density(ewas[probes[["methylation_gain"  ]],]$mean_beta, bw=d0$bw, weights=rep(1/length(probes[["bonferroni01"]]), length(probes[["methylation_gain"  ]])))
-# d2 = density(ewas[probes[["methylation_loss"  ]],]$mean_beta, bw=d0$bw, weights=rep(1/length(probes[["bonferroni01"]]), length(probes[["methylation_loss"  ]])))
-# d3 = density(ewas[probes[["methylation_losshypo"]],]$mean_beta, bw=d0$bw, weights=rep(1/length(probes[["bonferroni01"]]), length(probes[["methylation_losshypo"]])))
-# d4 = density(ewas[probes[["methylation_losshyper"]],]$mean_beta, bw=d0$bw, weights=rep(1/length(probes[["bonferroni01"]]), length(probes[["methylation_losshyper"]])))
-# ```
-
-
-
-
-
-# ```{r probes_plot}
-# plot(d0, col="grey", lty=2)
-# lines(d1, col=1)
-# lines(d2, col=2)
-# lines(d3, col=3)
-# lines(d4, col=4)
-# abline(v=0.3, col="grey", lty=3)
-# abline(v=0.6, col="grey", lty=3)
-```
-
 
 
 
@@ -440,7 +449,6 @@ anno = NULL
 equiv.cpg = TRUE
 fract.counts = TRUE
 sig.genes = FALSE
-genomic.features = "ALL" #, "TSS200", "TSS1500", "Body",         "1stExon", "3'UTR", "5'UTR", "ExonBnd"), sig.genes = FALSE)
 # collection
 # kegg = missMethyl:::.getKEGG()
 go  = missMethyl:::.getGO()
@@ -453,6 +461,7 @@ collection = go$idList[tmp_idTable$GOID]
 # reference and target
 sig.cpg = rownames(ewas)[ewas$pvbonf<0.01]
 all.cpg = rownames(ewas)
+genomic.features = "ALL" #, "TSS200", "TSS1500", "Body",         "1stExon", "3'UTR", "5'UTR", "ExonBnd"), sig.genes = FALSE)
 # Go!
 if (!exists("mmissmethyl_gsameth")) {mmissmethyl_gsameth=memoise::memoise(missMethyl::gsameth)}
 result <- mmissmethyl_gsameth(sig.cpg = sig.cpg, all.cpg = all.cpg, 
@@ -463,27 +472,168 @@ result <- mmissmethyl_gsameth(sig.cpg = sig.cpg, all.cpg = all.cpg,
 result <- merge(tmp_idTable, result, by.x = "GOID", 
     by.y = "row.names")
 rownames(result) <- result$PathwayID
-head(result[order(result$FDR),], 30)
+result$TERM_short = substr(result$TERM, 1, 35)
+result$EXP = result$N * length(sig.cpg) / length(all.cpg) 
+head(result[order(result$P.DE),-(1:3)], 30)
+
+
+
+
+
+
+
+# library(enrichplot)
+# library(clusterProfiler)
+
+# # Supposez que res est déjà trié et filtré
+# ego <- head(result[order(result$P.DE),-(1:3)], 30)
+# ego$ID <- ego$TERM  # Rename if needed
+# ego$Description <- ego$TERM
+# ego$GeneRatio <- ego$DE / ego$N
+# ego$Count = ego$N
+# ego$p.adjust = signif(ego$FDR,3)
+
+# # enrichplot::dotplot(ego, x = "GeneRatio", showCategory = 10)
+# enrichplot:::dotplot.enrichResult(ego, x = "GeneRatio", showCategory = 10)
+
 
 missmethylfig = function (result) {
-  layout(1, respect=TRUE)
+  # Supposons que 'res' est la sortie de la fonction gometh
+  # res <- gometh(sig.cpg = sig.cpgs, all.cpg = all.cpgs, collection = "GO", array.type = "450K")
+
+  # Sélection des 20 premiers termes les plus significatifs
+  ntop=20
+  top_res <- result[order(result$P.DE),][1:ntop,]
+  top_res <- top_res[order(top_res$N),]
+
+  layout(matrix(1:2, 1), respect=TRUE) ;
+  # Préparation du graphique
+  par(mar = c(5.1, 15, 4.1, 0.1))  # marges pour laisser de la place aux labels
+  bp = barplot(
+    top_res$N, 
+    # -log10(top_res$P.DE), 
+    names.arg = top_res$TERM,
+    horiz = TRUE,
+    las = 1,  # rotation des noms pour qu'ils soient horizontaux
+    col = "lightgrey", 
+    xlab = "#genes",
+    main = paste0("Top ", ntop, " GO terms (BP)"),  
+    border=0
+  )
+  barplot(top_res$DE,  horiz = TRUE,col = "darkgrey", add=TRUE, border=0, xaxt="n", yaxt="n")
+  barplot(top_res$EXP, horiz = TRUE,col = "black",    add=TRUE, border=0, xaxt="n", yaxt="n")
+  legend("bottomright", c("N", "DM", "EXP"), col=c("lightgrey", "darkgrey", "black"), pt.cex=2, pch=15)
+  par(xpd = NA)
+  text(top_res$N, bp, paste0("FDR=", signif(top_res$FDR, 1)), pos=4)
+  par(xpd = FALSE)
+  put_a_letter("a")
+
+  par(mar=c(5.1, 4.1, 4.1, 2.1))
+  par(mar=c(0,0,0,0))
   result = result[result$FDR<0.05,]
   tag_blacklist = c("cell", "of", "in", "to", "by")
   tab = sort(table(unlist(strsplit(result$TERM," "))))
   tab = tab[!names(tab) %in% tag_blacklist]
-  wordcloud::wordcloud(names(tab), tab, main=k, min.freq=3)
+  par(xpd = NA)
+  wordcloud::wordcloud(names(tab), tab, min.freq=3, use.r.layout=TRUE)
+  par(xpd = FALSE)
+  par(mar=c(5.1, 4.1, 4.1, 2.1))
+  put_a_letter("b")
 }
 
 
+
 missmethylfig(result)
-pdf(paste0("fig_", gse, "_missmethyl.pdf"), width=6, height=6)
-# png("missmethylfig.png", width=1600, height=1200, res=150)
+w=12
+pdf(paste0("fig_", gse, "_missmethyl.pdf"), width=w, height=w/2)
 missmethylfig(result)
 dev.off()
+```
+
+## missMethyl per epigenomic contexts
+
+```{r}
+for (feat in c("Island", "Shore", "Shelf", "OpenSea")) {
+  print(feat)
+  sig.cpg = rownames(ewas)[ewas$pvbonf<0.01 & ewas$Relation_to_Island %in% feat]
+  all.cpg = rownames(ewas)[ewas$Relation_to_Island %in% feat]
+  genomic.features = "ALL" #, "TSS200", "TSS1500", "Body",         "1stExon", "3'UTR", "5'UTR", "ExonBnd"), sig.genes = FALSE)
+  # Go!
+  if (!exists("mmissmethyl_gsameth")) {mmissmethyl_gsameth=memoise::memoise(missMethyl::gsameth)}
+  result <- mmissmethyl_gsameth(sig.cpg = sig.cpg, all.cpg = all.cpg, 
+      collection = collection, array.type = array.type, 
+      plot.bias = plot.bias, prior.prob = prior.prob, anno = anno, 
+      equiv.cpg = equiv.cpg, fract.counts = fract.counts, 
+      genomic.features = genomic.features, sig.genes = sig.genes)
+  result <- merge(tmp_idTable, result, by.x = "GOID", 
+      by.y = "row.names")
+  rownames(result) <- result$PathwayID
+  result$TERM_short = substr(result$TERM, 1, 35)
+  result$EXP = result$N * length(sig.cpg) / length(all.cpg) 
+  head(result[order(result$P.DE),-(1:3)], 30)
+  missmethylfig(result)
+  put_a_letter(feat)
+}
+
 
 ```
 
+# Pair-Correlation
+```{r pair correlation}
+head(ewas)
+dim(ewas)
+head(pfepichg38)
+dim(pfepichg38)
 
+# center_on = ""
+co = "Shore"
+# co = "Shelf"
+idx = rownames(ewas)[ewas$pvbonf<0.01]
+df_co = pfepichg38[idx, c("chr", "pos", "Relation_to_Island")]
+# targeted feature
+tf = "Island"
+idx = rownames(ewas)
+df_tf = pfepichg38[idx, c("chr", "pos", "Relation_to_Island")]
+
+df_co = df_co[df_co$Relation_to_Island%in%co, ]
+df_tf = df_tf[df_tf$Relation_to_Island%in%tf, ]
+
+chrs = sort(unique(df_co$chr))
+tmp_df_co = lapply(chrs, function(chr) { 
+  # chr = chrs[1]
+  print(chr)
+  tmp_df_co = df_co[df_co$chr%in%chr, ]
+  tmp_df_tf = df_tf[df_tf$chr%in%chr, ]
+  tmp_df_co[[paste0("nearest_", tf)]] = sapply(tmp_df_co$pos, function(pos) {
+    # pos = tmp_df_co$pos[1]
+    tmp_delta = abs(pos - tmp_df_tf$pos)
+    rownames(tmp_df_tf)[which(tmp_delta == min(tmp_delta))][1]
+  })
+  tmp_df_co[[paste0("dist_nearest_", tf)]] = abs(tmp_df_co$pos - tmp_df_tf[tmp_df_co[[paste0("nearest_", tf)]],]$pos)
+  tmp_df_co[[paste0("dist_nearest_", tf)]]
+  tmp_df_co
+})
+tmp_df_co = do.call(rbind, tmp_df_co)
+plot(density(tmp_df_co[[paste0("dist_nearest_", tf)]]))
+plot(tmp_df_co[[paste0("dist_nearest_", tf)]], ewas[rownames(tmp_df_co),]$mean_beta)
+
+
+x = tmp_df_co[[paste0("dist_nearest_", tf)]]
+y = ewas[rownames(tmp_df_co),]$mean_beta
+# y = (ewas[rownames(tmp_df_co),]$mean_beta - ewas[tmp_df_co[[paste0("nearest_", tf)]],]$mean_beta) / 2 + 0.5
+
+# y = ewas[tmp_df_co$nearest_Shore,]$mean_beta
+# d = density(y)
+xlab = paste0("distance to nearest ", tf, " (bp)")
+ylab = "mean methylation proportion"
+main = paste0(co, " (", length(x), " probes)")
+xlim = c(0, 2500)
+if (co=="Shore") xlim = c(0, 2500)
+if (co=="Shelf") xlim = c(0, 5000)
+ylim = c(0, 1)
+custom_hm(x, y, xlim, ylim, xlab, ylab, main, col=1, LOG=TRUE, nbin=100)
+  
+```
 
 
 
@@ -806,8 +956,18 @@ if (!exists("mget_mf_clust")) {mget_mf_clust = memoise::memoise(get_mf_clust)}
 ### Heatmap (raw)
 
 ```{r hm, fig.width=9, fig.height=9}
+# stop("EFN")
+# table(ewas$predimeth, ewas$cluster, useNA="always")
 
-probes_bonf01 = rownames(ewas)[ewas$pvbonf<0.01]
+
+
+probes_signature = rownames(ewas)[
+  ewas$predimeth == 1    |
+  ewas$hannum    == 1    |
+  ewas$horvath   == 1    |
+  ewas$phenoage   == 1    |
+  ewas$bonf01      == 1      
+]
 
 # stop("EFN")
 # idx_up = probes[["bonferroni01"      ]] 
@@ -828,7 +988,8 @@ idx_rnd_opensea = sample(rownames(pfepichg38)[pfepichg38$Relation_to_Island%in% 
 
 pfepichg38$Start_hg38 = as.numeric(pfepichg38$Start_hg38)
 pfepichg38 = pfepichg38[!is.na(pfepichg38$CHR_hg38),]
-bed_bonf01        = mget_fat_feats(pfepichg38[probes_bonf01       ,], "CHR_hg38", "Start_hg38", extend_region_dist=1000)
+bed_signature        = mget_fat_feats(pfepichg38[probes_signature       ,], "CHR_hg38", "Start_hg38", extend_region_dist=1000)
+# bed_bonf01        = mget_fat_feats(pfepichg38[probes_bonf01       ,], "CHR_hg38", "Start_hg38", extend_region_dist=1000)
 # bed_gain        = mget_fat_feats(pfepichg38[idx_gain       ,], "CHR_hg38", "Start_hg38", extend_region_dist=1000)
 # bed_loss        = mget_fat_feats(pfepichg38[idx_loss       ,], "CHR_hg38", "Start_hg38", extend_region_dist=1000)
 # bed_losshypo      = mget_fat_feats(pfepichg38[idx_losshypo     ,], "CHR_hg38", "Start_hg38", extend_region_dist=1000)
@@ -837,13 +998,14 @@ bed_bonf01        = mget_fat_feats(pfepichg38[probes_bonf01       ,], "CHR_hg38"
 # bed_rnd_opensea = mget_fat_feats(pfepichg38[idx_rnd_opensea,], "CHR_hg38", "Start_hg38", extend_region_dist=1000)
 
 # fat_feats= rbind(bed_bonf01, bed_rnd_island, bed_rnd_opensea)
-fat_feats= rbind(bed_bonf01)
+fat_feats= rbind(bed_signature)
 # fat_feats= rbind(bed_gain)
 # fat_feats= rbind(bed_loss)
 
 
 bed_files = c(
-  write_bed_tss(bed_bonf01       , "all"       ), 
+  write_bed_tss(bed_signature       , "all"       ), 
+  # write_bed_tss(bed_bonf01       , "all"       ), 
   # write_bed_tss(bed_gain       , "gain"       ), 
   # write_bed_tss(bed_loss       , "loss"       ), 
   # write_bed_tss(bed_losshypo     , "losshypo"       ), 
@@ -897,20 +1059,6 @@ bed_files = sapply(unique(clusters$V13), function(tag) {
   locus_bed_file
 })
 
-
-
-# tag = "cluster_3"
-# locus_bed = clusters[clusters$V13==tag, 1:6]
-# rownames(locus_bed) = locus_bed[,4]
-# dim(locus_bed)
-# head(locus_bed)
-# pbs1 = unique(unlist(fat_feats[locus_bed[,4],]$probes))
-# locus_bed_file = write_bed_tss(locus_bed, tag)
-# foo = read.table(locus_bed_file)
-# head(foo)
-# idx = foo[,4]
-# pbs2 = unique(unlist(fat_feats[idx,]$probes))
-# sum(!pbs2 %in% pbs2)
 
 
 plot_terrain = function(bed_files) {
@@ -1012,14 +1160,6 @@ res = cbind(res, bar)
 
 
 
-# baz = sapply(1:nrow(res), function(i) {
-# 		sum(!res[i,]$probes[[1]] %in% probes_per_bed_files$bonferroni01)
-# })
-
-# table_ewas = table_ewas[!is.na(table_ewas[,1]),]
-
-
-
 
 layout(matrix(1:8, 2), respect=TRUE)
 foo = sapply(names(probes_per_bed_files), function(k) {
@@ -1058,67 +1198,208 @@ legend("bottomright", pch=1, col=1:length(probes_per_bed_files), paste0(names(pr
 ```
 
 
-## Figure
 
-```{r plot}
-	
-################# First Plot (RMSE/nb_probes)
 
-predimethstatsfig = function() {
-  s = mreadRDS(study_filename)
-  null_rmse = sd(s$exp_grp$age)
 
-  x = c(0:runmax)
-  r2_bs = c()
-  rmse_bs = c()
-  nb_pb_bs = c()
-  for (run in 0:runmax){
-    tmp_info_model_bs = mreadRDS(paste0("info_model_r",run,"_",gse,"_modelcalllm_meth~age_ewas", newas, "_nn", neighb, ".rds"))
-    tmp_nb_pb_bs = tmp_info_model_bs$gender.bootstrap.nb_probes_mod
-    tmp_rmse_bs = tmp_info_model_bs$gender.bootstrap.RMSE
-    tmp_r2_bs = tmp_info_model_bs$gender.bootstrap.R2
-    rmse_bs = c(rmse_bs,tmp_rmse_bs)
-    r2_bs = c(r2_bs,tmp_r2_bs)	
-    nb_pb_bs = c(nb_pb_bs, tmp_nb_pb_bs)
-  }
-	## add extra space to right margin of plot within frame
-	par(mar=c(5.1, 4.1, 4.1, 5.1))
-	## Plot first set of data and draw its axis
-	plot(x, rmse_bs, xlab="iterations", ylab="RMSE", 
-	     type="b", ylim=c(0,max(null_rmse, rmse_bs)), lty=1, col="black", main=paste0("PrediMeth model trained on ", gse))
-	# axis(2, ylim=c(0,null_rmse+1),col="black",las=1)  ## las=1 makes horizontal labels
-  abline(h=null_rmse, col = "black", lty=2)
-	# abline(v=10, col="black",lty = 2)
-
-	## Allow a second plot on the same graph
-	par(new=TRUE)
-
-	## Plot the second plot and put axis scale on right
-	cum_nb = cumsum(nb_pb_bs)
-	plot(x, cum_nb,  xlab="", ylab="", 
-	    axes=FALSE, type="b", col="red", lty=1, ylim=c(0, max(cum_nb)))
-	## a little farther out (line=4) to make room for labels
-	mtext("number of cumulative probes", side=4, col="red", line=4) 
-	axis(4, ylim=c(0,max(cum_nb)+200,10), col="red",col.axis="red",las=1, lwd=0, lwd.ticks=1)
-
-	legend("bottomright",
-	  legend=c("null model RMSE", "RMSE at each iteration", "cumulative number of probes"), 
-		col=c("black", "black", "red"), lty = c(2, 1, 1), pch= c(1,1,NA), cex=1)
-	par(mar=c(5.1, 4.1, 4.1, 2.1))
-}
-
-layout(1, respect=TRUE)
-predimethstatsfig()
-pdf(paste0("fig_", gse, "_predimethstats.pdf"), width=6, height=6)
-predimethstatsfig()
-dev.off()
+```{r child = '05_postprocpredimethstats.Rmd', eval=TRUE}
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # GSEA
 
+```{r}
+tcga_studies = c(    
+  "TCGA-LUSC" , # 40                
+  "TCGA-LUAD" , # 27                
+  "TCGA-KIRC" , # 160                
+  "TCGA-KIRP" , # 42                
+  # "TCGA-KICH" , # 0                
+  # "TCGA-LGG"  , # 0                
+  # "TCGA-GBM"  , # 1                
+  # "TCGA-ACC"  , # 0                
+  "TCGA-HNSC" , # 49                
+  # "BRB"       , # 7                
+  "TCGA-BRCA" , # 85                
+  "TCGA-BLCA" , # 21                
+  # "TCGA-CESC" , # 3                
+  # "TCGA-CHOL" , # 9                
+  "TCGA-COAD" , # 36                
+  # "TCGA-DLBC" , # 0                
+  # "TCGA-ESCA" , # 16                
+  # "TCGA-LAML" , # 0                
+  "TCGA-LIHC" , # 49                
+  # "TCGA-MESO" , # 0                
+  # "TCGA-PAAD" , # 10                
+  # "TCGA-PCPG" , # 3                
+  "TCGA-PRAD" , # 50                
+  # "TCGA-READ" , # 7                
+  # "TCGA-SARC" , # 2                
+  # "TCGA-SKCM" , # 2                
+  # "TCGA-STAD" , # 2                
+  # "TCGA-TGCT" , # 0                
+  "TCGA-THCA" , # 56                
+  # "TCGA-THYM" , # 2                    
+  # "TCGA-UCS"  , # 0                
+  # "TCGA-UVM"  , # 0                
+  # "TCGA-OV"   , # 0                     
+  NULL
+)
+
+# tcga_studies = c(    
+#   # "TCGA-KIRC" , # 160                
+#   # "TCGA-KIRP" , # 42                
+#   # # "TCGA-KICH" , # 0                
+#   # # "TCGA-LGG"  , # 0                
+#   # # "TCGA-GBM"  , # 1                
+#   # # "TCGA-ACC"  , # 0                
+#   # "TCGA-HNSC" , # 49                
+#   "TCGA-LUAD" , # 27                
+#   "TCGA-LUSC" , # 40                
+#   # # "BRB"       , # 7                
+#   # "TCGA-BRCA" , # 85                
+#   # "TCGA-BLCA" , # 21                
+#   # # "TCGA-CESC" , # 3                
+#   # # "TCGA-CHOL" , # 9                
+#   # "TCGA-COAD" , # 36                
+#   # # "TCGA-DLBC" , # 0                
+#   # # "TCGA-ESCA" , # 16                
+#   # # "TCGA-LAML" , # 0                
+#   # "TCGA-LIHC" , # 49                
+#   # # "TCGA-MESO" , # 0                
+#   # # "TCGA-PAAD" , # 10                
+#   # # "TCGA-PCPG" , # 3                
+#   # "TCGA-PRAD" , # 50                
+#   # # "TCGA-READ" , # 7                
+#   # # "TCGA-SARC" , # 2                
+#   # # "TCGA-SKCM" , # 2                
+#   # # "TCGA-STAD" , # 2                
+#   # # "TCGA-TGCT" , # 0                
+#   # "TCGA-THCA" , # 56                
+#   # # "TCGA-THYM" , # 2                    
+#   # # "TCGA-UCS"  , # 0                
+#   # # "TCGA-UVM"  , # 0                
+#   # # "TCGA-OV"   , # 0                     
+#   NULL
+# )
+
+
+results = lapply(tcga_studies, function(tcga_id) {
+  s = mreadRDS(paste0("~/projects/datashare/", tcga_id, "/study_preproc_", tcga_id, ".rds"))
+  e = s$exp_grp
+  idx = intersect(e[e$tissue_status == "normal",]$id_patient, e[e$tissue_status == "tumoral",]$id_patient)
+  e = e[e$id_patient%in%idx,]
+  tab1 = table(e[e$tissue_status == "normal",]$id_patient)
+  tab2 = table(e[e$tissue_status == "tumoral",]$id_patient)
+  idx = intersect(names(tab1)[tab1==1], names(tab2)[tab2==1])    
+  e = e[e$id_patient%in%idx,]
+  tab = table(e$id_patient, e$tissue_status)
+  tab
+  if (!all(tab==1)|nrow(tab)==0) {stop(paste0("Problem pairing samples for ", tcga_id))}
+
+  qt = quantile(e$age)
+  idx_yng = rownames(e)[e$age<=qt[2]]
+  idx_old = rownames(e)[e$age>=qt[4]]
+  individuals = list(all=rownames(e), young=idx_yng, old=idx_old)
+  results = lapply(1:length(individuals), function(i, tcga_id) {
+    print(paste0(tcga_id, " ", names(individuals[i])))
+    idx = individuals[[i]]
+    d = s$data[,idx]
+    da = apply(d[,idx[e[idx,]$tissue_status=="tumoral"]], 1, mean) - apply(d[,idx[e[idx,]$tissue_status=="normal"]], 1, mean)
+    da = sort(da)
+    gsea_input = data.frame(probe=names(da), meth=da)
+    rownames(gsea_input) = gsea_input$probe
+    head(gsea_input)
+    dim(gsea_input)
+    # BOXPLOT
+    results = lapply(names(grp_files), function(grp_file_name, tcga_id, gsea_input)  {
+      grp_file = grp_files[[grp_file_name]]
+      tmp_probes = intersect(read.table(grp_file)[,1], rownames(gsea_input))
+      print(length(tmp_probes))
+      # tmp_probes = sample(tmp_probes, 30)
+      levs = c(grp_file_name, "BG")
+      gsea_input$grp = levs[[2]]
+      gsea_input[tmp_probes,]$grp = levs[[1]]
+      gsea_input$grp = factor(gsea_input$grp, levels=levs)
+      mw_pv = wilcox.test(gsea_input$meth[gsea_input$grp==levs[2]], gsea_input$meth[gsea_input$grp!=levs[2]])$p.value
+      m = lm(gsea_input$meth~gsea_input$grp)
+      beta = -m$coefficients[[2]]
+
+      # if (i>0) { par(mar=c(2.1, 4.1, 4.1, .6)) } else { 	par(mar=c(5.1, 4.1, 4.1, .6)) }
+      # main = ifelse(i>0, paste0("MW pv=", signif(mw_pv, 2)), paste0("Mann Whitney pv=", signif(mw_pv, 2)))
+      # ylab = ifelse(i>0, "diff. meth.", "differential methylation")
+      # las = ifelse(i>0, 1, 2)
+      # tmpx = paste0(gsea_input$grp, " (", table(gsea_input$grp)[gsea_input$grp], " probes)")
+      # tmpx = gsea_input$grp
+      # beanplot::beanplot(gsea_input$meth ~ tmpx, what=c(1,1,0,0), main=main, ylab=ylab, las=las, yaxt="n", col=as.list(c(metacluster_cols[which(grp_files == grp_file)], "grey")))
+      # # boxplot(gsea_input$meth ~ tmpx, what=c(1,1,0,0), main=main, ylab=ylab, las=las, yaxt="n", col=c(metacluster_cols[which(grp_files == grp_file)], "grey"), outline=FALSE)
+      # axis(2, at=c(-.5,0,.5)) 
+
+      return(data.frame(tcga_id=tcga_id, n=length(individuals[[i]])/2, grp=names(individuals[i]), beta=beta, pv=mw_pv, grp_file=grp_file))
+    }, tcga_id, gsea_input)
+    results = do.call(rbind, results)
+    return(results)
+  }, tcga_id)
+  results = do.call(rbind, results)
+  results$grp = factor(results$grp, names(individuals))
+  return(results)
+})
+results = do.call(rbind, results)
+results$grp_file = factor(results$grp_file, levels=grp_files)
+levels(results$grp_file) = names(grp_files)
+```
 
 ```{r child = '05_postprocgsea.Rmd', eval=TRUE}
 ```
+
+```{r child = '05_postprocpancancer.Rmd', eval=TRUE}
+```
+
+
+
+
+
+
+
 
 # Process Information 
 
