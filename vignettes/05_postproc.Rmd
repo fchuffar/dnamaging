@@ -24,7 +24,9 @@ if (!exists("model_formula"))   model_formula = "meth~age"  ;
 if (!exists("model_func_name")) model_func_name = "modelcalllm"         ;
 newas = "1000000"
 neighb = 1000
-runmax = 45
+tmp = list.files(pattern="*_CustGSE147740rr_modelcalllm_meth~age_ewas1000000_nn1000.rds")
+runmax = max(as.numeric(substr(do.call(rbind, strsplit(tmp[grep("info_model", tmp)], "_"))[,3], 2, 1000)))
+
 # if (file.exists(paste0(model_func_name, ".R"))) {
 #   source(paste0(model_func_name, ".R"))
 # }
