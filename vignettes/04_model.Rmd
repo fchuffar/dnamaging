@@ -89,7 +89,11 @@ if (nrow(df) - nb_train<100) {
   nb_train = ceiling(nrow(df)/2)
 }
 print(paste0("Use ", nb_train, " observations for training."))
-if (!exists("MODESA")) {
+
+if (exists("custom_idx_train") & exists("custom_idx_test")) { # for same train / test set for GSE147740 and CustGSE147740rr
+  idx_train = custom_idx_train
+  idx_test  = custom_idx_test 
+} else if (!exists("MODESA")) {
   set.seed(seed)
   idx_train = sample(rownames(df), nb_train)
   idx_test = setdiff(rownames(df), idx_train)      

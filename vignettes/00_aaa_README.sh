@@ -1,4 +1,5 @@
 cd ~/projects/dnamaging/vignettes
+ln -s ~/projects/datashare
 rsync -auvP ~/projects/dnamaging/ cargo:~/projects/dnamaging/ --dry-run
 rsync -auvP ~/projects/dnamaging/ cargo:~/projects/dnamaging/ --exclude="gsea_out*" --exclude="*.rds" --exclude="*.grp" --exclude="*.bed" --exclude="*.html" --exclude="*.rnk" --dry-run 
 
@@ -108,8 +109,8 @@ conda activate missmethyl_env
 rsync -auvP cargo:~/projects/dnamaging/vignettes/datashare/GSE147740/study_preproc_GSE147740_modelcalllm_meth~age_ewas1000000_nn1000.rds ~/projects/dnamaging/vignettes/datashare/GSE147740/
 rsync -auvP cargo:~/projects/dnamaging/vignettes/datashare/CustGSE147740rr/study_preproc_CustGSE147740rr_modelcalllm_meth~age_ewas1000000_nn1000.rds ~/projects/dnamaging/vignettes/datashare/CustGSE147740rr/ --exclude="df*"
 
-rsync -auvP cargo:~/projects/dnamaging/vignettes/ewas_*GSE147740*_modelcalllm_meth~age.rds ~/projects/dnamaging/vignettes/ --exclude="df*"
-rsync -auvP cargo:~/projects/dnamaging/vignettes/info_model_r*_*GSE147740*_modelcalllm_meth~age_ewas1000000_nn1000.rds ~/projects/dnamaging/vignettes/ --exclude="df*"
+rsync -auvP cargo:~/projects/dnamaging/vignettes/ewas_*GSE147740*_modelcalllm_meth~age.rds ~/projects/dnamaging/vignettes/
+rsync -auvP cargo:~/projects/dnamaging/vignettes/info_model_r*_*GSE147740*_modelcalllm_meth~age_ewas1000000_nn1000.rds ~/projects/dnamaging/vignettes/
 rsync -auvP cargo:~/projects/dnamaging/vignettes/models_r*_*GSE147740*_modelcalllm_meth~age_ewas1000000_nn1000.rds ~/projects/dnamaging/vignettes/ --exclude="df*"
 # cp ../../dnamaging.save12/vignettes/wf.png .
 
