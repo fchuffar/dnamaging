@@ -3,8 +3,7 @@ A set of scripts and vignettes allowing to build and evaluate an epigenetic cloc
 
 # conda environnement
 
-https://docs.conda.io/projects/miniconda/en/latest/miniconda-install.html
-
+https://www.anaconda.com/docs/getting-started/miniconda/install#linux-terminal-installer
 
 
 # 180 seconds turorial
