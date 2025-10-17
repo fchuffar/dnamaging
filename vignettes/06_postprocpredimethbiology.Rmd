@@ -48,6 +48,15 @@ metacluster_cols = c(
   NULL
 )
 
+metacluster_cols = c(
+  "#19198c", 
+  "#19d8ff", 
+  # "#36e6ba", 
+  "#ffe819", 
+  # "#ff9e19", 
+  NULL
+)
+
 
 # Nom	Code Hex	Aperçu
 # Original	#8AFF87	
@@ -82,110 +91,13 @@ samplesLabel = gsub("-human", "", paste(paste0(db$Experiment.target, "_", db$Bio
 samplesLabel = gsub("_lung", "", samplesLabel)
 regionsLabel = gsub(".bed", "", paste(names(bed_files), collapse=" "))
 prefix = paste0("metacluster_", gse)
-mf = mget_mf_clust(bwfiles, bed_files, samplesLabel, prefix=prefix, othargs=paste0(" --refPointLabel 'loc' --legendLocation none --xAxisLabel ''  --colorMap RdBu --regionsLabel ", regionsLabel, " --heatmapWidth 3.5 --heatmapHeight 14"))
+mf = mget_mf_clust(bwfiles, bed_files, samplesLabel, prefix=prefix, othargs=paste0(" --refPointLabel 'loc' --legendLocation none --xAxisLabel ''  --colorMap RdBu --regionsLabel ", regionsLabel, " --heatmapWidth 5 --heatmapHeight 14"))
 # plotHeatmap -m mt_metaclusters_GSE147740.txt.gz  --samplesLabel H3K4me3_lung H3K4me3_lung H3K4me1_lung H3K4me1_lung H3K4me1_lung H3K27me3_lung H3K27me3_lung -o hm_metaclusters_GSE147740.png --outFileSortedRegions hm_metaclusters_GSE147740.bed --refPointLabel "locus" --legendLocation none --xAxisLabel ""
 
 ```
 
 
 ![metaclusters](`r paste0("hm_", prefix, ".png")`)
-
-### Clusters (metaclusters)
-
-
-```{r, fig.width=9, fig.height=9}
-plot_terrain(bed_files)
-```
-
-### Figure
-
-```{r figure deepTools, fig.width=10*4/3, fig.height=10*2/3}
-plot_deeptools = function() {
-  layout(matrix(c(
-                1,1,2,
-                1,1,3,
-                4,5,6,
-                NULL), 3, byrow=TRUE), respect=TRUE)
-  layout(matrix(c(
-                1,1,1,2,5, 
-                1,1,1,3,6, 
-                1,1,1,4,7, 
-                NULL), 3, byrow=TRUE), respect=TRUE)
-  layout(matrix(c(
-                1,1,2,4, 
-                1,1,3,5, 
-                NULL), 2, byrow=TRUE), respect=TRUE)
-
-
-  m0 = matrix(c(
-      3,3,3,3,4,
-      1,1,1,1,2,
-      1,1,1,1,2,
-      1,1,1,1,2,
-      1,1,1,1,2,
-  NULL), 5, byrow=TRUE)
-  m0 = rbind(m0, m0 + max(m0))
-  m0 = cbind(m0, m0+max(m0))
-
-  m = matrix(c(
-      1,1,1,1,1,1,1,1,1,1,
-      1,1,1,1,1,1,1,1,1,1,
-      1,1,1,1,1,1,1,1,1,1,
-      1,1,1,1,1,1,1,1,1,1,
-      1,1,1,1,1,1,1,1,1,1,
-      1,1,1,1,1,1,1,1,1,1,
-      1,1,1,1,1,1,1,1,1,1,
-      1,1,1,1,1,1,1,1,1,1,
-      1,1,1,1,1,1,1,1,1,1,
-      1,1,1,1,1,1,1,1,1,1,
-  NULL), 10, byrow=TRUE)
-  m = cbind(m, m0+max(m))
-
-  layout(m, respect=TRUE)
-
-
-
-
-  par(mar=c(0, 0, 0, 0))
-  img = png::readPNG(paste0("hm_", prefix, ".png"))
-  plot(NA, NA, xlim=0:1, ylim=0:1, axes=FALSE, main=paste0(""), xlab="", ylab="")
-  addImg(img, x=.5,y=.5,width=1)
-  par(mar=c(5.1, 4.1, 4.1, 2.1))  
-  tmp_i = 1
-  put_a_letter(letters[tmp_i])
-  tmp_i = tmp_i + 1
-  for (bed_file_name in names(bed_files)) {
-    par(mar=c(4.1, 4.1, 1.5, 1.0))
-    # idx = rownames(ewas)[ewas$pvbonf<0.01]
-    # idx = probes[["cluster_1.bed"]]
-    locus_bed = read.table(bed_files[[bed_file_name]])
-    idx = unique(unlist(fat_feats[locus_bed[,4],]$probes))
-
-    col = metacluster_cols[[bed_file_name]]
-    xlab = "age effect (meth. prop. per year)"
-    ylab = "mean meth. prop."
-    xlim = c(-0.003, 0.003)
-    ylim = 0:1
-    x = ewas[idx, ]$beta
-    y = ewas[idx, ]$mean_beta
-    main=paste0(bed_file_name, " (", length(idx), " probes)")
-    custom_hm(x, y, xlim, ylim, xlab, ylab, main, col, LAYOUT=FALSE, letter=letters[tmp_i])
-    tmp_i = tmp_i + 1
-  # plot(x, y, xlab=xlab, ylab=ylab, main=main, col=adjustcolor(col, alpha.f=0.01*10000/length(idx)), pch=16, xlim=xlim, ylim=ylim)
-    # fc(z, main=main, plot.axes=FALSE, color.palette=function(n) hcl.colors(n,  palette=colpals[k], rev=TRUE))# , levels=fc$levels, zlim=fc$zlim)
-    # axis(1, at=c(-0.002, 0, 0.002), labels=c(-0.002, 0, 0.002))
-    # axis(2, at=c(0, .5, 1), labels=c(0, .5, 1))
-
-  }
-  par(mar=c(5.1, 4.1, 4.1, 2.1))
-}
-plot_deeptools()
-# png(paste0("fig_deeptools_", gse, ".png"), width=1800, height=900, res=150) 
-w = 40/3
-pdf(paste0("fig_", gse, "_deeptools.pdf"), width=w, height=w*2/3) 
-plot_deeptools()
-dev.off()
-```
 
 
 ### Inject cluster names in ewas df
@@ -199,6 +111,267 @@ for (bed_file_name in names(bed_files)) {
   ewas[idx,]$cluster = bed_file_name
 }
 ```
+
+
+### Clusters (metaclusters)
+
+
+```{r, fig.width=9, fig.height=9}
+plot_terrain(bed_files)
+```
+
+### Figure
+
+```{r figure deepTools, fig.width=10*4/3, fig.height=10*2/3}
+plot_predimethbiology = function() {
+
+  # m0 = matrix(c(
+  #     3,3,3,3,4,
+  #     1,1,1,1,2,
+  #     1,1,1,1,2,
+  #     1,1,1,1,2,
+  #     1,1,1,1,2,
+  # NULL), 5, byrow=TRUE)
+  # # m0 = rbind(m0, m0 + max(m0))
+  # # m0 = cbind(m0, m0+max(m0))
+
+  # m = matrix(c(
+  #     1,1,1,1,1,1,1,1,1,1,
+  #     1,1,1,1,1,1,1,1,1,1,
+  #     1,1,1,1,1,1,1,1,1,1,
+  #     1,1,1,1,1,1,1,1,1,1,
+  #     1,1,1,1,1,1,1,1,1,1,
+  #     1,1,1,1,1,1,1,1,1,1,
+  #     1,1,1,1,1,1,1,1,1,1,
+  #     1,1,1,1,1,1,1,1,1,1,
+  #     1,1,1,1,1,1,1,1,1,1,
+  #     1,1,1,1,1,1,1,1,1,1,
+  # NULL), 10, byrow=TRUE)
+  # m = cbind(m, m0+max(m))
+
+  m = matrix(c(
+
+      3,3,3,3,4, 5,5,5,5,5, 6,6,6,6,6,
+      1,1,1,1,2, 5,5,5,5,5, 6,6,6,6,6,
+      1,1,1,1,2, 5,5,5,5,5, 6,6,6,6,6,
+      1,1,1,1,2, 5,5,5,5,5, 6,6,6,6,6,
+      1,1,1,1,2, 5,5,5,5,5, 6,6,6,6,6,
+
+      7,7,7,7,7,7,7, 12, 10,10,10,10,10,10,11,
+      7,7,7,7,7,7,7, 12, 10,10,10,10,10,10,11,
+      7,7,7,7,7,7,7, 12, 8,8,8,8,8,8,9,
+      7,7,7,7,7,7,7, 12, 8,8,8,8,8,8,9,
+      7,7,7,7,7,7,7, 12, 8,8,8,8,8,8,9,
+      7,7,7,7,7,7,7, 12, 8,8,8,8,8,8,9,
+      7,7,7,7,7,7,7, 12, 8,8,8,8,8,8,9,
+
+  NULL), 12, byrow=TRUE)
+  layout(m, respect=TRUE)
+
+
+  # par(mar=c(2, 2.5, 3.1, 2.5))
+  # par(mar=c(5.1, 4.1, 4.1, 2.1))
+  idx = rownames(ewas)#[ewas$pvbonf<0.01]
+  x = ewas[idx, ]$beta
+  y = ewas[idx, ]$lpv
+  # d = density(y)
+  xlab = "age effect (meth. prop. per year)"
+  ylab = "-log10(pval)"
+  main = paste0("methylation~age (", nrow(ewas), " probes)")
+  # col = as.numeric(ewas$pvbonf<0.01)+ 1
+  # plot(x, y, xlab=xlab, ylab=ylab, main=main, col=adjustcolor(col, alpha.f=.2), pch=16)
+  # # points(x, y, col=adjustcolor(col, alpha.f=.5), pch=".")
+  # legend("topleft", pch=16, col=1:2, c(paste0(">= 1% (", sum(!ewas$pvbonf<0.01), " probes)"), paste0("< 1% (", sum(ewas$pvbonf<0.01), " probes)")), title="Bonferroni")
+  xlim = c(-0.005, 0.005)
+  ylim = c(0, 80)
+  wrapper_func = function() {
+    abline(h=min(ewas[ewas$pvbonf<0.01, ]$lpv), col=2)
+    # widx = rownames(ewas)[ewas$predimeth==1]
+    # wx = ewas[widx, ]$beta
+    # wy = ewas[widx, ]$lpv
+    # points(wx, wy, col=adjustcolor(2, alpha.f=0.3), pch=16)
+  }
+
+
+  l_it =  1
+  custom_hm(x, y, xlim, ylim, xlab, ylab, main, col=1, LAYOUT=FALSE, LOGCOUNT=TRUE, wrapper_func=wrapper_func, letter=letters[l_it])
+  l_it = l_it + 1
+
+
+
+
+
+
+  options(scipen = 0)
+  library(missMethyl)
+  # params
+  array.type = "EPIC"
+  plot.bias = FALSE
+  prior.prob = TRUE
+  anno = NULL
+  equiv.cpg = TRUE
+  fract.counts = TRUE
+  sig.genes = FALSE
+  # collection
+  # kegg = missMethyl:::.getKEGG()
+  go  = missMethyl:::.getGO()
+  head(go$idTable)
+  tmp_idTable = go$idTable
+  dim(tmp_idTable)
+  tmp_idTable = tmp_idTable[tmp_idTable$ONTOLOGY=="BP",]
+  dim(tmp_idTable)
+  collection = go$idList[tmp_idTable$GOID]
+  # reference and target
+  sig.cpg = rownames(ewas)[ewas$pvbonf<0.01]
+  # sig.cpg = rownames(ewas)[ewas$predimeth==1]
+  all.cpg = rownames(ewas)
+  genomic.features = "ALL" #, "TSS200", "TSS1500", "Body",         "1stExon", "3'UTR", "5'UTR", "ExonBnd"), sig.genes = FALSE)
+  # Go!
+  if (!exists("mmissmethyl_gsameth")) {mmissmethyl_gsameth=memoise::memoise(missMethyl::gsameth)}
+  result <- mmissmethyl_gsameth(sig.cpg = sig.cpg, all.cpg = all.cpg, 
+      collection = collection, array.type = array.type, 
+      plot.bias = plot.bias, prior.prob = prior.prob, anno = anno, 
+      equiv.cpg = equiv.cpg, fract.counts = fract.counts, 
+      genomic.features = genomic.features, sig.genes = sig.genes)
+  result <- merge(tmp_idTable, result, by.x = "GOID", 
+      by.y = "row.names")
+  rownames(result) <- result$PathwayID
+  result$TERM_short = substr(result$TERM, 1, 35)
+  result$EXP = result$N * length(sig.cpg) / length(all.cpg) 
+  head(result[order(result$P.DE),-(1:3)], 30)
+
+  # Sélection des 20 premiers termes les plus significatifs
+  ntop=20
+  top_res <- result[order(result$P.DE),][1:ntop,]
+  top_res <- top_res[order(top_res$N),]
+
+  # Préparation du graphique
+  par(mar = c(5.1, 15, 4.1, 0.1))  # marges pour laisser de la place aux labels
+  bp = barplot(
+    top_res$N, 
+    # -log10(top_res$P.DE), 
+    names.arg = top_res$TERM,
+    horiz = TRUE,
+    las = 1,  # rotation des noms pour qu'ils soient horizontaux
+    col = "lightgrey", 
+    xlab = "#genes",
+    main = paste0("Top ", ntop, " GO terms (BP)"),  
+    border=0
+  )
+  barplot(top_res$DE,  horiz = TRUE,col = "darkgrey", add=TRUE, border=0, xaxt="n", yaxt="n")
+  barplot(top_res$EXP, horiz = TRUE,col = "black",    add=TRUE, border=0, xaxt="n", yaxt="n")
+  legend("bottomright", c("N", "DM", "EXP"), col=c("lightgrey", "darkgrey", "black"), pt.cex=2, pch=15)
+  par(xpd = NA)
+  text(top_res$N, bp, paste0("FDR=", signif(top_res$FDR, 1)), pos=4)
+  par(xpd = FALSE)
+  l = letters[l_it] ; l_it = l_it + 1
+  put_a_letter(paste0(l))
+
+  par(mar=c(5.1, 4.1, 4.1, 2.1))
+  par(mar=c(0,0,0,0))
+  result = result[result$FDR<0.05,]
+  tag_blacklist = c("cell", "of", "in", "to", "by")
+  tab = sort(table(unlist(strsplit(result$TERM," "))))
+  tab = tab[!names(tab) %in% tag_blacklist]
+  par(xpd = NA)
+  if (length(tab)>0) {
+    wordcloud::wordcloud(names(tab), tab, min.freq=3, use.r.layout=TRUE)
+  } else {
+    plot(0,0, main="no signif. term")
+  }
+  par(xpd = FALSE)
+  par(mar=c(5.1, 4.1, 4.1, 2.1))
+  l = letters[l_it] ; l_it = l_it + 1
+  put_a_letter(paste0(l))
+
+
+
+
+
+
+
+  par(mar=c(0, 0, 0, 0))
+  img = png::readPNG(paste0("hm_", prefix, ".png"))
+  plot(NA, NA, xlim=0:1, ylim=0:1, axes=FALSE, main=paste0(""), xlab="", ylab="")
+  addImg(img, x=.5,y=.5,width=1)
+  par(mar=c(5.1, 4.1, 4.1, 2.1))  
+  l = letters[l_it] ; l_it = l_it + 1
+  put_a_letter(paste0(l))
+  par(mar=c(5.1, 4.1, 4.1, 2.1))
+
+
+
+
+  tmp_df = ewas[ewas$predimeth==1,]
+  wx = tmp_df$beta
+  wy = tmp_df$lpv
+  wy[wy>150]=150
+  xlab = "age effect (meth. prop. per year)"
+  ylab = "-log10(pval)"
+  main = paste0("methylation~age (", nrow(tmp_df), " PrediMeth probes)")
+
+
+  levs = names(bed_files)
+  tmp_df$cluster = factor(tmp_df$cluster, levels=levs)
+
+  par(mar=c(5.1, 4.1, 0, 0))
+  plot(wx, wy, col=adjustcolor(metacluster_cols[tmp_df$cluster], alpha.f=0.66), pch=16, xlab=xlab, ylab=ylab)
+  legend("topleft", paste0(levels(tmp_df$cluster), " (", sapply(levels(tmp_df$cluster), function(k){sum(tmp_df$cluster==k)}), " probes)"), col=metacluster_cols[levels(tmp_df$cluster)], pch=16)
+
+  
+  par(mar=c(5.1, 0, 0, .1))
+  par(xpd = NA)
+  den = density(wy)
+  denx = den$x
+  deny = den$y
+
+
+
+  plot(deny, denx, type="l", frame.plot=FALSE, yaxs="i", xaxt="n", yaxt="n", xlab="", ylab="", col="grey", lwd=1, lty=3)
+  for (k in levs) {
+    den2 = density(wy[tmp_df$cluster==k], bw = den$bw)
+    denx = den2$x
+    deny = den2$y/nrow(tmp_df)*sum(tmp_df$cluster==k)
+    lines(deny, denx, type="l", col=metacluster_cols[[k]], lwd=3) 
+  }
+  par(xpd = FALSE)
+
+  par(mar=c(0, 4.1, 4.1, 0))
+  par(xpd = NA)
+  den = density(wx)
+  denx = den$x
+  deny = den$y
+  plot(denx, deny, type="l", frame.plot=FALSE, xaxs="i", xaxt="n", yaxt="n", xlab="", ylab="", main=main, col="grey", lwd=1, lty=3) 
+  for (k in levs) {
+    den2 = density(wx[tmp_df$cluster==k], bw = den$bw)
+    denx = den2$x
+    deny = den2$y/nrow(tmp_df)*sum(tmp_df$cluster==k)
+    lines(denx, deny, type="l", col=metacluster_cols[[k]], lwd=3) 
+  }
+  l = letters[l_it] ; l_it = l_it + 1
+  put_a_letter(paste0(l))
+  par(xpd = FALSE)
+
+
+  par(mar=c(5.1, 4.1, 4.1, 2.1))
+}
+# stop("EFN")
+plot_predimethbiology()
+# png(paste0("fig_predimethbiology_", gse, ".png"), width=1800, height=900, res=150) 
+w = 40/3
+pdf(paste0("fig_", gse, "_predimethbiology.pdf"), width=w, height=w*12/15) 
+plot_predimethbiology()
+dev.off()
+```
+
+
+
+
+
+
+
+
+
 
 
 
@@ -239,7 +412,9 @@ prop.table(table(ewas$Relation_to_Island, ewas$metacluster), margin=1)
 prop.table(table(ewas$Relation_to_Island, ewas$metacluster, useNA="ifany"), margin=2)
 pv_tab
 
+```
 
+```{r eval=FALSE}
 
 # k1=c("Island", "Shore", "Shelf")
 # k1 = "OpenSea"
@@ -278,7 +453,9 @@ custom_hm(x, y, xlim, ylim, xlab, ylab, main, col)
 missmethylfig(result)
 
 
+```
 
+```{r}
 
 
 

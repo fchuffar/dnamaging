@@ -1,3 +1,4 @@
+if (file.exists("./datashare/CustGSE147740rr/study_preproc_CustGSE147740rr.rds") & file.exists("./datashare/GSE147740/study_preproc_GSE147740.rds")) {
 study_preproc_filename = paste0("./datashare/CustGSE147740rr/study_preproc_CustGSE147740rr.rds")
 s = readRDS(study_preproc_filename)
 e = s$exp_grp
@@ -40,7 +41,8 @@ i
 foo[i]
 
 set.seed(i)
+idx_train = sample(idx_samples, nb_trains)
 custom_idx_train = sample(idx_samples, nb_trains)
 custom_idx_test = sample(setdiff(idx_samples, idx_train))
-
+}
 

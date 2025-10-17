@@ -95,9 +95,10 @@ plot_gseafig("predimeth")
 pdf(paste0("fig_", gse, "_gsea.pdf"), width=9, height=9) 
 plot_gseafig("predimeth")
 dev.off()
-plot_gseafig("hannum")
-plot_gseafig("horvath")
-plot_gseafig("phenoage")
+# plot_gseafig("hannum")
+# plot_gseafig("horvath")
+# plot_gseafig("phenoage")
+# plot_gseafig("morandini")
 # plot_gseafig("bonf01")
 
 
@@ -174,9 +175,9 @@ plot_gseasupfig  = function(keys) {
 }
 
 
-plot_gseasupfig(c("hannum", "horvath", "phenoage"))
+plot_gseasupfig(names(signatures))
 pdf(paste0("fig_gseasup.pdf"), width=9, height=3) 
-plot_gseasupfig(c("hannum", "horvath", "phenoage"))
+plot_gseasupfig(names(signatures))
 dev.off()
 
 

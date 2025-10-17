@@ -228,11 +228,12 @@ ewas[intersect(probes_bonf01, rownames(ewas)),]$bonf01 = 1
 signatures = list()
 litterature_models = readRDS("litterature_models.rds")
 signatures[["hannum"   ]]  = rownames(litterature_models$hannum_model_mc$coeff)
+signatures[["gao"     ]]  = openxlsx::read.xlsx("../misc/13059_2023_2953_MOESM2_ESM.xlsx", sheet=16)[-(1:2),2] # https://genomebiology.biomedcentral.com/articles/10.1186/s13059-023-02953-6#Sec27
 signatures[["horvath"  ]]  = rownames(litterature_models$horvath_model_mc$coeff)
 signatures[["phenoage" ]]  = read.table("aging-v10i4-101414-supplementary-material-SD2.csv", sep=",", header=TRUE)$CpG[-1]
-signatures[["morandini"]]  = openxlsx::read.xlsx("../misc/43587_2024_757_MOESM5_ESM.xlsx")[-1,1]
-signatures[["zeng"     ]]  = openxlsx::read.xlsx("../misc/41467_2019_9301_MOESM4_ESM.xlsx")[,1]
 signatures[["predimeth"]]  = bed_predimeth_hg19[,4]
+signatures[["morandini"]]  = openxlsx::read.xlsx("../misc/43587_2024_757_MOESM5_ESM.xlsx")[-1,1]
+# signatures[["zeng"     ]]  = openxlsx::read.xlsx("../misc/41467_2019_9301_MOESM4_ESM.xlsx")[,1] # https://pmc.ncbi.nlm.nih.gov/articles/PMC6437195/
 predimeth_it = bed_predimeth_hg19[,5]
 names(predimeth_it) = rownames(bed_predimeth_hg19)
 
@@ -247,7 +248,8 @@ for (k in names(signatures)) {
   ewas[intersect(signatures[[k]], rownames(ewas)),k] = 1
 }
 
-probes_signature = rownames(ewas)[apply(ewas[, names(signatures)], 1, sum) > 0] 
+# probes_signature = rownames(ewas)[apply(ewas[, names(signatures)], 1, sum) > 0] 
+probes_signature = rownames(ewas)[ewas$predimeth==1] 
 
 # probes_signature = rownames(ewas)[
 #   ewas$hannum    == 1    |
@@ -316,7 +318,7 @@ d_old = density(apply(s$data[,rownames(exp_grp)[exp_grp$qtage==rev(levels(exp_gr
 rm("s")
 ```
 
-```{r child = '05_postprocstatdesc.Rmd', eval=TRUE}
+```{r child = '06_postprocpredimethaging.Rmd', eval=TRUE}
 ```
 
 
@@ -463,7 +465,6 @@ fc = function (x = seq(0, 1, length.out = nrow(z)), y = seq(0, 1,
 #                colorkey = FALSE, region = TRUE)
 
 
-
 ```
 
 
@@ -472,159 +473,36 @@ fc = function (x = seq(0, 1, length.out = nrow(z)), y = seq(0, 1,
 
 
 
-```{r child = '05_postprocewas.Rmd', eval=TRUE}
+```{r child = '05_postprocewas.Rmd', eval=FALSE}
 ```
 
 
 
-
-# missMethyl
-
-
-## Figure 
-
-```{r missmethyl}
-options(scipen = 0)
-library(missMethyl)
-# params
-array.type = "EPIC"
-plot.bias = FALSE
-prior.prob = TRUE
-anno = NULL
-equiv.cpg = TRUE
-fract.counts = TRUE
-sig.genes = FALSE
-# collection
-# kegg = missMethyl:::.getKEGG()
-go  = missMethyl:::.getGO()
-head(go$idTable)
-tmp_idTable = go$idTable
-dim(tmp_idTable)
-tmp_idTable = tmp_idTable[tmp_idTable$ONTOLOGY=="BP",]
-dim(tmp_idTable)
-collection = go$idList[tmp_idTable$GOID]
-# reference and target
-sig.cpg = rownames(ewas)[ewas$pvbonf<0.01]
-all.cpg = rownames(ewas)
-genomic.features = "ALL" #, "TSS200", "TSS1500", "Body",         "1stExon", "3'UTR", "5'UTR", "ExonBnd"), sig.genes = FALSE)
-# Go!
-if (!exists("mmissmethyl_gsameth")) {mmissmethyl_gsameth=memoise::memoise(missMethyl::gsameth)}
-result <- mmissmethyl_gsameth(sig.cpg = sig.cpg, all.cpg = all.cpg, 
-    collection = collection, array.type = array.type, 
-    plot.bias = plot.bias, prior.prob = prior.prob, anno = anno, 
-    equiv.cpg = equiv.cpg, fract.counts = fract.counts, 
-    genomic.features = genomic.features, sig.genes = sig.genes)
-result <- merge(tmp_idTable, result, by.x = "GOID", 
-    by.y = "row.names")
-rownames(result) <- result$PathwayID
-result$TERM_short = substr(result$TERM, 1, 35)
-result$EXP = result$N * length(sig.cpg) / length(all.cpg) 
-head(result[order(result$P.DE),-(1:3)], 30)
-
-
-
-
-
-
-
-# library(enrichplot)
-# library(clusterProfiler)
-
-# # Supposez que res est déjà trié et filtré
-# ego <- head(result[order(result$P.DE),-(1:3)], 30)
-# ego$ID <- ego$TERM  # Rename if needed
-# ego$Description <- ego$TERM
-# ego$GeneRatio <- ego$DE / ego$N
-# ego$Count = ego$N
-# ego$p.adjust = signif(ego$FDR,3)
-
-# # enrichplot::dotplot(ego, x = "GeneRatio", showCategory = 10)
-# enrichplot:::dotplot.enrichResult(ego, x = "GeneRatio", showCategory = 10)
-
-
-missmethylfig = function (result) {
-  # Supposons que 'res' est la sortie de la fonction gometh
-  # res <- gometh(sig.cpg = sig.cpgs, all.cpg = all.cpgs, collection = "GO", array.type = "450K")
-
-  # Sélection des 20 premiers termes les plus significatifs
-  ntop=20
-  top_res <- result[order(result$P.DE),][1:ntop,]
-  top_res <- top_res[order(top_res$N),]
-
-  layout(matrix(1:2, 1), respect=TRUE) ;
-  # Préparation du graphique
-  par(mar = c(5.1, 15, 4.1, 0.1))  # marges pour laisser de la place aux labels
-  bp = barplot(
-    top_res$N, 
-    # -log10(top_res$P.DE), 
-    names.arg = top_res$TERM,
-    horiz = TRUE,
-    las = 1,  # rotation des noms pour qu'ils soient horizontaux
-    col = "lightgrey", 
-    xlab = "#genes",
-    main = paste0("Top ", ntop, " GO terms (BP)"),  
-    border=0
-  )
-  barplot(top_res$DE,  horiz = TRUE,col = "darkgrey", add=TRUE, border=0, xaxt="n", yaxt="n")
-  barplot(top_res$EXP, horiz = TRUE,col = "black",    add=TRUE, border=0, xaxt="n", yaxt="n")
-  legend("bottomright", c("N", "DM", "EXP"), col=c("lightgrey", "darkgrey", "black"), pt.cex=2, pch=15)
-  par(xpd = NA)
-  text(top_res$N, bp, paste0("FDR=", signif(top_res$FDR, 1)), pos=4)
-  par(xpd = FALSE)
-  put_a_letter("a")
-
-  par(mar=c(5.1, 4.1, 4.1, 2.1))
-  par(mar=c(0,0,0,0))
-  result = result[result$FDR<0.05,]
-  tag_blacklist = c("cell", "of", "in", "to", "by")
-  tab = sort(table(unlist(strsplit(result$TERM," "))))
-  tab = tab[!names(tab) %in% tag_blacklist]
-  par(xpd = NA)
-  if (length(tab)>0) {
-    wordcloud::wordcloud(names(tab), tab, min.freq=3, use.r.layout=TRUE)
-  } else {
-    plot(0,0, main="no signif. term")
-  }
-  par(xpd = FALSE)
-  par(mar=c(5.1, 4.1, 4.1, 2.1))
-  put_a_letter("b")
-}
-
-
-
-missmethylfig(result)
-w=12
-pdf(paste0("fig_", gse, "_missmethyl.pdf"), width=w, height=w/2)
-missmethylfig(result)
-dev.off()
-```
 
 ## missMethyl per epigenomic contexts
 
 ```{r}
-for (feat in c("Island", "Shore", "Shelf", "OpenSea")) {
-  print(feat)
-  sig.cpg = rownames(ewas)[ewas$pvbonf<0.01 & ewas$Relation_to_Island %in% feat]
-  all.cpg = rownames(ewas)[ewas$Relation_to_Island %in% feat]
-  genomic.features = "ALL" #, "TSS200", "TSS1500", "Body",         "1stExon", "3'UTR", "5'UTR", "ExonBnd"), sig.genes = FALSE)
-  # Go!
-  if (!exists("mmissmethyl_gsameth")) {mmissmethyl_gsameth=memoise::memoise(missMethyl::gsameth)}
-  result <- mmissmethyl_gsameth(sig.cpg = sig.cpg, all.cpg = all.cpg, 
-      collection = collection, array.type = array.type, 
-      plot.bias = plot.bias, prior.prob = prior.prob, anno = anno, 
-      equiv.cpg = equiv.cpg, fract.counts = fract.counts, 
-      genomic.features = genomic.features, sig.genes = sig.genes)
-  result <- merge(tmp_idTable, result, by.x = "GOID", 
-      by.y = "row.names")
-  rownames(result) <- result$PathwayID
-  result$TERM_short = substr(result$TERM, 1, 35)
-  result$EXP = result$N * length(sig.cpg) / length(all.cpg) 
-  head(result[order(result$P.DE),-(1:3)], 30)
-  missmethylfig(result)
-  put_a_letter(feat)
-}
-
-
+# for (feat in c("Island", "Shore", "Shelf", "OpenSea")) {
+#   print(feat)
+#   sig.cpg = rownames(ewas)[ewas$pvbonf<0.01 & ewas$Relation_to_Island %in% feat]
+#   all.cpg = rownames(ewas)[ewas$Relation_to_Island %in% feat]
+#   genomic.features = "ALL" #, "TSS200", "TSS1500", "Body",         "1stExon", "3'UTR", "5'UTR", "ExonBnd"), sig.genes = FALSE)
+#   # Go!
+#   if (!exists("mmissmethyl_gsameth")) {mmissmethyl_gsameth=memoise::memoise(missMethyl::gsameth)}
+#   result <- mmissmethyl_gsameth(sig.cpg = sig.cpg, all.cpg = all.cpg, 
+#       collection = collection, array.type = array.type, 
+#       plot.bias = plot.bias, prior.prob = prior.prob, anno = anno, 
+#       equiv.cpg = equiv.cpg, fract.counts = fract.counts, 
+#       genomic.features = genomic.features, sig.genes = sig.genes)
+#   result <- merge(tmp_idTable, result, by.x = "GOID", 
+#       by.y = "row.names")
+#   rownames(result) <- result$PathwayID
+#   result$TERM_short = substr(result$TERM, 1, 35)
+#   result$EXP = result$N * length(sig.cpg) / length(all.cpg) 
+#   head(result[order(result$P.DE),-(1:3)], 30)
+#   missmethylfig(result)
+#   put_a_letter(feat)
+# }
 ```
 
 # Pair-Correlation
@@ -877,7 +755,7 @@ db = db[order(db$Experiment.target),]
 db = db[db$Experiment.target %in% c(
   "H3K27me3-human" , # Repression            | Facultative heterochromatin  (PRC2)  |
   "H3K4me3-human"  , # Activation            | Active or poised promoters           |
-  "H3K4me1-human"  , # Activation (potential)| Primed/active enhancers              |
+  # "H3K4me1-human"  , # Activation (potential)| Primed/active enhancers              |
   "H3K27ac-human"  , # Activation            | Active enhancers, promoters          |
   # "H3K9ac-human"   , # Activation            | Active promoters, enhancers          |
   # "H3K36me3-human" , # Activation            | Coding regions                       |
@@ -1110,7 +988,7 @@ plot_terrain = function(bed_files) {
   }
   par(mar=c(5.1, 4.1, 4.1, 2.1))
 }
-
+# stop("EFN")
 ```
 
 ![hm_all](`r paste0("hm_", prefix, ".png")`)
@@ -1119,9 +997,11 @@ plot_terrain = function(bed_files) {
 
 ```{r, fig.width=9, fig.height=9}
 plot_terrain(bed_files)
+
 ```
 
-```{r child = '05_postprocdeeptools.Rmd', eval=TRUE}
+
+```{r child = '06_postprocpredimethbiology.Rmd', eval=TRUE}
 ```
 
 
@@ -1218,7 +1098,7 @@ legend("bottomright", pch=1, col=1:length(probes_per_bed_files), paste0(names(pr
 
 
 
-```{r child = '05_postprocpstatdesc.Rmd', eval=TRUE}
+```{r child = '05_postprocpredimethstats.Rmd', eval=FALSE}
 ```
 
 
@@ -1405,11 +1285,48 @@ results$grp_file = factor(results$grp_file, levels=grp_files)
 levels(results$grp_file) = names(grp_files)
 ```
 
-```{r child = '05_postprocgsea.Rmd', eval=TRUE}
+```{r child = '05_postprocgsea.Rmd', eval=FALSE}
 ```
 
-```{r child = '05_postprocpancancer.Rmd', eval=TRUE}
+```{r child = '05_postprocpancancer.Rmd', eval=FALSE}
 ```
+
+
+
+```{r child = '06_postprocpredimethcancer.Rmd', eval=TRUE}
+```
+
+## Tables
+
+```{r table ewas}
+# ewas = ewas[, c(setdiff(colnames(ewas), tmp_names), tmp_names)]
+exported_ewas = ewas[rownames(ewas)%in%probes_signature,]
+
+col_oi = c(
+  "chr_hg38"   ,
+  "start_hg38" ,
+  "end_hg38"   ,
+  "name"       ,
+  "beta_age"   , 
+  "strand_hg38",
+  "gene"       ,
+  "group" 
+)
+
+exported_ewas = exported_ewas[, c(col_oi, setdiff(colnames(exported_ewas), col_oi))]
+
+
+exported_ewas[,1] = as.character(exported_ewas[,1])
+exported_ewas = exported_ewas[order(exported_ewas[,1], exported_ewas[,2]),]
+
+ewas_xlsx_filename = paste0("ewas_", gse, ".xlsx")
+ewas_bed_filename = paste0("ewas_", gse, ".bed")
+WriteXLS::WriteXLS(exported_ewas, ewas_xlsx_filename)
+write.table(exported_ewas, file=ewas_bed_filename , sep="\t", quote=FALSE, row.names=FALSE, col.names=TRUE)
+```
+
+Table of ewas results is exported `r ewas_xlsx_filename` for 1% Bonferroni probes.
+
 
 
 

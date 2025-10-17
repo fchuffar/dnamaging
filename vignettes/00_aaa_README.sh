@@ -98,21 +98,22 @@ for (gse in c("GSE42861", "GSE40279", "GSE87571", "GSE147740", "GSE152026")) {
 source ~/conda_config.sh
 # conda create -n missmethyl_env
 conda activate missmethyl_env
-# mamba install -c anaconda -c bioconda -c conda-forge -c r r-base libopenblas bioconductor-geoquery bioconductor-affy bioconductor-biobase r-seqinr r-rcpparmadillo r-devtools r-fastmap r-matrix r-kernsmooth r-catools r-gtools r-nortest r-survival r-beanplot r-gplots r-dbi  snakemake=7.32.4 python=3.9 r-intervals r-iterators r-codetools r-rcppeigen r-shape r-foreach r-glmnet r-writexls r-glmnetutils r-ggvenn r-bedr bedtools bioconductor-rtracklayer bioconductor-epidish deeptools r-wordcloud r-lme4 r-nlme bioconductor-annotatr bioconductor-txdb.hsapiens.ucsc.hg38.knowngene r-openxlsx umap-learn r-umap
+# mamba install -c anaconda -c bioconda -c conda-forge -c r r-base libopenblas bioconductor-geoquery bioconductor-affy bioconductor-biobase r-seqinr r-rcpparmadillo r-devtools r-fastmap r-matrix r-kernsmooth r-catools r-gtools r-nortest r-survival r-beanplot r-gplots r-dbi  snakemake=7.32.4 python=3.9 r-intervals r-iterators r-codetools r-rcppeigen r-shape r-foreach r-glmnet r-writexls r-glmnetutils r-ggvenn r-bedr bedtools bioconductor-rtracklayer bioconductor-epidish deeptools r-wordcloud r-lme4 r-nlme bioconductor-annotatr bioconductor-txdb.hsapiens.ucsc.hg38.knowngene r-openxlsx umap-learn r-umap r-upsetr pygenometracks
 # bioconductor-missmethyl
 # devtools::install_github("fchuffar/epimedtools")
 # devtools::install_github("fchuffar/dnamaging")
 # BiocManager::install("missMethyl")
 # devtools::install_github("achilleasNP/IlluminaHumanMethylationEPICanno.ilm10b5.hg38")
 
-
+# get study_preproc_XXX_modelcalllm_meth~age_ewas1000000_nn1000.rds
 rsync -auvP cargo:~/projects/dnamaging/vignettes/datashare/GSE147740/study_preproc_GSE147740_modelcalllm_meth~age_ewas1000000_nn1000.rds ~/projects/dnamaging/vignettes/datashare/GSE147740/
 rsync -auvP cargo:~/projects/dnamaging/vignettes/datashare/CustGSE147740rr/study_preproc_CustGSE147740rr_modelcalllm_meth~age_ewas1000000_nn1000.rds ~/projects/dnamaging/vignettes/datashare/CustGSE147740rr/ --exclude="df*"
-
+# get ewas_*  info_model_r*  models_r*_*  
 rsync -auvP cargo:~/projects/dnamaging/vignettes/ewas_*GSE147740*_modelcalllm_meth~age.rds ~/projects/dnamaging/vignettes/
 rsync -auvP cargo:~/projects/dnamaging/vignettes/info_model_r*_*GSE147740*_modelcalllm_meth~age_ewas1000000_nn1000.rds ~/projects/dnamaging/vignettes/
 rsync -auvP cargo:~/projects/dnamaging/vignettes/models_r*_*GSE147740*_modelcalllm_meth~age_ewas1000000_nn1000.rds ~/projects/dnamaging/vignettes/ --exclude="df*"
-# cp ../../dnamaging.save12/vignettes/wf.png .
+# get wf.png
+cp ../../dnamaging.save12/vignettes/wf.png .
 
 # NOPCA=TRUE; gse = "CustGSE147740rr" ;  print(gse) ;   rmarkdown::render("05_postproc.Rmd"      , output_file=paste0("05_postproc_"      , gse, ".html"))
 # NOPCA=TRUE; gse = "GSE147740" ;  print(gse) ;   rmarkdown::render("05_postproc.Rmd"      , output_file=paste0("05_postproc_"      , gse, ".html"))

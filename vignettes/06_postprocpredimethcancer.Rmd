@@ -1,0 +1,317 @@
+---
+title: "Post processing `GSEA`"
+author: "Florent Chuffart"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+## TCGA-LUSC
+
+```{r gsea apply, fig.width=9, fig.height=9}
+plot_gseafig  = function(key) {
+  tcga_id = "TCGA-LUSC"
+  s = mreadRDS(paste0("~/projects/datashare/", tcga_id, "/study_preproc_", tcga_id, ".rds"))
+  e = s$exp_grp
+  idx = intersect(e[e$tissue_status == "normal",]$id_patient, e[e$tissue_status == "tumoral",]$id_patient)
+  e = e[e$id_patient%in%idx,]
+  tab1 = table(e[e$tissue_status == "normal",]$id_patient)
+  tab2 = table(e[e$tissue_status == "tumoral",]$id_patient)
+  idx = intersect(names(tab1)[tab1==1], names(tab2)[tab2==1])    
+  e = e[e$id_patient%in%idx,]
+  tab = table(e$id_patient, e$tissue_status)
+  tab
+  if (!all(tab==1)|nrow(tab)==0) {stop(paste0("Problem pairing samples for ", tcga_id))}
+
+
+
+  layout(matrix(c(
+  1,1,1,1,2,2,
+  1,1,1,1,2,2,
+  1,1,1,1,3,3,
+  1,1,1,1,3,3,
+  4,4,5,7,7,8,
+  4,4,6,7,7,9,
+  NULL), 6, byrow=TRUE), respect=TRUE)
+
+  qt = quantile(e$age)
+  idx_yng = rownames(e)[e$age<=qt[2]]
+  idx_old = rownames(e)[e$age>=qt[4]]
+  individuals = list(rownames(e), youngest=idx_yng, oldest=idx_old)
+  l_it = 1 # iterator for letter index on figure
+  for (i in 1:length(individuals)) {
+    idx = individuals[[i]]
+    d = s$data[,idx]
+    da = apply(d[,idx[e[idx,]$tissue_status=="tumoral"]], 1, mean) - apply(d[,idx[e[idx,]$tissue_status=="normal"]], 1, mean)
+    da = sort(da)
+    gsea_input = data.frame(probe=names(da), meth=da)
+    head(gsea_input)
+    dim(gsea_input)
+    rnk_filename = paste0("gsea_input_", tcga_id, ".rnk")
+    print(paste("gsea_input were exported in", rnk_filename, "file."))
+    write.table(gsea_input, rnk_filename, sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
+    tmp_probes = rownames(ewas)[ewas[[key]]==1]
+    if (i>1) { levs = c("PM", "O") } else { levs = c(key, "background") }
+    ylab = ifelse(i>1, "diff. meth.", "differential methylation")
+    gsea_input$grp = levs[[2]]
+    gsea_input[tmp_probes,]$grp = levs[[1]]
+    gsea_input$grp = factor(gsea_input$grp, levels=levs)
+    gsea_input[tmp_probes,]$grp
+    grp_filename = paste0(key, ".grp")
+    write.table(tmp_probes, quote=FALSE, row.names=FALSE, col.names=FALSE, grp_filename)
+    gsea_plot(grp_filename, rnk_filename, main=tcga_id)  
+    l = letters[l_it] ; l_it = l_it + 1
+    put_a_letter(paste0(l))
+    
+    if (i>1) { par(mar=c(2.1, 4.1, 2.1, .6)) } else { 	par(mar=c(5.1, 4.1, 4.1, .6)) }
+    mw_pv = wilcox.test(gsea_input$meth[gsea_input$grp==levs[2]], gsea_input$meth[gsea_input$grp!=levs[2]])$p.value
+    main = ifelse(i>1, paste0("MW pv=", signif(mw_pv, 2)), paste0("Mann Whitney pv=", signif(mw_pv, 2)))
+    ylab = ifelse(i>1, "diff. meth.", "differential methylation")
+    las = ifelse(i>1, 1, 2)
+    tmpx = paste0(gsea_input$grp, " (", table(gsea_input$grp)[gsea_input$grp], " probes)")
+    tmpx = gsea_input$grp
+    beanplot::beanplot(gsea_input$meth ~ tmpx, what=c(1,1,0,0), col="grey", main=main, ylab=ylab, las=las, yaxt="n")
+    axis(2, at=c(-.5,0,.5)) 
+    l = letters[l_it] ; l_it = l_it + 1
+    put_a_letter(paste0(l))
+
+    if (i>1) { par(mar=c(4.1, .6, 2.6, .6))} else {par(mar=c(5.1, .6, 2.1, .6)) }
+    if (i>1) { main = paste0(length(idx)/2, " ", names(individuals)[i], " ind.") } else { main = paste0(length(idx)/2, " ", names(individuals)[i], " individuals") }
+    plot(density(e[idx, ]$age), xlab="age (years)", ylab="", yaxt="n", main=main)
+    abline(v=qt, lty=2, col="grey")
+    l = letters[l_it] ; l_it = l_it + 1
+    put_a_letter(paste0(l))
+
+    par(mar=c(5.1, 4.1, 4.1, 2.1))
+  }
+}
+# plot_gseafig("predimeth")
+# # stop("EFN")
+# # png("gseafig.png", width=1200, height=1200) 
+# pdf(paste0("fig_", gse, "_gsea.pdf"), width=9, height=9) 
+# plot_gseafig("predimeth")
+# dev.off()
+# plot_gseafig("hannum")
+# plot_gseafig("horvath")
+# plot_gseafig("phenoage")
+# plot_gseafig("morandini")
+# plot_gseafig("bonf01")
+
+
+
+plot_predimethcancerfig  = function(keys) {
+  tcga_id = "TCGA-LUSC"
+  s = mreadRDS(paste0("~/projects/datashare/", tcga_id, "/study_preproc_", tcga_id, ".rds"))
+  e = s$exp_grp
+  idx = intersect(e[e$tissue_status == "normal",]$id_patient, e[e$tissue_status == "tumoral",]$id_patient)
+  e = e[e$id_patient%in%idx,]
+  tab1 = table(e[e$tissue_status == "normal",]$id_patient)
+  tab2 = table(e[e$tissue_status == "tumoral",]$id_patient)
+  idx = intersect(names(tab1)[tab1==1], names(tab2)[tab2==1])    
+  e = e[e$id_patient%in%idx,]
+  tab = table(e$id_patient, e$tissue_status)
+  tab
+  if (!all(tab==1)|nrow(tab)==0) {stop(paste0("Problem pairing samples for ", tcga_id))}
+
+
+  qt = quantile(e$age)
+  idx_yng = rownames(e)[e$age<=qt[2]]
+  idx_old = rownames(e)[e$age>=qt[4]]
+  idx_all = rownames(e)
+
+
+  it_params = list(
+    list(key=keys[1], indiv=idx_all, main=paste0(tcga_id,  " ", length(idx_all)/2, " indiv."      )),
+    list(key=keys[2], indiv=idx_all, main=paste0(tcga_id,  " ", length(idx_all)/2, " indiv."      )),
+    list(key=keys[3], indiv=idx_all, main=paste0(tcga_id,  " ", length(idx_all)/2, " indiv."      )),
+    list(key=keys[4], indiv=idx_all, main=paste0(tcga_id,  " ", length(idx_all)/2, " indiv."      )),
+    list(key=keys[5], indiv=idx_all, main=paste0(tcga_id,  " ", length(idx_all)/2, " indiv."      )),
+    list(key=keys[6], indiv=idx_all, main=paste0(tcga_id,  " ", length(idx_all)/2, " indiv."      )),
+    list(key=keys[5], indiv=idx_yng, main=paste0(tcga_id,  " ", length(idx_yng)/2, " young indiv.")),
+    list(key=keys[5], indiv=idx_old, main=paste0(tcga_id,  " ", length(idx_old)/2, " old indiv.  "))
+  )
+
+  layout(matrix(c(
+    1,1,1,1,2,2,2,2,3,3,3,3,
+    1,1,1,1,2,2,2,2,3,3,3,3,
+    1,1,1,1,2,2,2,2,3,3,3,3,
+    1,1,1,1,2,2,2,2,3,3,3,3,
+
+    4,4,4,4,5,5,5,5,6,6,6,6,
+    4,4,4,4,5,5,5,5,6,6,6,6,
+    4,4,4,4,5,5,5,5,6,6,6,6,
+    4,4,4,4,5,5,5,5,6,6,6,6,
+
+    7,7,7,7,7,7,8,8,8,8,8,8,
+    7,7,7,7,7,7,8,8,8,8,8,8,
+    7,7,7,7,7,7,8,8,8,8,8,8,
+    7,7,7,7,7,7,8,8,8,8,8,8,
+    7,7,7,7,7,7,8,8,8,8,8,8,
+    7,7,7,7,7,7,8,8,8,8,8,8,
+
+    9,9,9,9,9,9,10,10,10,10,10,10,
+    9,9,9,9,9,9,10,10,10,10,10,10,
+    9,9,9,9,9,9,10,10,10,10,10,10,
+    9,9,9,9,9,9,10,10,10,10,10,10,
+    9,9,9,9,9,9,10,10,10,10,10,10,
+    9,9,9,9,9,9,10,10,10,10,10,10,
+
+    NULL
+    ), 20, byrow=TRUE), respect=TRUE)
+
+  l_it = 1 # iterator for letter index on figure
+  for (i in 1:length(it_params)) {
+    key = it_params[[i]]$key
+    idx = it_params[[i]]$indiv
+    main = it_params[[i]]$main
+    d = s$data[,idx]
+    da = apply(d[,idx[e[idx,]$tissue_status=="tumoral"]], 1, mean) - apply(d[,idx[e[idx,]$tissue_status=="normal"]], 1, mean)
+    da = sort(da)
+    gsea_input = data.frame(probe=names(da), meth=da)
+    rnk_filename = paste0("gsea_input_", tcga_id, ".rnk")
+    print(paste("gsea_input were exported in", rnk_filename, "file."))
+    write.table(gsea_input, rnk_filename, sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
+    tmp_probes = rownames(ewas)[ewas[[key]]==1]
+    grp_filename = paste0(key, ".grp")
+    write.table(tmp_probes, quote=FALSE, row.names=FALSE, col.names=FALSE, grp_filename)
+    gsea_plot(grp_filename, rnk_filename, main=main)  
+    l = letters[l_it] ; l_it = l_it + 1
+    put_a_letter(paste0(l))
+    par(mar=c(5.1, 4.1, 4.1, 2.1))
+  }
+
+
+
+  idx = rownames(e)
+  d = s$data[,idx]
+  da = apply(d[,idx[e[idx,]$tissue_status=="tumoral"]], 1, mean) - apply(d[,idx[e[idx,]$tissue_status=="normal"]], 1, mean)
+  da = sort(da)
+  gsea_input = data.frame(probe=names(da), meth=da)
+  rownames(gsea_input) = gsea_input$probe
+  # ANOVA
+  levs = c(names(grp_files), "BG")
+  gsea_input$grp = rev(levs)[1]
+  for (grp_file_name in names(grp_files)) {
+    grp_file = grp_files[[grp_file_name]]
+    tmp_probes = intersect(read.table(grp_file)[,1], rownames(gsea_input))
+    gsea_input[tmp_probes,]$grp = grp_file_name
+  }
+  gsea_input$grp = factor(gsea_input$grp, levels=levs)
+  # if (i>0) { par(mar=c(2.1, 4.1, 4.1, .6)) } else { 	par(mar=c(5.1, 4.1, 4.1, .6)) }
+  par(mar=c(3.6, 4.1, 1.5, 0.5))  
+  main = paste0(tcga_id, " ", length(idx)/2, " indiv.")
+  ylab = ifelse(i>0, "diff. meth.", "differential methylation")
+  ylim=c(-.6,1)
+  las = ifelse(i>0, 1, 2)
+  tmpx = paste0(gsea_input$grp, " (", table(gsea_input$grp)[gsea_input$grp], " probes)")
+  tmpx = gsea_input$grp
+  bp = beanplot::beanplot(gsea_input$meth ~ tmpx, what=c(1,1,0,0), main=main, ylim=ylim, ylab=ylab, las=las, yaxt="n", col=as.list(c(metacluster_cols, "grey")), las=2)
+  segments(1, bp$ylim[2]*.97, 4, bp$ylim[2]*.97, lwd=2)
+  segments(2, bp$ylim[2]*.87, 4, bp$ylim[2]*.87, lwd=2)
+  segments(3, bp$ylim[2]*.77, 4, bp$ylim[2]*.77, lwd=2)
+  segments(c(1,4), bp$ylim[2]*.97, c(1,4), bp$ylim[2]*.94, lwd=2)
+  segments(c(2,4), bp$ylim[2]*.87, c(2,4), bp$ylim[2]*.84, lwd=2)
+  segments(c(3,4), bp$ylim[2]*.77, c(3,4), bp$ylim[2]*.74, lwd=2)
+  text(2.5, .95, paste0("MW pv=", signif(results[results$tcga_id==tcga_id&results$grp=="all"&results$grp_file==levels(gsea_input$grp)[1],]$pv,2)),pos=3)
+  text(3  , .85, paste0("MW pv=", signif(results[results$tcga_id==tcga_id&results$grp=="all"&results$grp_file==levels(gsea_input$grp)[2],]$pv,2)),pos=3)
+  text(3.5, .75, paste0("MW pv=", signif(results[results$tcga_id==tcga_id&results$grp=="all"&results$grp_file==levels(gsea_input$grp)[3],]$pv,2)),pos=3)
+  axis(2, at=c(-.5,0,.5)) 
+  l = letters[l_it] ; l_it = l_it + 1
+  put_a_letter(paste0(l))
+
+
+  par(mar=c(5.1, 4.1, 4.1, 2.1))  
+
+  # layout(1, respect=TRUE)
+  results = results[results$grp=="all",]
+  plot(results$beta, -log10(results$pv), col=adjustcolor(metacluster_cols[results$grp_file], alpha.f=0.1), pch=16, ylab="-log10(MW pval)", xlab="beta", main="TCGA Pan-Cancer", cex=3)
+  for (grp_file in unique(results$grp_file)) {
+    for (tcga_id in unique(results$tcga_id)) {
+      idx = results$grp_file==grp_file & results$tcga_id == tcga_id
+      x = mean(results[idx, ]$beta)
+      y = mean(-log10(results[idx, ]$pv))
+      # segments(x,y, results[idx, ]$beta, -log10(results[idx, ]$pv), col=adjustcolor(metacluster_cols[which(levels(results$grp_file) == grp_file)], alpha.f=.5), lty=3)
+      text(x, y, substr(tcga_id, 6, 100), col=metacluster_cols[which(levels(results$grp_file) == grp_file)])
+    }
+  }
+  legend("topleft", paste0(levels(results$grp_file), " vs. BG"), col=c(metacluster_cols), pch=16)  
+  l = letters[l_it] ; l_it = l_it + 1
+  put_a_letter(paste0(l))
+  par(mar=c(5.1, 4.1, 4.1, 2.1))  
+
+
+
+}
+
+# stop("EFN")
+# plot_predimethcancerfig(names(signatures))
+pdf(paste0("fig_", gse, "_predimethcancer.pdf"), width=9, height=15) 
+plot_predimethcancerfig(names(signatures))
+dev.off()
+
+
+```
+
+
+
+```{r eval=FALSE}
+plot_pancancer = function() {
+  par(mar=c(5.1, 4.1, 4.1, 2.1))
+  layout(matrix(c(
+  1,1,2,2,
+  1,1,2,2,
+  NULL), 2, byrow=TRUE), respect=TRUE)
+
+  tcga_id = "TCGA-LUSC"
+  s = mreadRDS(paste0("~/projects/datashare/", tcga_id, "/study_preproc_", tcga_id, ".rds"))
+  e = s$exp_grp
+  idx = intersect(e[e$tissue_status == "normal",]$id_patient, e[e$tissue_status == "tumoral",]$id_patient)
+  e = e[e$id_patient%in%idx,]
+  tab1 = table(e[e$tissue_status == "normal",]$id_patient)
+  tab2 = table(e[e$tissue_status == "tumoral",]$id_patient)
+  idx = intersect(names(tab1)[tab1==1], names(tab2)[tab2==1])    
+  e = e[e$id_patient%in%idx,]
+  tab = table(e$id_patient, e$tissue_status)
+  tab
+  if (!all(tab==1)|nrow(tab)==0) {stop(paste0("Problem pairing samples for ", tcga_id))}
+
+  # par(mar=c(5.1, 4.1, 4.1, 2.1))  
+
+  # # layout(1, respect=TRUE)
+  # plot(results$beta, -log10(results$pv), col=adjustcolor(metacluster_cols, alpha.f=0.5), pch=1:length(levels(results$grp)), ylab="-log10(MW pval)", xlab="beta", main="TCGA Pan-Cancer")
+  # for (grp_file in unique(results$grp_file)) {
+  #   for (tcga_id in unique(results$tcga_id)) {
+  #     idx = results$grp_file==grp_file & results$tcga_id == tcga_id
+  #     x = mean(results[idx, ]$beta)
+  #     y = mean(-log10(results[idx, ]$pv))
+  #     segments(x,y, results[idx, ]$beta, -log10(results[idx, ]$pv), col=adjustcolor(metacluster_cols[which(levels(results$grp_file) == grp_file)], alpha.f=.5), lty=3)
+  #     text(x, y, substr(tcga_id, 6, 100), col=metacluster_cols[which(levels(results$grp_file) == grp_file)])
+  #   }
+  # }
+
+  # legend("topleft", c(levels(results$grp_file), levels(results$grp)), 
+  #   col=c(metacluster_cols, rep("grey", length(levels(results$grp)))), 
+  #   pch=c(rep(16, length(levels(results$grp_file))), 1:length(levels(results$grp)))
+  # )
+  # put_a_letter("d")
+  # par(mar=c(5.1, 4.1, 4.1, 2.1))  
+}
+
+
+
+plot_pancancer()
+# png("pancancerfig.png", width=1200, height=1200) 
+pdf(paste0("fig_", gse, "_pancancer.pdf"), width=8, height=6) 
+plot_pancancer()
+dev.off()
+
+
+
+
+```
+
+
