@@ -70,7 +70,7 @@ ln -s 00_models_wf.py 00_custom_models_wf.py
 source ~/conda_config.sh
 # conda create -n model_env
 conda activate model_env
-# mamba install -c anaconda -c bioconda -c conda-forge -c r r-base libopenblas bioconductor-geoquery bioconductor-affy bioconductor-biobase r-seqinr r-rcpparmadillo r-devtools r-fastmap r-matrix r-kernsmooth r-catools r-gtools r-nortest r-survival r-beanplot r-gplots r-dbi r-iterators r-codetools r-rcppeigen r-shape r-foreach r-glmnet r-writexls r-glmnetutils r-intervals bioconductor-epidish snakemake=7.32.4 python=3.9 scipy bedtools toolshed
+# mamba install -c anaconda -c bioconda -c conda-forge -c r r-base libopenblas bioconductor-geoquery bioconductor-affy bioconductor-biobase r-seqinr r-rcpparmadillo r-devtools r-fastmap r-matrix r-kernsmooth r-catools r-gtools r-nortest r-survival r-beanplot r-gplots r-dbi r-iterators r-codetools r-rcppeigen r-shape r-foreach r-glmnet r-writexls r-glmnetutils r-intervals bioconductor-epidish snakemake=7.32.4 python=3.9 scipy bedtools toolshed interlap
 # devtools::install_github("fchuffar/epimedtools")
 # devtools::install_github("fchuffar/dnamaging")
 # gse='GSE41037_modelcalllm_meth~age_ewas1000000_nn1000' ; run=0 ; rmarkdown::render('04_model.Rmd', output_file=paste0('04_model_r', run, '_', gse, '.html'));

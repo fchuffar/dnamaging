@@ -188,7 +188,7 @@ bed = pf[rownames(ewas),1:2] # Warning, here pf is global, it must be arg and in
 head(bed)
 bed[,3] = bed[,2]+1
 bed$probes = rownames(ewas)
-bed$pval = 10^ewas[,"lpv"]
+bed$pval = 10^-ewas[,"lpv"]
 bed$strand = "+"
 colnames(bed) = c("#chrom", "start", "end", "probes", "pval", "strand")
 head(bed)
