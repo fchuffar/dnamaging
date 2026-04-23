@@ -815,7 +815,8 @@ plot_res = function(
 
 
 build_dmr_candidates = function(pf, pf_chr_colname=1, pf_pos_colname=2, extend_region_dist=1000) {
-  pf = pf[pf[,pf_pos_colname]>0,]
+  pf = pf[!is.na(pf[[pf_chr_colname]]),]
+  pf = pf[pf[[pf_pos_colname]]>0,]
   pf = pf[order(pf[[pf_chr_colname]],pf[[pf_pos_colname]]), ]
   ## index meth probes by chr
   chrs = unique(pf[[pf_chr_colname]])
