@@ -1,1 +1,1 @@
-s$exp_grp = readRDS("~/projects/datashare/GSEPISOMA/study_idat_EPISOMA.rds")$exp_grp
+s$exp_grp = readRDS(paste0("~/projects/datashare/", gse, "/study_idat_", gse, ".rds"))$exp_grp
